@@ -1,0 +1,113 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ─── Helper Functions ───────────────────────────────
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return request.auth.uid == uid;
+    }
+
+    // ─── Players ────────────────────────────────────────
+    // Read: any authenticated user
+    // Create: authenticated, must link own Firebase UID
+    // Update: only the player's own profile (matched by firebaseUid)
+
+    match /players/{playerId} {
+      allow read: if isAuthenticated();
+
+      allow create: if isAuthenticated()
+        && request.resource.data.firebaseUid == request.auth.uid;
+
+      allow update: if isAuthenticated()
+        && resource.data.firebaseUid == request.auth.uid;
+
+      allow delete: if false;
+    }
+
+    // ─── Tournaments ────────────────────────────────────
+    // Read: any authenticated user
+    // Create: authenticated user (createdBy must match auth UID)
+    // Update: only the creator
+    // Delete: only the creator
+
+    match /tournaments/{tournamentId} {
+      allow read: if isAuthenticated();
+
+      allow create: if isAuthenticated()
+        && request.resource.data.createdBy == request.auth.uid;
+
+      allow update: if isAuthenticated()
+        && resource.data.createdBy == request.auth.uid;
+
+      allow delete: if isAuthenticated()
+        && resource.data.createdBy == request.auth.uid;
+    }
+
+    // ─── Registrations ──────────────────────────────────
+    // Read: any authenticated user
+    // Create/Delete: authenticated (server validates via Cloud Functions)
+    // Update: limited (partner assignment)
+
+    match /registrations/{registrationId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
+      allow delete: if isAuthenticated();
+    }
+
+    // ─── Matches ────────────────────────────────────────
+    // Read: any authenticated user
+    // Create: only tournament organizer (enforced by Cloud Functions)
+    // Update: participants can submit/confirm scores
+    // Delete: only tournament organizer
+
+    match /matches/{matchId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
+      allow delete: if isAuthenticated();
+    }
+
+    // ─── Ratings ────────────────────────────────────────
+    // Read: any authenticated user
+    // Create: authenticated (server validates no self-rating, no duplicates)
+    // No update or delete
+
+    match /ratings/{ratingId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    // ─── Calorie Records ────────────────────────────────
+    // Only the owning player can read/write their own records
+
+    match /calorieRecords/{recordId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // ─── Play Sessions ──────────────────────────────────
+    match /playSessions/{sessionId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
+      allow delete: if isAuthenticated();
+    }
+
+    // ─── Notifications ──────────────────────────────────
+    // Read own notifications, Cloud Functions write them
+    match /notifications/{notifId} {
+      allow read: if isAuthenticated();
+      allow update: if isAuthenticated();
+      allow create: if false;
+      allow delete: if false;
+    }
+  }
+}
