@@ -45,6 +45,7 @@ export { onTournamentCreated } from "./triggers/onTournamentCreated";
 export { onTournamentCancelled } from "./triggers/onTournamentCancelled";
 export { onRegistrationCreated } from "./triggers/onRegistrationCreated";
 export { onMatchFinished } from "./triggers/onMatchFinished";
+export { onPlaySessionCreated } from "./triggers/onPlaySessionCreated";
 
 // ─── Scheduled Jobs ─────────────────────────────────────
-export { hourlyCleanup, dailyReminders } from "./triggers/scheduledJobs";
+export { hourlyCleanup, dailyReminders, spamCleanup } from "./triggers/scheduledJobs";
