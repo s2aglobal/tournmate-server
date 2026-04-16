@@ -7,6 +7,8 @@ import {
   MatchFormat,
   SportType,
   DEFAULT_SPORT,
+  AgeGroup,
+  AGE_GROUP_RULES,
 } from "../types";
 
 export class ValidationError extends Error {
@@ -93,6 +95,13 @@ export function validateCreateTournament(body: CreateTournamentBody): void {
     throw new ValidationError(
       "matchFormat",
       `Invalid match format. Must be one of: ${VALID_MATCH_FORMATS.join(", ")}`,
+    );
+  }
+
+  if (body.ageGroup && !(body.ageGroup in AGE_GROUP_RULES)) {
+    throw new ValidationError(
+      "ageGroup",
+      `Invalid age group. Must be one of: ${Object.keys(AGE_GROUP_RULES).join(", ")}`,
     );
   }
 

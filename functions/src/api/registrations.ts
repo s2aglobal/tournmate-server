@@ -6,6 +6,9 @@ import {
   PlayerDoc,
   isSinglesFormat,
   TournamentFormat,
+  AgeGroup,
+  AGE_GROUP_RULES,
+  isAgeEligible,
 } from "../types";
 
 const router = Router();
@@ -57,7 +60,36 @@ router.post("/:tournamentId/register", async (req, res) => {
       return;
     }
 
-    // 4. Check for duplicate registration
+    // 4. Check age group eligibility
+    const ageGroup = (tournament.ageGroupRaw || "open") as AgeGroup;
+    if (ageGroup !== "open") {
+      const dob = player.data.dateOfBirth;
+      if (!dob) {
+        res.status(400).json({
+          error: "This tournament has an age restriction. Please set your date of birth in your profile.",
+        });
+        return;
+      }
+      const birthDate = dob.toDate();
+      const today = new Date();
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+      }
+      if (!isAgeEligible(age, ageGroup)) {
+        const rules = AGE_GROUP_RULES[ageGroup];
+        const desc = rules.min && rules.max
+          ? `ages ${rules.min}–${rules.max}`
+          : rules.min ? `ages ${rules.min}+` : `under ${rules.max}`;
+        res.status(400).json({
+          error: `This tournament is restricted to ${desc}. Your age (${age}) does not qualify.`,
+        });
+        return;
+      }
+    }
+
+    // 5. Check for duplicate registration
     const existingRegs = await db()
       .collection("registrations")
       .where("tournamentId", "==", tournamentId)
@@ -69,7 +101,7 @@ router.post("/:tournamentId/register", async (req, res) => {
       return;
     }
 
-    // 5. Also check if registered as a partner
+    // 6. Also check if registered as a partner
     const asPartner = await db()
       .collection("registrations")
       .where("tournamentId", "==", tournamentId)
@@ -81,7 +113,7 @@ router.post("/:tournamentId/register", async (req, res) => {
       return;
     }
 
-    // 6. Validate partner for doubles
+    // 7. Validate partner for doubles
     const format = tournament.formatRaw as TournamentFormat;
     if (!isSinglesFormat(format) && partnerId) {
       const partnerDoc = await db().collection("players").doc(partnerId).get();
@@ -120,7 +152,7 @@ router.post("/:tournamentId/register", async (req, res) => {
       }
     }
 
-    // 7. Create registration
+    // 8. Create registration
     const regId = crypto.randomUUID();
     const reg: RegistrationDoc = {
       tournamentId,
@@ -131,7 +163,7 @@ router.post("/:tournamentId/register", async (req, res) => {
 
     await db().collection("registrations").doc(regId).set(reg);
 
-    // 8. Increment participant count
+    // 9. Increment participant count
     const increment = partnerId ? 2 : 1;
     await db()
       .collection("tournaments")

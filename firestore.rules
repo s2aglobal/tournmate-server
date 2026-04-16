@@ -13,16 +13,18 @@ service cloud.firestore {
       return request.auth.uid == uid;
     }
 
-    // ─── Players ────────────────────────────────────────
-    // Read: any authenticated user
-    // Create: authenticated, must link own Firebase UID
-    // Update: only the player's own profile (matched by firebaseUid)
+    function isNonEmptyString(field) {
+      return field is string && field.size() > 0;
+    }
 
+    // ─── Players ────────────────────────────────────────
     match /players/{playerId} {
       allow read: if isAuthenticated();
 
       allow create: if isAuthenticated()
-        && request.resource.data.firebaseUid == request.auth.uid;
+        && request.resource.data.firebaseUid == request.auth.uid
+        && isNonEmptyString(request.resource.data.name)
+        && isNonEmptyString(request.resource.data.email);
 
       allow update: if isAuthenticated()
         && resource.data.firebaseUid == request.auth.uid;
@@ -31,16 +33,17 @@ service cloud.firestore {
     }
 
     // ─── Tournaments ────────────────────────────────────
-    // Read: any authenticated user
-    // Create: authenticated user (createdBy must match auth UID)
-    // Update: only the creator
-    // Delete: only the creator
-
     match /tournaments/{tournamentId} {
       allow read: if isAuthenticated();
 
       allow create: if isAuthenticated()
-        && request.resource.data.createdBy == request.auth.uid;
+        && request.resource.data.createdBy == request.auth.uid
+        && isNonEmptyString(request.resource.data.title)
+        && request.resource.data.title.size() >= 3
+        && request.resource.data.title.size() <= 100
+        && isNonEmptyString(request.resource.data.location)
+        && request.resource.data.date is timestamp
+        && request.resource.data.date > request.time;
 
       allow update: if isAuthenticated()
         && resource.data.createdBy == request.auth.uid;
@@ -50,23 +53,18 @@ service cloud.firestore {
     }
 
     // ─── Registrations ──────────────────────────────────
-    // Read: any authenticated user
-    // Create/Delete: authenticated (server validates via Cloud Functions)
-    // Update: limited (partner assignment)
-
     match /registrations/{registrationId} {
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
+
+      allow create: if isAuthenticated()
+        && isNonEmptyString(request.resource.data.tournamentId)
+        && isNonEmptyString(request.resource.data.playerId);
+
       allow update: if isAuthenticated();
       allow delete: if isAuthenticated();
     }
 
     // ─── Matches ────────────────────────────────────────
-    // Read: any authenticated user
-    // Create: only tournament organizer (enforced by Cloud Functions)
-    // Update: participants can submit/confirm scores
-    // Delete: only tournament organizer
-
     match /matches/{matchId} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated();
@@ -75,20 +73,22 @@ service cloud.firestore {
     }
 
     // ─── Ratings ────────────────────────────────────────
-    // Read: any authenticated user
-    // Create: authenticated (server validates no self-rating, no duplicates)
-    // No update or delete
-
     match /ratings/{ratingId} {
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
+
+      allow create: if isAuthenticated()
+        && isNonEmptyString(request.resource.data.playerId)
+        && isNonEmptyString(request.resource.data.raterId)
+        && request.resource.data.playerId != request.resource.data.raterId
+        && request.resource.data.stars is int
+        && request.resource.data.stars >= 1
+        && request.resource.data.stars <= 5;
+
       allow update: if false;
       allow delete: if false;
     }
 
     // ─── Calorie Records ────────────────────────────────
-    // Only the owning player can read/write their own records
-
     match /calorieRecords/{recordId} {
       allow read, write: if isAuthenticated();
     }
@@ -96,17 +96,25 @@ service cloud.firestore {
     // ─── Play Sessions ──────────────────────────────────
     match /playSessions/{sessionId} {
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated();
-      allow delete: if isAuthenticated();
+
+      allow create: if isAuthenticated()
+        && request.resource.data.hostId == request.auth.uid
+        && isNonEmptyString(request.resource.data.venue)
+        && request.resource.data.date is timestamp
+        && request.resource.data.date > request.time;
+
+      allow update: if isAuthenticated()
+        && resource.data.hostId == request.auth.uid;
+
+      allow delete: if isAuthenticated()
+        && resource.data.hostId == request.auth.uid;
     }
 
     // ─── Notifications ──────────────────────────────────
-    // Read own notifications, Cloud Functions write them
     match /notifications/{notifId} {
       allow read: if isAuthenticated();
       allow update: if isAuthenticated();
-      allow create: if false;
+      allow create: if isAuthenticated();
       allow delete: if false;
     }
   }

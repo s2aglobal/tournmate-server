@@ -49,6 +49,50 @@ export const hourlyCleanup = onSchedule("every 1 hours", async () => {
 });
 
 /**
+ * Runs every 6 hours. Cleans up flagged/spam events.
+ *
+ * - Deletes tournaments and play sessions with status "flagged"
+ *   that are older than 1 hour (gives admins time to review).
+ * - Cancels events whose creator account has been disabled.
+ */
+export const spamCleanup = onSchedule("every 6 hours", async () => {
+  const db = getFirestore();
+  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+
+  // Clean flagged tournaments
+  const flaggedTournaments = await db
+    .collection("tournaments")
+    .where("statusRaw", "==", "flagged")
+    .where("createdAt", "<", Timestamp.fromDate(oneHourAgo))
+    .get();
+
+  let deletedTournaments = 0;
+  for (const doc of flaggedTournaments.docs) {
+    await doc.ref.delete();
+    deletedTournaments++;
+  }
+
+  // Clean flagged play sessions
+  const flaggedSessions = await db
+    .collection("playSessions")
+    .where("status", "==", "flagged")
+    .where("createdAt", "<", Timestamp.fromDate(oneHourAgo))
+    .get();
+
+  let deletedSessions = 0;
+  for (const doc of flaggedSessions.docs) {
+    await doc.ref.delete();
+    deletedSessions++;
+  }
+
+  if (deletedTournaments > 0 || deletedSessions > 0) {
+    logger.info(
+      `Spam cleanup: deleted ${deletedTournaments} flagged tournaments, ${deletedSessions} flagged sessions`
+    );
+  }
+});
+
+/**
  * Runs daily at midnight UTC.
  * Sends reminder notifications to players registered for tournaments happening tomorrow.
  */

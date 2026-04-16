@@ -34,6 +34,40 @@ export type MatchStatus =
 
 export type Gender = "male" | "female";
 
+export type AgeGroup =
+  | "open"
+  | "u13"
+  | "u15"
+  | "u17"
+  | "u19"
+  | "u24"
+  | "senior"
+  | "veterans35"
+  | "masters40"
+  | "masters50"
+  | "grandMasters55";
+
+export const AGE_GROUP_RULES: Record<AgeGroup, { min?: number; max?: number }> = {
+  open: {},
+  u13: { max: 13 },
+  u15: { max: 15 },
+  u17: { max: 17 },
+  u19: { max: 19 },
+  u24: { max: 24 },
+  senior: { min: 19 },
+  veterans35: { min: 35 },
+  masters40: { min: 40 },
+  masters50: { min: 50 },
+  grandMasters55: { min: 55 },
+};
+
+export function isAgeEligible(age: number, ageGroup: AgeGroup): boolean {
+  const rules = AGE_GROUP_RULES[ageGroup];
+  if (rules.min !== undefined && age < rules.min) return false;
+  if (rules.max !== undefined && age >= rules.max) return false;
+  return true;
+}
+
 // ─── Firestore Document Shapes ──────────────────────────
 
 export interface PlayerDoc {
@@ -49,6 +83,7 @@ export interface PlayerDoc {
   homePostalCode?: string;
   fcmToken?: string;
   weightKg?: number;
+  dateOfBirth?: Timestamp;
   createdAt: Timestamp;
 }
 
@@ -75,6 +110,7 @@ export interface TournamentDoc {
   countryCode?: string;
   postalCode?: string;
   formatConfigData?: string;
+  ageGroupRaw?: string;
   createdAt: Timestamp;
 }
 
@@ -152,6 +188,7 @@ export interface CreateTournamentBody {
   paymentInfo?: string;
   prizeInfo?: string;
   durationMinutes?: number;
+  ageGroup?: AgeGroup;
 }
 
 export interface UpdateTournamentBody extends Partial<CreateTournamentBody> {}
