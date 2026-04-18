@@ -1,8 +1,7 @@
 {
   "projects": {
-    "default": "baddies-live",
-    "dev": "baddies-live-dev",
-    "prod": "baddies-live"
-  },
-  "_comment": "Firebase project IDs cannot be renamed. These point to the existing baddies-live project which serves TournMate."
+    "default": "tournmate-dev",
+    "dev": "tournmate-dev",
+    "prod": "tournmate-prod"
+  }
 }
