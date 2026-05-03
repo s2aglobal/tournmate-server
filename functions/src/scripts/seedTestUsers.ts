@@ -207,6 +207,8 @@ async function seedTestUsers() {
       avatarId: tp.avatarId,
       weightKg: tp.weightKg,
       dateOfBirth: dobTimestamp(tp.dobYear),
+      homeCountryCode: "US",
+      homePostalCode: "78641",
       createdAt: Timestamp.now(),
     });
 
