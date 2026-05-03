@@ -186,7 +186,8 @@ async function seedTestUsers() {
     }
 
     // 2. Create Firestore player doc
-    const playerId = crypto.randomUUID();
+    // iOS UUID strings are uppercase; Firestore doc IDs are case-sensitive.
+    const playerId = crypto.randomUUID().toUpperCase();
     await db.collection("players").doc(playerId).set({
       name: tp.name,
       phone: "",
