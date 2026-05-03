@@ -2,9 +2,11 @@
  * Seed script: creates 20 test player accounts and pairs them into 10 doubles teams.
  *
  * Usage:
- *   npm run seed:test-users
+ *   FIREBASE_API_KEY=<web-api-key> npm run seed:test-users
  *
- * Target: tournmate-dev (default Firebase project).
+ * Get the Web API key from Firebase Console > tournmate-dev > Project Settings > General.
+ *
+ * Target: tournmate-dev (via GCLOUD_PROJECT env var or default Firebase project).
  * Safe to run multiple times — skips accounts that already exist.
  *
  * Credentials follow pattern:
@@ -12,16 +14,29 @@
  *   Password: TournMate1! … TournMate20!
  */
 
-import { initializeApp, cert, getApps } from "firebase-admin/app";
-import { getAuth } from "firebase-admin/auth";
+import { initializeApp, getApps } from "firebase-admin/app";
 import { getFirestore, Timestamp } from "firebase-admin/firestore";
 
 if (getApps().length === 0) {
   initializeApp();
 }
 
-const auth = getAuth();
 const db = getFirestore();
+
+const FIREBASE_API_KEY = process.env.FIREBASE_API_KEY;
+if (!FIREBASE_API_KEY) {
+  console.error(
+    "❌ FIREBASE_API_KEY is required.\n" +
+    "   Find it at: Firebase Console > tournmate-dev > Project Settings > General > Web API Key\n" +
+    "   Usage: FIREBASE_API_KEY=<key> npm run seed:test-users"
+  );
+  process.exit(1);
+}
+
+const AUTH_SIGNUP_URL = `https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${FIREBASE_API_KEY}`;
+const AUTH_LOOKUP_URL = `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${FIREBASE_API_KEY}`;
+const AUTH_SIGNIN_URL = `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${FIREBASE_API_KEY}`;
+const AUTH_UPDATE_URL = `https://identitytoolkit.googleapis.com/v1/accounts:update?key=${FIREBASE_API_KEY}`;
 
 // ─── Test Player Definitions ─────────────────────────────
 
@@ -32,7 +47,7 @@ interface TestPlayer {
   avatarId: string;
   elo: number;
   weightKg: number;
-  dobYear: number; // birth year — age derived from this
+  dobYear: number;
 }
 
 const avatars = [
@@ -65,18 +80,9 @@ const TEST_PLAYERS: TestPlayer[] = [
   { index: 20, name: "Olive Test",     gender: "female", avatarId: avatars[19], elo: 1230, weightKg: 61, dobYear: 1998 },
 ];
 
-// Doubles teams: pairs of player indices (1-based)
 const TEAMS: [number, number][] = [
-  [1, 2],   // Team 1: Aiden + Riley  (mixed)
-  [3, 4],   // Team 2: Marcus + Sophia (mixed)
-  [5, 6],   // Team 3: Leo + Mika (mixed)
-  [7, 8],   // Team 4: Jaden + Nora (mixed)
-  [9, 10],  // Team 5: Felix + Luna (mixed)
-  [11, 12], // Team 6: Elijah + Harper (mixed)
-  [13, 14], // Team 7: Roman + Aria (mixed)
-  [15, 16], // Team 8: Dante + Chloe (mixed)
-  [17, 18], // Team 9: Skyler + Sadie (mixed)
-  [19, 20], // Team 10: Miles + Olive (mixed)
+  [1, 2], [3, 4], [5, 6], [7, 8], [9, 10],
+  [11, 12], [13, 14], [15, 16], [17, 18], [19, 20],
 ];
 
 // ─── Helpers ─────────────────────────────────────────────
@@ -90,7 +96,58 @@ function passwordFor(index: number): string {
 }
 
 function dobTimestamp(year: number): Timestamp {
-  return Timestamp.fromDate(new Date(year, 5, 15)); // June 15 of birth year
+  return Timestamp.fromDate(new Date(year, 5, 15));
+}
+
+/** Create a Firebase Auth user via REST API (no Admin SDK needed). */
+async function createAuthUser(
+  email: string, password: string, displayName: string
+): Promise<string> {
+  const res = await fetch(AUTH_SIGNUP_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password, returnSecureToken: true }),
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    if (data.error?.message === "EMAIL_EXISTS") {
+      return signInAndGetUid(email, password);
+    }
+    throw new Error(`Auth signup failed: ${data.error?.message || res.statusText}`);
+  }
+
+  const uid = data.localId as string;
+
+  // Mark email as verified + set display name
+  await fetch(AUTH_UPDATE_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      idToken: data.idToken,
+      displayName,
+      emailVerified: true,
+    }),
+  });
+
+  return uid;
+}
+
+/** Sign in an existing user to retrieve their UID. */
+async function signInAndGetUid(email: string, password: string): Promise<string> {
+  const res = await fetch(AUTH_SIGNIN_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password, returnSecureToken: true }),
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(`Auth signin failed for ${email}: ${data.error?.message || res.statusText}`);
+  }
+
+  return data.localId as string;
 }
 
 // ─── Main ────────────────────────────────────────────────
@@ -99,59 +156,53 @@ async function seedTestUsers() {
   console.log("🏸 TournMate Test User Seed Script");
   console.log("══════════════════════════════════════════\n");
 
-  const playerIdMap = new Map<number, string>(); // index -> Firestore doc ID
+  const playerIdMap = new Map<number, string>();
 
   for (const tp of TEST_PLAYERS) {
     const email = emailFor(tp.index);
     const password = passwordFor(tp.index);
 
-    // 1. Create or find Firebase Auth user
+    // 1. Create or find Firebase Auth user (via REST API)
     let uid: string;
+    let isNew = false;
     try {
-      const existing = await auth.getUserByEmail(email);
-      uid = existing.uid;
-      console.log(`  ✓ Auth exists: ${email} (${uid})`);
-    } catch {
-      const created = await auth.createUser({
-        email,
-        password,
-        displayName: tp.name,
-        emailVerified: true,
-      });
-      uid = created.uid;
-      console.log(`  + Auth created: ${email} (${uid})`);
+      uid = await createAuthUser(email, password, tp.name);
+      // Check if this was an existing user (signIn path) or new
+      const existingSnap = await db
+        .collection("players")
+        .where("firebaseUid", "==", uid)
+        .limit(1)
+        .get();
+      if (!existingSnap.empty) {
+        const playerId = existingSnap.docs[0].id;
+        playerIdMap.set(tp.index, playerId);
+        console.log(`  ✓ Exists: ${tp.name} — ${email} (${playerId.slice(0, 8)}…)`);
+        continue;
+      }
+      isNew = true;
+    } catch (err: any) {
+      console.error(`  ✗ Failed auth for ${email}: ${err.message}`);
+      continue;
     }
 
-    // 2. Create or find Firestore player doc
-    const existingSnap = await db
-      .collection("players")
-      .where("firebaseUid", "==", uid)
-      .limit(1)
-      .get();
-
-    let playerId: string;
-    if (!existingSnap.empty) {
-      playerId = existingSnap.docs[0].id;
-      console.log(`  ✓ Player exists: ${tp.name} (${playerId})`);
-    } else {
-      playerId = crypto.randomUUID();
-      await db.collection("players").doc(playerId).set({
-        name: tp.name,
-        phone: "",
-        email: email,
-        genderRaw: tp.gender,
-        elo: tp.elo,
-        streak: 0,
-        firebaseUid: uid,
-        avatarId: tp.avatarId,
-        weightKg: tp.weightKg,
-        dateOfBirth: dobTimestamp(tp.dobYear),
-        createdAt: Timestamp.now(),
-      });
-      console.log(`  + Player created: ${tp.name} (${playerId}) ELO ${tp.elo}`);
-    }
+    // 2. Create Firestore player doc
+    const playerId = crypto.randomUUID();
+    await db.collection("players").doc(playerId).set({
+      name: tp.name,
+      phone: "",
+      email: email,
+      genderRaw: tp.gender,
+      elo: tp.elo,
+      streak: 0,
+      firebaseUid: uid,
+      avatarId: tp.avatarId,
+      weightKg: tp.weightKg,
+      dateOfBirth: dobTimestamp(tp.dobYear),
+      createdAt: Timestamp.now(),
+    });
 
     playerIdMap.set(tp.index, playerId);
+    console.log(`  + Created: ${tp.name} — ${email} (${playerId.slice(0, 8)}…) ELO ${tp.elo}`);
   }
 
   // 3. Print team pairings
@@ -160,10 +211,10 @@ async function seedTestUsers() {
     const [a, b] = TEAMS[i];
     const pa = TEST_PLAYERS.find((p) => p.index === a)!;
     const pb = TEST_PLAYERS.find((p) => p.index === b)!;
-    const idA = playerIdMap.get(a)!;
-    const idB = playerIdMap.get(b)!;
+    const idA = playerIdMap.get(a);
+    const idB = playerIdMap.get(b);
     console.log(
-      `  Team ${i + 1}: ${pa.name} (${idA.slice(0, 8)}…) + ${pb.name} (${idB.slice(0, 8)}…)`
+      `  Team ${i + 1}: ${pa.name} (${idA?.slice(0, 8) ?? "??"}…) + ${pb.name} (${idB?.slice(0, 8) ?? "??"}…)`
     );
   }
 
