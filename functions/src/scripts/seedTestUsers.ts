@@ -164,29 +164,37 @@ async function seedTestUsers() {
 
     // 1. Create or find Firebase Auth user (via REST API)
     let uid: string;
-    let isNew = false;
     try {
       uid = await createAuthUser(email, password, tp.name);
-      // Check if this was an existing user (signIn path) or new
-      const existingSnap = await db
-        .collection("players")
-        .where("firebaseUid", "==", uid)
-        .limit(1)
-        .get();
-      if (!existingSnap.empty) {
-        const playerId = existingSnap.docs[0].id;
-        playerIdMap.set(tp.index, playerId);
-        console.log(`  ✓ Exists: ${tp.name} — ${email} (${playerId.slice(0, 8)}…)`);
-        continue;
-      }
-      isNew = true;
     } catch (err: any) {
       console.error(`  ✗ Failed auth for ${email}: ${err.message}`);
       continue;
     }
 
-    // 2. Create Firestore player doc
-    // iOS UUID strings are uppercase; Firestore doc IDs are case-sensitive.
+    // 2. Clean up any existing player docs for this firebaseUid
+    //    (handles re-runs, duplicates from profile setup, or lowercase UUID docs)
+    const existingSnap = await db
+      .collection("players")
+      .where("firebaseUid", "==", uid)
+      .get();
+
+    for (const doc of existingSnap.docs) {
+      await doc.ref.delete();
+      console.log(`  🗑 Deleted old player doc: ${doc.id}`);
+    }
+
+    // Also clean up docs matching the email (catches profile-setup duplicates)
+    const emailSnap = await db
+      .collection("players")
+      .where("email", "==", email)
+      .get();
+
+    for (const doc of emailSnap.docs) {
+      await doc.ref.delete();
+      console.log(`  🗑 Deleted duplicate by email: ${doc.id}`);
+    }
+
+    // 3. Create fresh Firestore player doc with uppercase UUID (matches iOS convention)
     const playerId = crypto.randomUUID().toUpperCase();
     await db.collection("players").doc(playerId).set({
       name: tp.name,
@@ -203,7 +211,7 @@ async function seedTestUsers() {
     });
 
     playerIdMap.set(tp.index, playerId);
-    console.log(`  + Created: ${tp.name} — ${email} (${playerId.slice(0, 8)}…) ELO ${tp.elo}`);
+    console.log(`  ✓ ${tp.name} — ${email}  uid:${uid.slice(0, 8)}…  doc:${playerId.slice(0, 8)}…  ELO ${tp.elo}`);
   }
 
   // 3. Print team pairings
