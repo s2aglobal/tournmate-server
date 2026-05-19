@@ -2,7 +2,7 @@ import { onDocumentCreated } from "firebase-functions/v2/firestore";
 import { logger } from "firebase-functions/v2";
 import { getFirestore, Timestamp } from "firebase-admin/firestore";
 import { TournamentDoc } from "../types";
-import { sendToRegionTopic } from "../services/notifications";
+import { sendToRegionTopic, sendToCountryTopic } from "../services/notifications";
 
 const MAX_CREATES_PER_DAY = 5;
 
@@ -40,7 +40,7 @@ export const onTournamentCreated = onDocumentCreated(
       }
     }
 
-    // --- Send regional push notification ---
+    // --- Send push notifications ---
     if (data.countryCode && data.postalCode) {
       const dateStr = data.date.toDate().toLocaleDateString("en-US", {
         weekday: "short",
@@ -48,11 +48,42 @@ export const onTournamentCreated = onDocumentCreated(
         day: "numeric",
       });
 
+      // Regional (same ZIP) — "near you" message
       await sendToRegionTopic(
         data.countryCode,
         data.postalCode,
-        "New Tournament Near You!",
+        "New Tournament Near You! 🏸",
         `${data.title} on ${dateStr} at ${data.location}`,
+        {
+          type: "tournament_created",
+          tournamentId,
+        },
+      );
+
+      // Country-wide (different ZIP or no ZIP) — includes city/location
+      await sendToCountryTopic(
+        data.countryCode,
+        data.postalCode,
+        `New Tournament in ${data.location}! 🏸`,
+        `${data.title} on ${dateStr}`,
+        {
+          type: "tournament_created",
+          tournamentId,
+        },
+      );
+    } else if (data.countryCode) {
+      // No postal code on tournament — send country-wide only
+      const dateStr = data.date.toDate().toLocaleDateString("en-US", {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+      });
+
+      await sendToCountryTopic(
+        data.countryCode,
+        "",
+        `New Tournament in ${data.location}! 🏸`,
+        `${data.title} on ${dateStr}`,
         {
           type: "tournament_created",
           tournamentId,

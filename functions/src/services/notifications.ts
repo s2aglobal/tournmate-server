@@ -31,6 +31,39 @@ export async function sendToRegionTopic(
 }
 
 /**
+ * Sends a push notification to the country-wide topic, excluding users
+ * already subscribed to the specific regional topic (avoids duplicates).
+ * Topic naming: `country_{countryCode}`
+ */
+export async function sendToCountryTopic(
+  countryCode: string,
+  postalCode: string,
+  title: string,
+  body: string,
+  data?: Record<string, string>,
+): Promise<void> {
+  const countryTopic = `country_${countryCode}`;
+  const regionTopic = `region_${countryCode}_${postalCode}`;
+
+  try {
+    // Send to country subscribers who are NOT on the regional topic
+    await getMessaging().send({
+      condition: `'${countryTopic}' in topics && !('${regionTopic}' in topics)`,
+      notification: { title, body },
+      data: data ?? {},
+      apns: {
+        payload: {
+          aps: { sound: "default", badge: 1 },
+        },
+      },
+    });
+    logger.info(`Country notification sent to ${countryTopic} (excluding ${regionTopic})`);
+  } catch (err) {
+    logger.error(`Failed to send to country topic ${countryTopic}:`, err);
+  }
+}
+
+/**
  * Sends a push notification directly to a player's device via FCM token.
  */
 export async function sendToPlayer(
