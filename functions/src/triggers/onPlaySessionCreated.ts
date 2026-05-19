@@ -1,7 +1,7 @@
 import { onDocumentCreated } from "firebase-functions/v2/firestore";
 import { logger } from "firebase-functions/v2";
 import { getFirestore, Timestamp } from "firebase-admin/firestore";
-import { sendToRegionTopic } from "../services/notifications";
+import { sendToRegionTopic, sendToCountryTopic } from "../services/notifications";
 
 const MAX_CREATES_PER_DAY = 8;
 
@@ -39,7 +39,7 @@ export const onPlaySessionCreated = onDocumentCreated(
       }
     }
 
-    // --- Send regional push notification ---
+    // --- Send push notifications ---
     if (data.countryCode && data.postalCode) {
       const dateStr = data.date.toDate().toLocaleDateString("en-US", {
         weekday: "short",
@@ -47,11 +47,41 @@ export const onPlaySessionCreated = onDocumentCreated(
         day: "numeric",
       });
 
+      // Regional (same ZIP)
       await sendToRegionTopic(
         data.countryCode,
         data.postalCode,
-        "Open Play Near You!",
+        "Open Play Near You! 🏸",
         `${data.title} on ${dateStr} at ${data.venue}`,
+        {
+          type: "session_created",
+          sessionId,
+        },
+      );
+
+      // Country-wide (different ZIP or no ZIP)
+      await sendToCountryTopic(
+        data.countryCode,
+        data.postalCode,
+        `Open Play in ${data.venue}! 🏸`,
+        `${data.title} on ${dateStr}`,
+        {
+          type: "session_created",
+          sessionId,
+        },
+      );
+    } else if (data.countryCode) {
+      const dateStr = data.date.toDate().toLocaleDateString("en-US", {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+      });
+
+      await sendToCountryTopic(
+        data.countryCode,
+        "",
+        `Open Play in ${data.venue}! 🏸`,
+        `${data.title} on ${dateStr}`,
         {
           type: "session_created",
           sessionId,
