@@ -152,7 +152,6 @@ service cloud.firestore {
         && request.resource.data.date is timestamp;
 
       allow update: if isAuthenticated()
-        && resource.data.hostId == request.auth.uid
         && unchanged('hostId');
 
       allow delete: if isAuthenticated()
