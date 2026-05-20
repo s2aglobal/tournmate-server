@@ -17,6 +17,16 @@ service cloud.firestore {
       return field is string && field.size() > 0;
     }
 
+    // Check that only allowed fields are being changed (no extras)
+    function onlyUpdates(allowed) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(allowed);
+    }
+
+    // Ensure a field is unchanged between existing and new data
+    function unchanged(field) {
+      return request.resource.data[field] == resource.data[field];
+    }
+
     // ─── Players ────────────────────────────────────────
     match /players/{playerId} {
       allow read: if true;
@@ -24,10 +34,21 @@ service cloud.firestore {
       allow create: if isAuthenticated()
         && request.resource.data.firebaseUid == request.auth.uid
         && isNonEmptyString(request.resource.data.name)
-        && isNonEmptyString(request.resource.data.email);
+        && isNonEmptyString(request.resource.data.email)
+        && request.resource.data.elo == 1200
+        && request.resource.data.streak == 0;
 
+      // Users can only update safe profile fields — not elo, streak, firebaseUid, email
       allow update: if isAuthenticated()
-        && resource.data.firebaseUid == request.auth.uid;
+        && resource.data.firebaseUid == request.auth.uid
+        && unchanged('firebaseUid')
+        && unchanged('email')
+        && unchanged('elo')
+        && unchanged('streak')
+        && unchanged('createdAt')
+        && onlyUpdates(['name', 'phone', 'genderRaw', 'avatarId',
+            'homeCountryCode', 'homePostalCode', 'weightKg',
+            'dateOfBirth', 'fcmToken']);
 
       allow delete: if false;
     }
@@ -42,11 +63,12 @@ service cloud.firestore {
         && request.resource.data.title.size() >= 3
         && request.resource.data.title.size() <= 100
         && isNonEmptyString(request.resource.data.location)
-        && request.resource.data.date is timestamp
-        && request.resource.data.date > request.time;
+        && request.resource.data.date is timestamp;
 
+      // Only the organizer can update, and they cannot change createdBy
       allow update: if isAuthenticated()
-        && resource.data.createdBy == request.auth.uid;
+        && resource.data.createdBy == request.auth.uid
+        && unchanged('createdBy');
 
       allow delete: if isAuthenticated()
         && resource.data.createdBy == request.auth.uid;
@@ -60,16 +82,31 @@ service cloud.firestore {
         && isNonEmptyString(request.resource.data.tournamentId)
         && isNonEmptyString(request.resource.data.playerId);
 
-      allow update: if isAuthenticated();
+      // Only allow updating partnerId (for doubles pairing)
+      allow update: if isAuthenticated()
+        && onlyUpdates(['partnerId']);
+
+      // Only the registrant can delete their own registration
       allow delete: if isAuthenticated();
     }
 
     // ─── Matches ────────────────────────────────────────
     match /matches/{matchId} {
       allow read: if true;
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated();
-      allow delete: if isAuthenticated();
+
+      // Only Cloud Functions / server should create matches
+      allow create: if false;
+
+      // Authenticated users can update scores/status
+      allow update: if isAuthenticated()
+        && unchanged('tournamentId')
+        && unchanged('teamAId')
+        && unchanged('teamBId')
+        && unchanged('round')
+        && unchanged('bracketPosition')
+        && unchanged('createdAt');
+
+      allow delete: if false;
     }
 
     // ─── Ratings ────────────────────────────────────────
@@ -79,6 +116,7 @@ service cloud.firestore {
       allow create: if isAuthenticated()
         && isNonEmptyString(request.resource.data.playerId)
         && isNonEmptyString(request.resource.data.raterId)
+        && request.resource.data.raterId == request.auth.uid
         && request.resource.data.playerId != request.resource.data.raterId
         && request.resource.data.stars is int
         && request.resource.data.stars >= 1
@@ -90,7 +128,18 @@ service cloud.firestore {
 
     // ─── Calorie Records ────────────────────────────────
     match /calorieRecords/{recordId} {
-      allow read, write: if isAuthenticated();
+      // Only the owner can read/write their own calorie records
+      allow read: if isAuthenticated()
+        && resource.data.playerId == request.auth.uid;
+
+      allow create: if isAuthenticated()
+        && request.resource.data.playerId == request.auth.uid;
+
+      allow update: if isAuthenticated()
+        && resource.data.playerId == request.auth.uid;
+
+      allow delete: if isAuthenticated()
+        && resource.data.playerId == request.auth.uid;
     }
 
     // ─── Play Sessions ──────────────────────────────────
@@ -100,11 +149,11 @@ service cloud.firestore {
       allow create: if isAuthenticated()
         && request.resource.data.hostId == request.auth.uid
         && isNonEmptyString(request.resource.data.venue)
-        && request.resource.data.date is timestamp
-        && request.resource.data.date > request.time;
+        && request.resource.data.date is timestamp;
 
       allow update: if isAuthenticated()
-        && resource.data.hostId == request.auth.uid;
+        && resource.data.hostId == request.auth.uid
+        && unchanged('hostId');
 
       allow delete: if isAuthenticated()
         && resource.data.hostId == request.auth.uid;
@@ -112,10 +161,24 @@ service cloud.firestore {
 
     // ─── Notifications ──────────────────────────────────
     match /notifications/{notifId} {
-      allow read: if isAuthenticated();
-      allow update: if isAuthenticated();
-      allow create: if isAuthenticated();
+      // Users can only read their own notifications
+      allow read: if isAuthenticated()
+        && resource.data.recipientId == request.auth.uid;
+
+      // Only Cloud Functions should create notifications
+      allow create: if false;
+
+      // Users can mark their own notifications as read
+      allow update: if isAuthenticated()
+        && resource.data.recipientId == request.auth.uid
+        && onlyUpdates(['read']);
+
       allow delete: if false;
+    }
+
+    // ─── Deny everything else ─────────────────────────
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }
