@@ -125,18 +125,22 @@ export const dailyReminders = onSchedule("every day 00:00", async () => {
       .where("tournamentId", "==", tournamentId)
       .get();
 
-    // Collect unique player IDs
-    const playerIds = new Set<string>();
+    // Collect unique player document IDs
+    const playerDocIds = new Set<string>();
     for (const reg of regsSnap.docs) {
       const data = reg.data();
-      playerIds.add(data.playerId);
-      if (data.partnerId) playerIds.add(data.partnerId);
+      playerDocIds.add(data.playerId);
+      if (data.partnerId) playerDocIds.add(data.partnerId);
     }
 
-    // Write reminder notifications
-    for (const playerId of playerIds) {
+    // Look up firebaseUid for each player and write reminder notifications
+    for (const playerDocId of playerDocIds) {
+      const playerDoc = await db.collection("players").doc(playerDocId).get();
+      const firebaseUid = playerDoc.data()?.firebaseUid as string | undefined;
+      if (!firebaseUid) continue;
+
       await db.collection("notifications").add({
-        recipientId: playerId,
+        recipientId: firebaseUid,
         type: "tournament_reminder",
         title: "Tournament Tomorrow!",
         body: `${tournament.title} at ${tournament.location} is tomorrow. Get ready!`,

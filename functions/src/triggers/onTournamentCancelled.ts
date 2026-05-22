@@ -39,23 +39,38 @@ export const onTournamentCancelled = onDocumentUpdated(
       if (reg.partnerId) playerIds.add(reg.partnerId);
     }
 
-    // Notify each player with an FCM token
+    // Notify each player
     for (const playerId of playerIds) {
       const playerDoc = await db.collection("players").doc(playerId).get();
       if (!playerDoc.exists) continue;
 
       const player = playerDoc.data() as PlayerDoc;
-      if (!player.fcmToken) continue;
 
-      await sendToPlayer(
-        player.fcmToken,
-        "Tournament Cancelled",
-        `${after.title} has been cancelled by the organizer.`,
-        {
+      // Write inbox notification doc
+      if (player.firebaseUid) {
+        await db.collection("notifications").add({
+          recipientId: player.firebaseUid,
           type: "tournament_cancelled",
+          title: "Tournament Cancelled",
+          body: `${after.title} has been cancelled by the organizer.`,
           tournamentId,
-        },
-      );
+          read: false,
+          createdAt: new Date(),
+        });
+      }
+
+      // Send push notification
+      if (player.fcmToken) {
+        await sendToPlayer(
+          player.fcmToken,
+          "Tournament Cancelled",
+          `${after.title} has been cancelled by the organizer.`,
+          {
+            type: "tournament_cancelled",
+            tournamentId,
+          },
+        );
+      }
     }
   },
 );
