@@ -66,7 +66,7 @@ export const onPlaySessionCreated = onDocumentCreated(
         creatorUid,
         "Open Play Near You! 🏸",
         `${data.title} on ${fullDateStr} at ${data.venue}`,
-        { type: "session_created", sessionId },
+        { type: "session_created", sessionId, createdBy: creatorUid },
       );
 
       // Country-wide (different ZIP or no ZIP)
@@ -76,7 +76,7 @@ export const onPlaySessionCreated = onDocumentCreated(
         creatorUid,
         `Open Play in ${data.venue}! 🏸`,
         `${data.title} on ${fullDateStr}`,
-        { type: "session_created", sessionId },
+        { type: "session_created", sessionId, createdBy: creatorUid },
       );
     } else if (data.countryCode) {
       await sendToCountryTopicExcluding(
@@ -85,7 +85,7 @@ export const onPlaySessionCreated = onDocumentCreated(
         creatorUid,
         `Open Play in ${data.venue}! 🏸`,
         `${data.title} on ${fullDateStr}`,
-        { type: "session_created", sessionId },
+        { type: "session_created", sessionId, createdBy: creatorUid },
       );
     }
 

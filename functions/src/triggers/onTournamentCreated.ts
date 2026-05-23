@@ -67,7 +67,7 @@ export const onTournamentCreated = onDocumentCreated(
         creatorUid,
         "New Tournament Near You! 🏸",
         `${data.title} on ${fullDateStr} at ${data.location}`,
-        { type: "tournament_created", tournamentId },
+        { type: "tournament_created", tournamentId, createdBy: creatorUid },
       );
 
       // Country-wide (different ZIP or no ZIP) — includes city/location
@@ -77,7 +77,7 @@ export const onTournamentCreated = onDocumentCreated(
         creatorUid,
         `New Tournament in ${data.location}! 🏸`,
         `${data.title} on ${fullDateStr}`,
-        { type: "tournament_created", tournamentId },
+        { type: "tournament_created", tournamentId, createdBy: creatorUid },
       );
     } else if (data.countryCode) {
       await sendToCountryTopicExcluding(
@@ -86,7 +86,7 @@ export const onTournamentCreated = onDocumentCreated(
         creatorUid,
         `New Tournament in ${data.location}! 🏸`,
         `${data.title} on ${fullDateStr}`,
-        { type: "tournament_created", tournamentId },
+        { type: "tournament_created", tournamentId, createdBy: creatorUid },
       );
     }
 
