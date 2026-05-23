@@ -109,6 +109,7 @@ export interface TournamentDoc {
   durationMinutes?: number;
   countryCode?: string;
   postalCode?: string;
+  timeZone?: string;
   formatConfigData?: string;
   ageGroupRaw?: string;
   createdAt: Timestamp;
