@@ -45,14 +45,21 @@ export const onPlaySessionCreated = onDocumentCreated(
         weekday: "short",
         month: "short",
         day: "numeric",
+        timeZone: "America/Chicago",
       });
+      const timeStr = data.date.toDate().toLocaleTimeString("en-US", {
+        hour: "numeric",
+        minute: "2-digit",
+        timeZone: "America/Chicago",
+      });
+      const fullDateStr = `${dateStr} at ${timeStr}`;
 
       // Regional (same ZIP)
       await sendToRegionTopic(
         data.countryCode,
         data.postalCode,
         "Open Play Near You! 🏸",
-        `${data.title} on ${dateStr} at ${data.venue}`,
+        `${data.title} on ${fullDateStr} at ${data.venue}`,
         {
           type: "session_created",
           sessionId,
@@ -64,24 +71,30 @@ export const onPlaySessionCreated = onDocumentCreated(
         data.countryCode,
         data.postalCode,
         `Open Play in ${data.venue}! 🏸`,
-        `${data.title} on ${dateStr}`,
+        `${data.title} on ${fullDateStr}`,
         {
           type: "session_created",
           sessionId,
         },
       );
     } else if (data.countryCode) {
-      const dateStr = data.date.toDate().toLocaleDateString("en-US", {
+      const dateStr2 = data.date.toDate().toLocaleDateString("en-US", {
         weekday: "short",
         month: "short",
         day: "numeric",
+        timeZone: "America/Chicago",
+      });
+      const timeStr2 = data.date.toDate().toLocaleTimeString("en-US", {
+        hour: "numeric",
+        minute: "2-digit",
+        timeZone: "America/Chicago",
       });
 
       await sendToCountryTopic(
         data.countryCode,
         "",
         `Open Play in ${data.venue}! 🏸`,
-        `${data.title} on ${dateStr}`,
+        `${data.title} on ${dateStr2} at ${timeStr2}`,
         {
           type: "session_created",
           sessionId,

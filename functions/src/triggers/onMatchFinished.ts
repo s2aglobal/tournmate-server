@@ -48,18 +48,33 @@ export const onMatchFinished = onDocumentUpdated(
       const playerDoc = await db.collection("players").doc(pid).get();
       if (!playerDoc.exists) continue;
       const player = playerDoc.data() as PlayerDoc;
-      if (!player.fcmToken) continue;
 
-      await sendToPlayer(
-        player.fcmToken,
-        "Match Result",
-        `Final score: ${scoreText}`,
-        {
+      // Write inbox notification doc
+      if (player.firebaseUid) {
+        await db.collection("notifications").add({
+          recipientId: player.firebaseUid,
           type: "match_finished",
-          matchId: event.params.matchId,
+          title: "Match Result",
+          body: `Final score: ${scoreText}`,
           tournamentId: after.tournamentId,
-        },
-      );
+          read: false,
+          createdAt: new Date(),
+        });
+      }
+
+      // Send push notification
+      if (player.fcmToken) {
+        await sendToPlayer(
+          player.fcmToken,
+          "Match Result",
+          `Final score: ${scoreText}`,
+          {
+            type: "match_finished",
+            matchId: event.params.matchId,
+            tournamentId: after.tournamentId,
+          },
+        );
+      }
     }
   },
 );

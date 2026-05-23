@@ -46,14 +46,21 @@ export const onTournamentCreated = onDocumentCreated(
         weekday: "short",
         month: "short",
         day: "numeric",
+        timeZone: "America/Chicago",
       });
+      const timeStr = data.date.toDate().toLocaleTimeString("en-US", {
+        hour: "numeric",
+        minute: "2-digit",
+        timeZone: "America/Chicago",
+      });
+      const fullDateStr = `${dateStr} at ${timeStr}`;
 
       // Regional (same ZIP) — "near you" message
       await sendToRegionTopic(
         data.countryCode,
         data.postalCode,
         "New Tournament Near You! 🏸",
-        `${data.title} on ${dateStr} at ${data.location}`,
+        `${data.title} on ${fullDateStr} at ${data.location}`,
         {
           type: "tournament_created",
           tournamentId,
@@ -65,25 +72,30 @@ export const onTournamentCreated = onDocumentCreated(
         data.countryCode,
         data.postalCode,
         `New Tournament in ${data.location}! 🏸`,
-        `${data.title} on ${dateStr}`,
+        `${data.title} on ${fullDateStr}`,
         {
           type: "tournament_created",
           tournamentId,
         },
       );
     } else if (data.countryCode) {
-      // No postal code on tournament — send country-wide only
       const dateStr = data.date.toDate().toLocaleDateString("en-US", {
         weekday: "short",
         month: "short",
         day: "numeric",
+        timeZone: "America/Chicago",
+      });
+      const timeStr = data.date.toDate().toLocaleTimeString("en-US", {
+        hour: "numeric",
+        minute: "2-digit",
+        timeZone: "America/Chicago",
       });
 
       await sendToCountryTopic(
         data.countryCode,
         "",
         `New Tournament in ${data.location}! 🏸`,
-        `${data.title} on ${dateStr}`,
+        `${data.title} on ${dateStr} at ${timeStr}`,
         {
           type: "tournament_created",
           tournamentId,

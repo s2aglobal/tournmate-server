@@ -28,25 +28,17 @@ export const onRegistrationCreated = onDocumentCreated(
 
     logger.info(`${playerName} registered for ${tournament.title}`);
 
-    // Write a notification for the organizer
+    // Write a notification for the organizer (use Firebase UID as recipientId)
     if (tournament.createdBy) {
-      const orgSnap = await db
-        .collection("players")
-        .where("firebaseUid", "==", tournament.createdBy)
-        .limit(1)
-        .get();
-
-      if (!orgSnap.empty) {
-        await db.collection("notifications").add({
-          recipientId: orgSnap.docs[0].id,
-          type: "new_registration",
-          title: "New Registration",
-          body: `${playerName} registered for ${tournament.title}`,
-          tournamentId: data.tournamentId,
-          read: false,
-          createdAt: new Date(),
-        });
-      }
+      await db.collection("notifications").add({
+        recipientId: tournament.createdBy,
+        type: "new_registration",
+        title: "New Registration",
+        body: `${playerName} registered for ${tournament.title}`,
+        tournamentId: data.tournamentId,
+        read: false,
+        createdAt: new Date(),
+      });
     }
   },
 );
