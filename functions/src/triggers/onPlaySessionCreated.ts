@@ -1,7 +1,7 @@
 import { onDocumentCreated } from "firebase-functions/v2/firestore";
 import { logger } from "firebase-functions/v2";
-import { getFirestore, Timestamp } from "firebase-admin/firestore";
-import { sendToRegionTopic, sendToCountryTopic } from "../services/notifications";
+import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
+import { sendToRegionTopicExcluding, sendToCountryTopicExcluding } from "../services/notifications";
 
 const MAX_CREATES_PER_DAY = 8;
 
@@ -39,67 +39,67 @@ export const onPlaySessionCreated = onDocumentCreated(
       }
     }
 
+    // Use the timezone stored with the document, fallback to UTC
+    const tz = data.timeZone || "UTC";
+    const dateStr = data.date.toDate().toLocaleDateString("en-US", {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+      timeZone: tz,
+    });
+    const timeStr = data.date.toDate().toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+      timeZone: tz,
+    });
+    const fullDateStr = `${dateStr} at ${timeStr}`;
+
+    // Exclude the creator from receiving their own notification
+    const creatorUid = data.hostId || "";
+
     // --- Send push notifications ---
     if (data.countryCode && data.postalCode) {
-      const dateStr = data.date.toDate().toLocaleDateString("en-US", {
-        weekday: "short",
-        month: "short",
-        day: "numeric",
-        timeZone: "America/Chicago",
-      });
-      const timeStr = data.date.toDate().toLocaleTimeString("en-US", {
-        hour: "numeric",
-        minute: "2-digit",
-        timeZone: "America/Chicago",
-      });
-      const fullDateStr = `${dateStr} at ${timeStr}`;
-
       // Regional (same ZIP)
-      await sendToRegionTopic(
+      await sendToRegionTopicExcluding(
         data.countryCode,
         data.postalCode,
+        creatorUid,
         "Open Play Near You! 🏸",
         `${data.title} on ${fullDateStr} at ${data.venue}`,
-        {
-          type: "session_created",
-          sessionId,
-        },
+        { type: "session_created", sessionId },
       );
 
       // Country-wide (different ZIP or no ZIP)
-      await sendToCountryTopic(
+      await sendToCountryTopicExcluding(
         data.countryCode,
         data.postalCode,
+        creatorUid,
         `Open Play in ${data.venue}! 🏸`,
         `${data.title} on ${fullDateStr}`,
-        {
-          type: "session_created",
-          sessionId,
-        },
+        { type: "session_created", sessionId },
       );
     } else if (data.countryCode) {
-      const dateStr2 = data.date.toDate().toLocaleDateString("en-US", {
-        weekday: "short",
-        month: "short",
-        day: "numeric",
-        timeZone: "America/Chicago",
-      });
-      const timeStr2 = data.date.toDate().toLocaleTimeString("en-US", {
-        hour: "numeric",
-        minute: "2-digit",
-        timeZone: "America/Chicago",
-      });
-
-      await sendToCountryTopic(
+      await sendToCountryTopicExcluding(
         data.countryCode,
         "",
+        creatorUid,
         `Open Play in ${data.venue}! 🏸`,
-        `${data.title} on ${dateStr2} at ${timeStr2}`,
-        {
-          type: "session_created",
-          sessionId,
-        },
+        `${data.title} on ${fullDateStr}`,
+        { type: "session_created", sessionId },
       );
+    }
+
+    // Write a confirmation inbox notification for the creator
+    if (creatorUid) {
+      await db.collection("notifications").add({
+        recipientId: creatorUid,
+        type: "session_created",
+        title: "Session Posted! 🎉",
+        body: `Your ${data.title} on ${fullDateStr} at ${data.venue} is live.`,
+        sessionId,
+        read: false,
+        createdAt: FieldValue.serverTimestamp(),
+      });
     }
   },
 );
