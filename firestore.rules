@@ -161,7 +161,9 @@ service cloud.firestore {
         && resource.data.recipientId == request.auth.uid
         && onlyUpdates(['read']);
 
-      allow delete: if false;
+      // Users can delete their own notifications
+      allow delete: if isAuthenticated()
+        && resource.data.recipientId == request.auth.uid;
     }
 
     // ─── Deny everything else ─────────────────────────
