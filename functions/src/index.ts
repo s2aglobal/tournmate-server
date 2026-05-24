@@ -44,6 +44,7 @@ export const api = onRequest(
 export { onTournamentCreated } from "./triggers/onTournamentCreated";
 export { onTournamentCancelled } from "./triggers/onTournamentCancelled";
 export { onRegistrationCreated } from "./triggers/onRegistrationCreated";
+export { onRegistrationDeleted } from "./triggers/onRegistrationDeleted";
 export { onMatchFinished } from "./triggers/onMatchFinished";
 export { onPlaySessionCreated } from "./triggers/onPlaySessionCreated";
 export { onSessionJoined } from "./triggers/onSessionJoined";
