@@ -1,11 +1,12 @@
 import { onDocumentCreated } from "firebase-functions/v2/firestore";
 import { logger } from "firebase-functions/v2";
-import { getFirestore } from "firebase-admin/firestore";
+import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { RegistrationDoc, TournamentDoc } from "../types";
+import { sendToPlayer } from "../services/notifications";
 
 /**
  * Fires when a new registration is created.
- * Writes a notification document so the tournament organizer is informed.
+ * Notifies the tournament organizer via push + inbox doc.
  */
 export const onRegistrationCreated = onDocumentCreated(
   "registrations/{registrationId}",
@@ -28,17 +29,37 @@ export const onRegistrationCreated = onDocumentCreated(
 
     logger.info(`${playerName} registered for ${tournament.title}`);
 
-    // Write a notification for the organizer (use Firebase UID as recipientId)
+    // Notify the organizer
     if (tournament.createdBy) {
+      // Write inbox doc
       await db.collection("notifications").add({
         recipientId: tournament.createdBy,
         type: "new_registration",
-        title: "New Registration",
+        title: "New Registration 🎉",
         body: `${playerName} registered for ${tournament.title}`,
         tournamentId: data.tournamentId,
         read: false,
-        createdAt: new Date(),
+        createdAt: FieldValue.serverTimestamp(),
       });
+
+      // Send push notification
+      const orgSnap = await db
+        .collection("players")
+        .where("firebaseUid", "==", tournament.createdBy)
+        .limit(1)
+        .get();
+
+      if (!orgSnap.empty) {
+        const fcmToken = orgSnap.docs[0].data()?.fcmToken as string | undefined;
+        if (fcmToken) {
+          await sendToPlayer(
+            fcmToken,
+            "New Registration 🎉",
+            `${playerName} registered for ${tournament.title}`,
+            { type: "new_registration", tournamentId: data.tournamentId },
+          );
+        }
+      }
     }
   },
 );
