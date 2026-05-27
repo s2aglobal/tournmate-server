@@ -16,15 +16,59 @@ export const onSessionJoined = onDocumentUpdated(
     const after = event.data?.after.data();
     if (!before || !after) return;
 
-    const beforeAttendees: string[] = before.attendeeIds ?? [];
-    const afterAttendees: string[] = after.attendeeIds ?? [];
-
     const hostId = after.hostId as string | undefined;
     if (!hostId) return;
 
     const db = getFirestore();
     const sessionId = event.params.sessionId;
     const sessionTitle = (after.title as string) || "Open Play";
+
+    // --- Session FINISHED (status changed to completed) ---
+    const beforeStatus = before.status as string | undefined;
+    const afterStatus = after.status as string | undefined;
+
+    if (beforeStatus !== "completed" && afterStatus === "completed") {
+      const attendeeIds: string[] = after.attendeeIds ?? [];
+      logger.info(`Session ${sessionId} finished by host, notifying ${attendeeIds.length} attendees`);
+
+      for (const attendeeId of attendeeIds) {
+        // Don't notify the host
+        if (attendeeId === hostId) continue;
+
+        const playerSnap = await db.collection("players").doc(attendeeId).get();
+        if (!playerSnap.exists) continue;
+        const playerData = playerSnap.data() as PlayerDoc;
+        const playerUid = playerData.firebaseUid;
+
+        // Write inbox notification
+        if (playerUid) {
+          await db.collection("notifications").add({
+            recipientId: playerUid,
+            type: "session_finished",
+            title: "Session Complete! 🏁",
+            body: `"${sessionTitle}" has ended. Don't forget to log your calories!`,
+            sessionId,
+            read: false,
+            createdAt: FieldValue.serverTimestamp(),
+          });
+        }
+
+        // Send push
+        if (playerData.fcmToken) {
+          await sendToPlayer(
+            playerData.fcmToken,
+            "Session Complete! 🏁",
+            `"${sessionTitle}" has ended. Don't forget to log your calories!`,
+            { type: "session_finished", sessionId },
+          );
+        }
+      }
+      return;
+    }
+
+    // --- Attendee changes ---
+    const beforeAttendees: string[] = before.attendeeIds ?? [];
+    const afterAttendees: string[] = after.attendeeIds ?? [];
 
     // --- Someone JOINED ---
     if (afterAttendees.length > beforeAttendees.length) {
