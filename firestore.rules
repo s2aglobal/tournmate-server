@@ -94,8 +94,8 @@ service cloud.firestore {
     match /matches/{matchId} {
       allow read: if true;
 
-      // Only Cloud Functions / server should create matches
-      allow create: if false;
+      // Tournament organizer can create matches (bracket generation)
+      allow create: if isAuthenticated();
 
       // Authenticated users can update scores/status
       allow update: if isAuthenticated()
