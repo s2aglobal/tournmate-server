@@ -106,7 +106,8 @@ service cloud.firestore {
         && unchanged('bracketPosition')
         && unchanged('createdAt');
 
-      allow delete: if false;
+      // Organizer can delete matches (reset bracket)
+      allow delete: if isAuthenticated();
     }
 
     // ─── Ratings ────────────────────────────────────────
