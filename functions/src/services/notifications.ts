@@ -23,6 +23,7 @@ export async function sendToRegionTopic(
           aps: { sound: "default", badge: 1 },
         },
       },
+      android: { priority: "high" as const },
     });
     logger.info(`Notification sent to topic: ${topic}`);
   } catch (err) {
@@ -61,6 +62,7 @@ export async function sendToRegionTopicExcluding(
           aps: { sound: "default", badge: 1 },
         },
       },
+      android: { priority: "high" as const },
     });
     logger.info(`Notification sent to ${regionTopic} excluding ${excludeUid}`);
   } catch (err) {
@@ -93,6 +95,7 @@ export async function sendToCountryTopic(
           aps: { sound: "default", badge: 1 },
         },
       },
+      android: { priority: "high" as const },
     });
     logger.info(`Country notification sent to ${countryTopic} (excluding ${regionTopic})`);
   } catch (err) {
@@ -142,6 +145,7 @@ export async function sendToCountryTopicExcluding(
           aps: { sound: "default", badge: 1 },
         },
       },
+      android: { priority: "high" as const },
     });
     logger.info(`Country notification sent to ${countryTopic} excluding creator ${excludeUid}`);
   } catch (err) {
@@ -168,6 +172,7 @@ export async function sendToPlayer(
           aps: { sound: "default", badge: 1 },
         },
       },
+      android: { priority: "high" as const },
     });
   } catch (err: unknown) {
     const code = (err as { code?: string }).code;
