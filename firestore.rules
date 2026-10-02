@@ -48,7 +48,7 @@ service cloud.firestore {
         && unchanged('createdAt')
         && onlyUpdates(['name', 'phone', 'genderRaw', 'avatarId',
             'homeCountryCode', 'homePostalCode', 'weightKg',
-            'dateOfBirth', 'fcmToken']);
+            'dateOfBirth', 'fcmToken', 'preferredSport']);
 
       allow delete: if false;
     }
@@ -165,6 +165,15 @@ service cloud.firestore {
       // Users can delete their own notifications
       allow delete: if isAuthenticated()
         && resource.data.recipientId == request.auth.uid;
+    }
+
+    // ─── App Config ─────────────────────────────────────
+    // `config/app` holds the minimum supported app versions. Readable before
+    // sign-in so the update gate can run on the welcome screen. Edited only
+    // from the Firebase console / Admin SDK.
+    match /config/{docId} {
+      allow read: if true;
+      allow write: if false;
     }
 
     // ─── Deny everything else ─────────────────────────
