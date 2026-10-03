@@ -48,7 +48,8 @@ service cloud.firestore {
         && unchanged('createdAt')
         && onlyUpdates(['name', 'phone', 'genderRaw', 'avatarId',
             'homeCountryCode', 'homePostalCode', 'weightKg',
-            'dateOfBirth', 'fcmToken', 'preferredSport']);
+            'dateOfBirth', 'fcmToken', 'preferredSport',
+            'playingHand', 'skillLevel']);
 
       allow delete: if false;
     }
