@@ -13,7 +13,10 @@
     "seed:test-users": "npm run build && node lib/scripts/seedTestUsers.js",
     "seed:sports-config": "npm run build && node lib/scripts/seedSportsConfig.js",
     "backfill:registration-counts": "npm run build && node lib/scripts/backfillRegistrationCounts.js",
-    "check:scoring": "npm run build && node lib/scripts/checkScoring.js"
+    "check:scoring": "npm run build && node lib/scripts/checkScoring.js",
+    "qa:seed": "npm run build && node lib/scripts/seedQaTournaments.js",
+    "qa:checks": "npm run build && node lib/scripts/qaServerChecks.js",
+    "qa:cleanup": "npm run build && node lib/scripts/cleanupQaTournaments.js"
   },
   "engines": {
     "node": "20"
