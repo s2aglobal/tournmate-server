@@ -7,7 +7,9 @@ import {
   TournamentDoc,
   RegistrationDoc,
   PlayerDoc,
+  parseSportType,
 } from "../types";
+import { matchWinner, resolveScoring } from "../services/scoring";
 
 const router = Router();
 const db = () => getFirestore();
@@ -66,8 +68,6 @@ router.post("/:matchId/submit-score", async (req, res) => {
     const { matchId } = req.params;
     const body = req.body as SubmitScoreBody;
 
-    validateSetScores(body);
-
     const matchDoc = await db().collection("matches").doc(matchId).get();
     if (!matchDoc.exists) {
       res.status(404).json({ error: "Match not found" });
@@ -80,6 +80,17 @@ router.post("/:matchId/submit-score", async (req, res) => {
       res.status(400).json({ error: "Score already submitted for this match" });
       return;
     }
+
+    // Scores are validated against the tournament's sport and scoring rules
+    // (scoringConfigData), exactly as the apps validate them.
+    const tDoc = await db().collection("tournaments").doc(match.tournamentId).get();
+    if (!tDoc.exists) {
+      res.status(404).json({ error: "Tournament not found" });
+      return;
+    }
+    const tournament = tDoc.data() as TournamentDoc;
+    const sport = parseSportType(tournament.sportType);
+    validateSetScores(body, sport, resolveScoring(tournament.scoringConfigData, sport));
 
     // Verify the submitter is part of this match
     const player = await findPlayerByUid(req.uid!);
@@ -103,28 +114,24 @@ router.post("/:matchId/submit-score", async (req, res) => {
       isPlayerInRegistration(teamA, player.id) ||
       isPlayerInRegistration(teamB, player.id);
 
-    if (!isInMatch) {
-      // Also allow tournament organizer to submit
-      const tDoc = await db().collection("tournaments").doc(match.tournamentId).get();
-      const tournament = tDoc.data() as TournamentDoc;
-      if (tournament.createdBy !== req.uid!) {
-        res.status(403).json({ error: "Only match participants or the organizer can submit scores" });
-        return;
-      }
+    // Also allow the tournament organizer to submit
+    if (!isInMatch && tournament.createdBy !== req.uid!) {
+      res.status(403).json({ error: "Only match participants or the organizer can submit scores" });
+      return;
     }
 
-    // Calculate sets won
+    // Games won per side (validation guarantees no tied games).
     let setsWonA = 0;
     let setsWonB = 0;
     for (const set of body.setScores) {
       if (set.teamAPoints > set.teamBPoints) setsWonA++;
-      else setsWonB++;
+      else if (set.teamBPoints > set.teamAPoints) setsWonB++;
     }
 
-    // Determine winner
-    let winnerRegistrationId: string | undefined;
-    if (setsWonA > setsWonB) winnerRegistrationId = match.teamAId;
-    else if (setsWonB > setsWonA) winnerRegistrationId = match.teamBId;
+    // Winner: the side that won the match (same rule as services/elo.ts).
+    const winnerSide = matchWinner(body.setScores);
+    const winnerRegistrationId =
+      winnerSide === "A" ? match.teamAId : winnerSide === "B" ? match.teamBId : undefined;
 
     const updateData: Record<string, unknown> = {
       setScores: body.setScores,

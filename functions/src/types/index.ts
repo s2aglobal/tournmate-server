@@ -211,6 +211,13 @@ export interface TournamentDoc {
   postalCode?: string;
   timeZone?: string;
   formatConfigData?: string;
+  /**
+   * JSON-encoded scoring settings written by the apps, e.g.
+   * {"gamesPerMatch":3,"pointsToWin":21,"winBy":2,"pointCap":30,"scoringSystem":"rally"}.
+   * Absent on tournaments created before scoring settings; those are scored
+   * leniently. See services/scoring.ts.
+   */
+  scoringConfigData?: string;
   ageGroupRaw?: string;
   createdAt: Timestamp;
 }
