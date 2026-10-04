@@ -171,7 +171,7 @@ export function validateSetScores(
       validateGenericScores(body);
       break;
     // Every other catalog sport (padel, squash, volleyball, beach_volleyball,
-    // basketball, soccer, cricket, golf, bowling, darts) and the legacy
+    // basketball, soccer, cricket, roundnet, golf, disc_golf, bowling, darts) and the legacy
     // football/generic ids use the generic rules until they get their own.
     default:
       validateGenericScores(body);

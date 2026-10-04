@@ -45,12 +45,12 @@ export const DEFAULT_SPORTS_CONFIG: SportsConfig = {
     {
       id: "court_field",
       title: "Court & Field",
-      sports: ["volleyball", "beach_volleyball", "basketball", "soccer", "cricket"],
+      sports: ["volleyball", "beach_volleyball", "basketball", "soccer", "cricket", "roundnet"],
     },
     {
       id: "target_more",
       title: "Target & More",
-      sports: ["golf", "bowling", "darts"],
+      sports: ["golf", "disc_golf", "bowling", "darts"],
     },
   ],
 };

@@ -20,7 +20,9 @@ export type SportType =
   | "football"
   | "soccer"
   | "cricket"
+  | "roundnet"
   | "golf"
+  | "disc_golf"
   | "bowling"
   | "darts"
   | "generic";
@@ -30,7 +32,7 @@ export const DEFAULT_SPORT: SportType = "badminton";
 export const SPORT_TYPES: readonly SportType[] = [
   "badminton", "pickleball", "tennis", "padel", "table_tennis", "squash",
   "volleyball", "beach_volleyball", "basketball", "football", "soccer",
-  "cricket", "golf", "bowling", "darts", "generic",
+  "cricket", "roundnet", "golf", "disc_golf", "bowling", "darts", "generic",
 ];
 
 export const SPORT_LABELS: Record<SportType, { name: string; emoji: string }> = {
@@ -46,7 +48,9 @@ export const SPORT_LABELS: Record<SportType, { name: string; emoji: string }> = 
   football: { name: "Football", emoji: "🏈" },
   soccer: { name: "Soccer", emoji: "⚽" },
   cricket: { name: "Cricket", emoji: "🏏" },
+  roundnet: { name: "Roundnet", emoji: "🟡" },
   golf: { name: "Golf", emoji: "⛳" },
+  disc_golf: { name: "Disc Golf", emoji: "🥏" },
   bowling: { name: "Bowling", emoji: "🎳" },
   darts: { name: "Darts", emoji: "🎯" },
   generic: { name: "Sports", emoji: "🏆" },
