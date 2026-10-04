@@ -77,9 +77,12 @@ async function checkElo(db: Firestore): Promise<boolean> {
   const before = new Map<string, number>();
   for (const id of [...winners, ...losers]) before.set(id, await rating(id));
 
+  // Attach the test match to the standings-free "QA RegCount Trigger" tournament so it
+  // doesn't add a result to the head-to-head tables being checked on the devices.
+  const host = await qaTournament(db, "QA RegCount Trigger");
   const matchId = randomUUID().toUpperCase();
   const ref = db.collection("matches").doc(matchId);
-  const scheduled: Record<string, unknown> = { ...m, statusRaw: "scheduled", qaSeed: true };
+  const scheduled: Record<string, unknown> = { ...m, tournamentId: host.id, statusRaw: "scheduled", qaSeed: true };
   for (const k of ["setScores", "scoreA", "scoreB", "winnerRegistrationId", "eloApplied"]) delete scheduled[k];
   await ref.set(scheduled);
   await sleep(3000);
