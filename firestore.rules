@@ -89,9 +89,10 @@ service cloud.firestore {
         && resource.data.firebaseUid == request.auth.uid
         && unchanged('firebaseUid')
         && unchanged('email')
-        && unchanged('elo')
-        && unchanged('streak')
-        && unchanged('createdAt')
+        // Optional on older player docs: unchanged() errors (deny) on a missing field.
+        && unchangedOptional('elo')
+        && unchangedOptional('streak')
+        && unchangedOptional('createdAt')
         && onlyUpdates(['name', 'phone', 'genderRaw', 'avatarId',
             'homeCountryCode', 'homePostalCode', 'weightKg',
             'dateOfBirth', 'fcmToken', 'preferredSport',
@@ -154,9 +155,11 @@ service cloud.firestore {
         && unchanged('tournamentId')
         && unchanged('teamAId')
         && unchanged('teamBId')
-        && unchanged('round')
-        && unchanged('bracketPosition')
-        && unchanged('createdAt');
+        // round/bracketPosition/createdAt are absent on round-robin, group, Swiss and
+        // manual-draw matches; unchanged() would error and deny every score update.
+        && unchangedOptional('round')
+        && unchangedOptional('bracketPosition')
+        && unchangedOptional('createdAt');
 
       // Organizer can delete matches (reset bracket)
       allow delete: if isAuthenticated();
