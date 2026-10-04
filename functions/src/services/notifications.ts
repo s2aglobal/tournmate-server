@@ -1,9 +1,26 @@
 import { getMessaging } from "firebase-admin/messaging";
 import { logger } from "firebase-functions/v2";
+import { SportType, DEFAULT_SPORT } from "../types";
+
+// ─── Topic names ────────────────────────────────────────
+// Badminton keeps the original topic names so app versions from before
+// multi-sport (which only subscribe to those) keep receiving them. Other
+// sports use sport-suffixed topics. The apps subscribe to the original
+// topics only while the player's sport is badminton, so nobody gets
+// another sport's notifications or duplicates.
+
+export function regionTopicName(countryCode: string, postalCode: string, sport: SportType = DEFAULT_SPORT): string {
+  return sport === "badminton"
+    ? `region_${countryCode}_${postalCode}`
+    : `region_${countryCode}_${postalCode}_${sport}`;
+}
+
+export function countryTopicName(countryCode: string, sport: SportType = DEFAULT_SPORT): string {
+  return sport === "badminton" ? `country_${countryCode}` : `country_${countryCode}_${sport}`;
+}
 
 /**
- * Sends a push notification to an FCM topic.
- * Topic naming: `region_{countryCode}_{postalCode}`
+ * Sends a push notification to a sport's regional topic (see `regionTopicName`).
  */
 export async function sendToRegionTopic(
   countryCode: string,
@@ -11,8 +28,9 @@ export async function sendToRegionTopic(
   title: string,
   body: string,
   data?: Record<string, string>,
+  sport: SportType = DEFAULT_SPORT,
 ): Promise<void> {
-  const topic = `region_${countryCode}_${postalCode}`;
+  const topic = regionTopicName(countryCode, postalCode, sport);
   try {
     await getMessaging().send({
       topic,
@@ -42,11 +60,12 @@ export async function sendToRegionTopicExcluding(
   title: string,
   body: string,
   data?: Record<string, string>,
+  sport: SportType = DEFAULT_SPORT,
 ): Promise<void> {
-  const regionTopic = `region_${countryCode}_${postalCode}`;
+  const regionTopic = regionTopicName(countryCode, postalCode, sport);
 
   if (!excludeUid) {
-    return sendToRegionTopic(countryCode, postalCode, title, body, data);
+    return sendToRegionTopic(countryCode, postalCode, title, body, data, sport);
   }
 
   const userTopic = `user_${excludeUid}`;
@@ -81,9 +100,10 @@ export async function sendToCountryTopic(
   title: string,
   body: string,
   data?: Record<string, string>,
+  sport: SportType = DEFAULT_SPORT,
 ): Promise<void> {
-  const countryTopic = `country_${countryCode}`;
-  const regionTopic = `region_${countryCode}_${postalCode}`;
+  const countryTopic = countryTopicName(countryCode, sport);
+  const regionTopic = regionTopicName(countryCode, postalCode, sport);
 
   try {
     await getMessaging().send({
@@ -118,18 +138,19 @@ export async function sendToCountryTopicExcluding(
   title: string,
   body: string,
   data?: Record<string, string>,
+  sport: SportType = DEFAULT_SPORT,
 ): Promise<void> {
-  const countryTopic = `country_${countryCode}`;
+  const countryTopic = countryTopicName(countryCode, sport);
 
   if (!excludeUid) {
-    return sendToCountryTopic(countryCode, postalCode, title, body, data);
+    return sendToCountryTopic(countryCode, postalCode, title, body, data, sport);
   }
 
   const userTopic = `user_${excludeUid}`;
   let condition: string;
 
   if (postalCode) {
-    const regionTopic = `region_${countryCode}_${postalCode}`;
+    const regionTopic = regionTopicName(countryCode, postalCode, sport);
     condition = `'${countryTopic}' in topics && !('${regionTopic}' in topics) && !('${userTopic}' in topics)`;
   } else {
     condition = `'${countryTopic}' in topics && !('${userTopic}' in topics)`;

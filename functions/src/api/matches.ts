@@ -8,7 +8,6 @@ import {
   RegistrationDoc,
   PlayerDoc,
 } from "../types";
-import { calculateEloChange } from "../services/elo";
 
 const router = Router();
 const db = () => getFirestore();
@@ -187,12 +186,8 @@ router.post("/:matchId/confirm", async (req, res) => {
       statusRaw: "finished",
     };
 
+    // Elo and streaks are applied by the onMatchFinished trigger.
     await matchDoc.ref.update(updateData);
-
-    // Apply ELO changes
-    if (match.winnerRegistrationId) {
-      await applyEloChanges(match);
-    }
 
     res.json({ message: "Score confirmed, match finalized" });
   } catch (err) {
@@ -232,74 +227,5 @@ router.post("/:matchId/dispute", async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 });
-
-/**
- * Applies ELO rating changes after a confirmed match.
- * Collects all players from winning and losing teams, updates ratings and streaks.
- */
-async function applyEloChanges(match: MatchDoc): Promise<void> {
-  if (!match.winnerRegistrationId) return;
-
-  const winnerTeamId = match.winnerRegistrationId;
-  const loserTeamId =
-    winnerTeamId === match.teamAId ? match.teamBId : match.teamAId;
-
-  const winnerReg = await db().collection("registrations").doc(winnerTeamId).get();
-  const loserReg = await db().collection("registrations").doc(loserTeamId).get();
-
-  if (!winnerReg.exists || !loserReg.exists) return;
-
-  const wData = winnerReg.data() as RegistrationDoc;
-  const lData = loserReg.data() as RegistrationDoc;
-
-  // Collect all player IDs
-  const winnerIds = [wData.playerId, wData.partnerId].filter(Boolean) as string[];
-  const loserIds = [lData.playerId, lData.partnerId].filter(Boolean) as string[];
-
-  // Fetch all players
-  const allIds = [...winnerIds, ...loserIds];
-  const playerDocs = await Promise.all(
-    allIds.map((id) => db().collection("players").doc(id).get()),
-  );
-  const playerMap = new Map<string, { ref: FirebaseFirestore.DocumentReference; data: PlayerDoc }>();
-  for (const doc of playerDocs) {
-    if (doc.exists) {
-      playerMap.set(doc.id, { ref: doc.ref, data: doc.data() as PlayerDoc });
-    }
-  }
-
-  // Calculate and apply ELO for each winner-loser pair
-  for (const wId of winnerIds) {
-    for (const lId of loserIds) {
-      const winner = playerMap.get(wId);
-      const loser = playerMap.get(lId);
-      if (!winner || !loser) continue;
-
-      const { winnerDelta, loserDelta } = calculateEloChange(
-        winner.data.elo,
-        loser.data.elo,
-      );
-      winner.data.elo += winnerDelta;
-      loser.data.elo += loserDelta;
-    }
-  }
-
-  // Update streaks and persist
-  const batch = db().batch();
-  for (const wId of winnerIds) {
-    const p = playerMap.get(wId);
-    if (!p) continue;
-    p.data.streak = Math.max(p.data.streak, 0) + 1;
-    batch.update(p.ref, { elo: p.data.elo, streak: p.data.streak });
-  }
-  for (const lId of loserIds) {
-    const p = playerMap.get(lId);
-    if (!p) continue;
-    p.data.streak = Math.min(p.data.streak, 0) - 1;
-    batch.update(p.ref, { elo: p.data.elo, streak: p.data.streak });
-  }
-
-  await batch.commit();
-}
 
 export default router;

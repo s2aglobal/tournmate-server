@@ -3,6 +3,7 @@ import { logger } from "firebase-functions/v2";
 import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
 import { TournamentDoc } from "../types";
 import { sendToRegionTopicExcluding, sendToCountryTopicExcluding } from "../services/notifications";
+import { parseSportType, sportName, sportEmoji } from "../types";
 
 const MAX_CREATES_PER_DAY = 5;
 
@@ -55,6 +56,10 @@ export const onTournamentCreated = onDocumentCreated(
     });
     const fullDateStr = `${dateStr} at ${timeStr}`;
 
+    // Notify players of this sport only (badminton uses the original topics).
+    const sport = parseSportType(data.sportType);
+    const emoji = sportEmoji(sport);
+
     // Exclude the creator from receiving their own notification
     const creatorUid = data.createdBy || "";
 
@@ -65,9 +70,10 @@ export const onTournamentCreated = onDocumentCreated(
         data.countryCode,
         data.postalCode,
         creatorUid,
-        "New Tournament Near You! 🏸",
+        `New ${sportName(sport)} Tournament Near You! ${emoji}`,
         `${data.title} on ${fullDateStr} at ${data.location}`,
         { type: "tournament_created", tournamentId, createdBy: creatorUid },
+        sport,
       );
 
       // Country-wide (different ZIP or no ZIP) — includes city/location
@@ -75,18 +81,20 @@ export const onTournamentCreated = onDocumentCreated(
         data.countryCode,
         data.postalCode,
         creatorUid,
-        `New Tournament in ${data.location}! 🏸`,
+        `New ${sportName(sport)} Tournament in ${data.location}! ${emoji}`,
         `${data.title} on ${fullDateStr}`,
         { type: "tournament_created", tournamentId, createdBy: creatorUid },
+        sport,
       );
     } else if (data.countryCode) {
       await sendToCountryTopicExcluding(
         data.countryCode,
         "",
         creatorUid,
-        `New Tournament in ${data.location}! 🏸`,
+        `New ${sportName(sport)} Tournament in ${data.location}! ${emoji}`,
         `${data.title} on ${fullDateStr}`,
         { type: "tournament_created", tournamentId, createdBy: creatorUid },
+        sport,
       );
     }
 

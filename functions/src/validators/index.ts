@@ -154,7 +154,7 @@ export function validateSetScores(
       validatePickleballScores(body);
       break;
     case "tennis":
-    case "tableTennis":
+    case "table_tennis":
       // Placeholder: accept any valid scores for now
       validateGenericScores(body);
       break;

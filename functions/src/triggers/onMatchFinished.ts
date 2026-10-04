@@ -3,6 +3,7 @@ import { logger } from "firebase-functions/v2";
 import { getFirestore } from "firebase-admin/firestore";
 import { MatchDoc, RegistrationDoc, PlayerDoc } from "../types";
 import { sendToPlayer } from "../services/notifications";
+import { applyEloForMatch } from "../services/elo";
 
 /**
  * Fires when a match document is updated.
@@ -22,6 +23,16 @@ export const onMatchFinished = onDocumentUpdated(
     logger.info(`Match finished: ${event.params.matchId}`);
 
     const db = getFirestore();
+
+    // Ratings are server-authoritative: security rules don't let clients
+    // write elo/eloRatings/streak. Idempotent via match.eloApplied.
+    if (event.data?.after.ref) {
+      try {
+        await applyEloForMatch(db, event.data.after.ref);
+      } catch (err) {
+        logger.error(`Elo update failed for match ${event.params.matchId}:`, err);
+      }
+    }
 
     // Get both teams
     const [teamADoc, teamBDoc] = await Promise.all([
