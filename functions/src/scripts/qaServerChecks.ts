@@ -31,10 +31,17 @@ async function waitFor(fn: () => Promise<boolean>, timeoutMs = 45000): Promise<b
   return false;
 }
 
+/** First QA tournament whose title is `title` or starts with it (seed adds " · iOS" / " · Android"). */
 async function qaTournament(db: Firestore, title: string) {
-  const snap = await db.collection("tournaments").where("qaSeed", "==", true).where("title", "==", title).limit(1).get();
-  if (snap.empty) throw new Error(`QA tournament "${title}" not found — run seedQaTournaments first.`);
-  return snap.docs[0];
+  const snap = await db.collection("tournaments").where("qaSeed", "==", true).get();
+  const doc = snap.docs
+    .filter((d) => {
+      const t = d.get("title") as string | undefined;
+      return t === title || (t?.startsWith(`${title} ·`) ?? false);
+    })
+    .sort((a, b) => String(a.get("title")).localeCompare(String(b.get("title"))))[0];
+  if (!doc) throw new Error(`QA tournament "${title}" not found — run seedQaTournaments first.`);
+  return doc;
 }
 
 async function checkRegistrationCount(db: Firestore): Promise<boolean> {
