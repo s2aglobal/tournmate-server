@@ -27,6 +27,11 @@ service cloud.firestore {
       return request.resource.data[field] == resource.data[field];
     }
 
+    // Like unchanged(), but safe when the field is absent on either side.
+    function unchangedOptional(field) {
+      return request.resource.data.get(field, null) == resource.data.get(field, null);
+    }
+
     // ─── Sport catalog ──────────────────────────────────
     // `config/sports.live` lists the sports that can be published right now
     // (see functions/src/config/sportsCatalog.ts). If the doc is missing, or
@@ -106,12 +111,15 @@ service cloud.firestore {
         && request.resource.data.title.size() <= 100
         && isNonEmptyString(request.resource.data.location)
         && request.resource.data.date is timestamp
-        && hasLiveSportOrNone();
+        && hasLiveSportOrNone()
+        // registrationCount is server-maintained (registration triggers).
+        && !('registrationCount' in request.resource.data);
 
       // Only the organizer can update, and they cannot change createdBy
       allow update: if isAuthenticated()
         && resource.data.createdBy == request.auth.uid
         && unchanged('createdBy')
+        && unchangedOptional('registrationCount')
         && sportUnchangedOrLive();
 
       allow delete: if isAuthenticated()

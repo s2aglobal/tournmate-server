@@ -187,6 +187,8 @@ export interface PlayerDoc {
 
 export interface TournamentDoc {
   title: string;
+  /** Server-maintained count of registrations (see services/registrationCount.ts). */
+  registrationCount?: number;
   date: Timestamp;
   location: string;
   locationAddress: string;
