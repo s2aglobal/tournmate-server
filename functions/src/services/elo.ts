@@ -133,6 +133,15 @@ export async function applyEloForMatch(db: Firestore, matchRef: DocumentReferenc
 
     const tournament = tournamentSnap.data() as TournamentDoc | undefined;
     const sport = parseSportType(match.sportType ?? tournament?.sportType);
+    if (sport === "generic") {
+      // Unknown (or explicitly generic) sport: don't rate it, so ratings for
+      // sports we don't know yet never pollute anyone's eloRatings. Mark it
+      // applied so retries and re-finishes don't re-evaluate it.
+      const rawSport = match.sportType ?? tournament?.sportType;
+      logger.info(`Match ${matchRef.id}: sport ${JSON.stringify(rawSport)} parses as generic; skipping Elo.`);
+      tx.update(matchRef, { eloApplied: true });
+      return;
+    }
 
     const teamIds = (reg: RegistrationDoc) => [reg.playerId, reg.partnerId].filter(Boolean) as string[];
     const winners = await loadPlayers(db, tx, teamIds(winnerReg.data() as RegistrationDoc));

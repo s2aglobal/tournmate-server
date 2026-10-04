@@ -1,39 +1,60 @@
 import { Timestamp } from "firebase-admin/firestore";
+import { logger } from "firebase-functions/v2";
 
 // ─── Sport Types ────────────────────────────────────────
 
 // Raw values match the iOS/Android `SportType` enums exactly.
+// The sport catalog (which of these are offered, and which are live) is
+// `config/sports` — see `config/sportsCatalog.ts`. `football` and `generic`
+// are legacy/fallback ids that are not in the catalog.
 export type SportType =
   | "badminton"
   | "pickleball"
   | "tennis"
+  | "padel"
   | "table_tennis"
+  | "squash"
   | "volleyball"
+  | "beach_volleyball"
   | "basketball"
   | "football"
   | "soccer"
   | "cricket"
+  | "golf"
+  | "bowling"
+  | "darts"
   | "generic";
 
 export const DEFAULT_SPORT: SportType = "badminton";
 
-const SPORT_TYPES: readonly SportType[] = [
-  "badminton", "pickleball", "tennis", "table_tennis", "volleyball",
-  "basketball", "football", "soccer", "cricket", "generic",
+export const SPORT_TYPES: readonly SportType[] = [
+  "badminton", "pickleball", "tennis", "padel", "table_tennis", "squash",
+  "volleyball", "beach_volleyball", "basketball", "football", "soccer",
+  "cricket", "golf", "bowling", "darts", "generic",
 ];
 
-const SPORT_LABELS: Record<SportType, { name: string; emoji: string }> = {
+export const SPORT_LABELS: Record<SportType, { name: string; emoji: string }> = {
   badminton: { name: "Badminton", emoji: "🏸" },
   pickleball: { name: "Pickleball", emoji: "🏓" },
   tennis: { name: "Tennis", emoji: "🎾" },
+  padel: { name: "Padel", emoji: "🎾" },
   table_tennis: { name: "Table Tennis", emoji: "🏓" },
+  squash: { name: "Squash", emoji: "🟢" },
   volleyball: { name: "Volleyball", emoji: "🏐" },
+  beach_volleyball: { name: "Beach Volleyball", emoji: "🏐" },
   basketball: { name: "Basketball", emoji: "🏀" },
   football: { name: "Football", emoji: "🏈" },
   soccer: { name: "Soccer", emoji: "⚽" },
   cricket: { name: "Cricket", emoji: "🏏" },
+  golf: { name: "Golf", emoji: "⛳" },
+  bowling: { name: "Bowling", emoji: "🎳" },
+  darts: { name: "Darts", emoji: "🎯" },
   generic: { name: "Sports", emoji: "🏆" },
 };
+
+export function isSportType(raw: unknown): raw is SportType {
+  return typeof raw === "string" && SPORT_TYPES.includes(raw as SportType);
+}
 
 export function sportName(sport: SportType): string {
   return SPORT_LABELS[sport].name;
@@ -43,9 +64,19 @@ export function sportEmoji(sport: SportType): string {
   return SPORT_LABELS[sport].emoji;
 }
 
-/** Parses a stored sport value; missing or unknown values mean badminton (pre-multi-sport data). */
+/**
+ * Parses a stored sport value.
+ * - Missing (undefined/null/empty) → badminton: pre-multi-sport docs have no sportType.
+ * - Known id → itself.
+ * - Unknown non-empty value (e.g. written by a newer app) → `generic`, with a warning.
+ *   Never coerce unknown values to badminton, or they would leak into badminton
+ *   topics and ratings. Callers must not broadcast region/country pushes for `generic`.
+ */
 export function parseSportType(raw: unknown): SportType {
-  return SPORT_TYPES.includes(raw as SportType) ? (raw as SportType) : DEFAULT_SPORT;
+  if (raw === undefined || raw === null || raw === "") return DEFAULT_SPORT;
+  if (isSportType(raw)) return raw;
+  logger.warn(`parseSportType: unknown sport ${JSON.stringify(raw)}; treating as generic.`);
+  return "generic";
 }
 
 // ─── Enums ──────────────────────────────────────────────

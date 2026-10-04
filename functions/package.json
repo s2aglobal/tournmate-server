@@ -10,7 +10,8 @@
     "deploy": "firebase deploy --only functions",
     "logs": "firebase functions:log",
     "lint": "eslint src/ --ext .ts",
-    "seed:test-users": "npm run build && node lib/scripts/seedTestUsers.js"
+    "seed:test-users": "npm run build && node lib/scripts/seedTestUsers.js",
+    "seed:sports-config": "npm run build && node lib/scripts/seedSportsConfig.js"
   },
   "engines": {
     "node": "20"

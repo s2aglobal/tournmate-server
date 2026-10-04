@@ -20,6 +20,22 @@ export function countryTopicName(countryCode: string, sport: SportType = DEFAULT
 }
 
 /**
+ * Whether region/country topic broadcasts make sense for this sport.
+ * `generic` is what `parseSportType` returns for unknown sport ids; no app
+ * subscribes to `*_generic` topics, so broadcasting would be wasted (and would
+ * tell nobody anything useful). Per-user pushes (`sendToPlayer`) are unaffected.
+ */
+export function canBroadcastSport(sport: SportType): boolean {
+  return sport !== "generic";
+}
+
+function skipBroadcast(kind: string, sport: SportType): boolean {
+  if (canBroadcastSport(sport)) return false;
+  logger.info(`Skipping ${kind} broadcast for sport "${sport}" (no app subscribes to it).`);
+  return true;
+}
+
+/**
  * Sends a push notification to a sport's regional topic (see `regionTopicName`).
  */
 export async function sendToRegionTopic(
@@ -30,6 +46,7 @@ export async function sendToRegionTopic(
   data?: Record<string, string>,
   sport: SportType = DEFAULT_SPORT,
 ): Promise<void> {
+  if (skipBroadcast("region", sport)) return;
   const topic = regionTopicName(countryCode, postalCode, sport);
   try {
     await getMessaging().send({
@@ -62,6 +79,7 @@ export async function sendToRegionTopicExcluding(
   data?: Record<string, string>,
   sport: SportType = DEFAULT_SPORT,
 ): Promise<void> {
+  if (skipBroadcast("region", sport)) return;
   const regionTopic = regionTopicName(countryCode, postalCode, sport);
 
   if (!excludeUid) {
@@ -102,6 +120,7 @@ export async function sendToCountryTopic(
   data?: Record<string, string>,
   sport: SportType = DEFAULT_SPORT,
 ): Promise<void> {
+  if (skipBroadcast("country", sport)) return;
   const countryTopic = countryTopicName(countryCode, sport);
   const regionTopic = regionTopicName(countryCode, postalCode, sport);
 
@@ -140,6 +159,7 @@ export async function sendToCountryTopicExcluding(
   data?: Record<string, string>,
   sport: SportType = DEFAULT_SPORT,
 ): Promise<void> {
+  if (skipBroadcast("country", sport)) return;
   const countryTopic = countryTopicName(countryCode, sport);
 
   if (!excludeUid) {

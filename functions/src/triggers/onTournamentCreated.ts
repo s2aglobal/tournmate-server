@@ -64,7 +64,14 @@ export const onTournamentCreated = onDocumentCreated(
     const creatorUid = data.createdBy || "";
 
     // --- Send push notifications ---
-    if (data.countryCode && data.postalCode) {
+    // Unknown sports parse as `generic`; nobody subscribes to generic topics,
+    // so skip the region/country broadcast (the creator's inbox doc below still goes out).
+    if (sport === "generic") {
+      logger.info(
+        `Tournament ${tournamentId}: sport ${JSON.stringify(data.sportType)} parses as generic; ` +
+        "skipping region/country broadcast.",
+      );
+    } else if (data.countryCode && data.postalCode) {
       // Regional (same ZIP) — "near you" message
       await sendToRegionTopicExcluding(
         data.countryCode,

@@ -27,6 +27,47 @@ service cloud.firestore {
       return request.resource.data[field] == resource.data[field];
     }
 
+    // ─── Sport catalog ──────────────────────────────────
+    // `config/sports.live` lists the sports that can be published right now
+    // (see functions/src/config/sportsCatalog.ts). If the doc is missing, or
+    // `live` isn't a list, fall back to the launch set — the same default the
+    // apps bundle.
+    //
+    // Access-call budget: this does at most one exists() + one get() on the
+    // same document (config/sports) per create. Firestore allows 10 document
+    // access calls per single-document request (20 for batches/transactions),
+    // and nothing else in these create rules calls get()/exists(), so we stay
+    // far under the limit. Keep any new get() calls in mind if you extend this.
+    function launchLiveSports() {
+      return ['pickleball', 'badminton', 'tennis'];
+    }
+
+    function liveSportsFrom(cfg) {
+      return cfg.data.get('live', null) is list ? cfg.data.live : launchLiveSports();
+    }
+
+    function liveSports() {
+      let cfgPath = /databases/$(database)/documents/config/sports;
+      return exists(cfgPath) ? liveSportsFrom(get(cfgPath)) : launchLiveSports();
+    }
+
+    // Creates may omit sportType (legacy clients: means badminton). If it is
+    // present it must be a currently live sport.
+    function hasLiveSportOrNone() {
+      return !('sportType' in request.resource.data)
+        || request.resource.data.sportType in liveSports();
+    }
+
+    // Updates may keep the existing sportType (even one that is no longer live),
+    // but may only change it to a currently live sport. The get() runs only
+    // when sportType actually changes.
+    function sportUnchangedOrLive() {
+      return !('sportType' in request.resource.data)
+        || ('sportType' in resource.data
+            && request.resource.data.sportType == resource.data.sportType)
+        || request.resource.data.sportType in liveSports();
+    }
+
     // ─── Players ────────────────────────────────────────
     match /players/{playerId} {
       allow read: if true;
@@ -64,12 +105,14 @@ service cloud.firestore {
         && request.resource.data.title.size() >= 3
         && request.resource.data.title.size() <= 100
         && isNonEmptyString(request.resource.data.location)
-        && request.resource.data.date is timestamp;
+        && request.resource.data.date is timestamp
+        && hasLiveSportOrNone();
 
       // Only the organizer can update, and they cannot change createdBy
       allow update: if isAuthenticated()
         && resource.data.createdBy == request.auth.uid
-        && unchanged('createdBy');
+        && unchanged('createdBy')
+        && sportUnchangedOrLive();
 
       allow delete: if isAuthenticated()
         && resource.data.createdBy == request.auth.uid;
@@ -140,10 +183,12 @@ service cloud.firestore {
       allow create: if isAuthenticated()
         && request.resource.data.hostId == request.auth.uid
         && isNonEmptyString(request.resource.data.venue)
-        && request.resource.data.date is timestamp;
+        && request.resource.data.date is timestamp
+        && hasLiveSportOrNone();
 
       allow update: if isAuthenticated()
-        && unchanged('hostId');
+        && unchanged('hostId')
+        && sportUnchangedOrLive();
 
       allow delete: if isAuthenticated()
         && resource.data.hostId == request.auth.uid;
@@ -169,9 +214,10 @@ service cloud.firestore {
     }
 
     // ─── App Config ─────────────────────────────────────
-    // `config/app` holds the minimum supported app versions. Readable before
-    // sign-in so the update gate can run on the welcome screen. Edited only
-    // from the Firebase console / Admin SDK.
+    // `config/app` holds the minimum supported app versions; `config/sports`
+    // holds the sport catalog (live vs soon, categories). Readable before
+    // sign-in so the update gate and sport picker can run on the welcome
+    // screen. Edited only from the Firebase console / Admin SDK.
     match /config/{docId} {
       allow read: if true;
       allow write: if false;

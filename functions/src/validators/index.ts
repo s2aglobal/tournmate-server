@@ -7,9 +7,11 @@ import {
   MatchFormat,
   SportType,
   DEFAULT_SPORT,
+  isSportType,
   AgeGroup,
   AGE_GROUP_RULES,
 } from "../types";
+import { CATALOG_SPORT_IDS } from "../config/sportsCatalog";
 
 export class ValidationError extends Error {
   constructor(
@@ -98,6 +100,16 @@ export function validateCreateTournament(body: CreateTournamentBody): void {
     );
   }
 
+  // Any catalog sport id (plus the legacy football/generic ids) is accepted
+  // here. Whether a sport is currently *live* is enforced by firestore.rules
+  // against config/sports, not by this validator.
+  if (body.sportType !== undefined && !isSportType(body.sportType)) {
+    throw new ValidationError(
+      "sportType",
+      `Invalid sport. Must be one of: ${CATALOG_SPORT_IDS.join(", ")}`,
+    );
+  }
+
   if (body.ageGroup && !(body.ageGroup in AGE_GROUP_RULES)) {
     throw new ValidationError(
       "ageGroup",
@@ -158,6 +170,9 @@ export function validateSetScores(
       // Placeholder: accept any valid scores for now
       validateGenericScores(body);
       break;
+    // Every other catalog sport (padel, squash, volleyball, beach_volleyball,
+    // basketball, soccer, cricket, golf, bowling, darts) and the legacy
+    // football/generic ids use the generic rules until they get their own.
     default:
       validateGenericScores(body);
   }

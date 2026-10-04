@@ -63,7 +63,14 @@ export const onPlaySessionCreated = onDocumentCreated(
     const creatorUid = data.hostId || "";
 
     // --- Send push notifications ---
-    if (data.countryCode && data.postalCode) {
+    // Unknown sports parse as `generic`; nobody subscribes to generic topics,
+    // so skip the region/country broadcast (the creator's inbox doc below still goes out).
+    if (sport === "generic") {
+      logger.info(
+        `Session ${sessionId}: sport ${JSON.stringify(data.sportType)} parses as generic; ` +
+        "skipping region/country broadcast.",
+      );
+    } else if (data.countryCode && data.postalCode) {
       // Regional (same ZIP)
       await sendToRegionTopicExcluding(
         data.countryCode,
