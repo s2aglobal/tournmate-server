@@ -1,7 +1,7 @@
 import { onDocumentUpdated } from "firebase-functions/v2/firestore";
 import { logger } from "firebase-functions/v2";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
-import { PlayerDoc } from "../types";
+import { PlayerDoc, parseSportType, sportEmoji } from "../types";
 import { sendToPlayer } from "../services/notifications";
 
 /**
@@ -22,6 +22,7 @@ export const onSessionJoined = onDocumentUpdated(
     const db = getFirestore();
     const sessionId = event.params.sessionId;
     const sessionTitle = (after.title as string) || "Open Play";
+    const joinedTitle = `Player Joined! ${sportEmoji(parseSportType(after.sportType))}`;
 
     // --- Session FINISHED (status changed to completed) ---
     const beforeStatus = before.status as string | undefined;
@@ -93,7 +94,7 @@ export const onSessionJoined = onDocumentUpdated(
       await db.collection("notifications").add({
         recipientId: hostId,
         type: "session_joined",
-        title: "Player Joined! 🏸",
+        title: joinedTitle,
         body: `${joinText} "${sessionTitle}"`,
         sessionId,
         read: false,
@@ -112,7 +113,7 @@ export const onSessionJoined = onDocumentUpdated(
         if (hostPlayer.fcmToken) {
           await sendToPlayer(
             hostPlayer.fcmToken,
-            "Player Joined! 🏸",
+            joinedTitle,
             `${joinText} "${sessionTitle}"`,
             { type: "session_joined", sessionId },
           );

@@ -197,6 +197,23 @@ To add a new sport:
 
 Everything else (players, registrations, ratings, notifications, ELO) works across all sports.
 
+### Sport catalog (`config/sports`)
+
+The apps read `config/sports` to decide which sports are Live vs Soon and how the
+picker is grouped. The server default lives in `functions/src/config/sportsCatalog.ts`;
+`firestore.rules` only allows creating tournaments / play sessions whose `sportType`
+is in `config/sports.live` (or the launch set pickleball/badminton/tennis if the doc
+is missing). Unknown sport ids parse as `generic`: no region/country broadcasts and
+no Elo for them.
+
+Seed the doc (writes only if missing; `--force` overwrites, `--dry-run` prints):
+
+```bash
+cd functions
+npm run seed:sports-config -- --project tournmate-dev
+npm run seed:sports-config -- --project tournmate-prod
+```
+
 ## Cross-Platform
 
 This API serves all client platforms identically:

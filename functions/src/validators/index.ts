@@ -7,9 +7,16 @@ import {
   MatchFormat,
   SportType,
   DEFAULT_SPORT,
+  isSportType,
   AgeGroup,
   AGE_GROUP_RULES,
 } from "../types";
+import { CATALOG_SPORT_IDS } from "../config/sportsCatalog";
+import {
+  ResolvedScoring,
+  defaultScoringConfig,
+  validateMatchScores,
+} from "../services/scoring";
 
 export class ValidationError extends Error {
   constructor(
@@ -98,6 +105,16 @@ export function validateCreateTournament(body: CreateTournamentBody): void {
     );
   }
 
+  // Any catalog sport id (plus the legacy football/generic ids) is accepted
+  // here. Whether a sport is currently *live* is enforced by firestore.rules
+  // against config/sports, not by this validator.
+  if (body.sportType !== undefined && !isSportType(body.sportType)) {
+    throw new ValidationError(
+      "sportType",
+      `Invalid sport. Must be one of: ${CATALOG_SPORT_IDS.join(", ")}`,
+    );
+  }
+
   if (body.ageGroup && !(body.ageGroup in AGE_GROUP_RULES)) {
     throw new ValidationError(
       "ageGroup",
@@ -136,106 +153,22 @@ export function validateCreateTournament(body: CreateTournamentBody): void {
 }
 
 // ─── Score Validators ───────────────────────────────────
-// Dispatches to sport-specific rules. Add new sports here.
+// Rules come from the tournament's sport and `scoringConfigData`; see
+// services/scoring.ts (a port of the iOS ScoreValidator).
 
+/**
+ * Validates submitted set scores against the tournament's scoring rules.
+ * Throws a ValidationError with the first problem (same text as the apps).
+ * Without `scoring`, the sport's defaults are enforced.
+ */
 export function validateSetScores(
   body: SubmitScoreBody,
   sportType: SportType = DEFAULT_SPORT,
+  scoring: ResolvedScoring = { config: defaultScoringConfig(sportType), enforce: true },
 ): void {
-  if (!body.setScores || !Array.isArray(body.setScores)) {
-    throw new ValidationError("setScores", "Set scores are required");
-  }
-
-  switch (sportType) {
-    case "badminton":
-      validateBadmintonScores(body);
-      break;
-    case "pickleball":
-      validatePickleballScores(body);
-      break;
-    case "tennis":
-    case "tableTennis":
-      // Placeholder: accept any valid scores for now
-      validateGenericScores(body);
-      break;
-    default:
-      validateGenericScores(body);
-  }
-}
-
-function validateGenericScores(body: SubmitScoreBody): void {
-  if (body.setScores.length < 1 || body.setScores.length > 5) {
-    throw new ValidationError("setScores", "Must have between 1 and 5 sets");
-  }
-  for (let i = 0; i < body.setScores.length; i++) {
-    const set = body.setScores[i];
-    if (typeof set.teamAPoints !== "number" || typeof set.teamBPoints !== "number") {
-      throw new ValidationError(`setScores[${i}]`, "Points must be numbers");
-    }
-    if (set.teamAPoints < 0 || set.teamBPoints < 0) {
-      throw new ValidationError(`setScores[${i}]`, "Points cannot be negative");
-    }
-  }
-}
-
-function validateBadmintonScores(body: SubmitScoreBody): void {
-  if (body.setScores.length < 1 || body.setScores.length > 3) {
-    throw new ValidationError("setScores", "Badminton: must have 1-3 sets");
-  }
-
-  for (let i = 0; i < body.setScores.length; i++) {
-    const set = body.setScores[i];
-    if (typeof set.teamAPoints !== "number" || typeof set.teamBPoints !== "number") {
-      throw new ValidationError(`setScores[${i}]`, "Points must be numbers");
-    }
-    if (set.teamAPoints < 0 || set.teamBPoints < 0) {
-      throw new ValidationError(`setScores[${i}]`, "Points cannot be negative");
-    }
-    if (set.teamAPoints > 30 || set.teamBPoints > 30) {
-      throw new ValidationError(`setScores[${i}]`, "Points cannot exceed 30");
-    }
-
-    const maxScore = Math.max(set.teamAPoints, set.teamBPoints);
-    const minScore = Math.min(set.teamAPoints, set.teamBPoints);
-
-    if (maxScore < 21) {
-      throw new ValidationError(`setScores[${i}]`, "Winner must reach at least 21 points");
-    }
-    if (maxScore === 30 && minScore !== 29) {
-      if (set.teamAPoints !== 30 && set.teamBPoints !== 30) {
-        throw new ValidationError(`setScores[${i}]`, "Invalid score at 30-point cap");
-      }
-    }
-    if (maxScore < 30 && maxScore - minScore < 2) {
-      throw new ValidationError(`setScores[${i}]`, "Must win by at least 2 points");
-    }
-  }
-}
-
-function validatePickleballScores(body: SubmitScoreBody): void {
-  if (body.setScores.length < 1 || body.setScores.length > 3) {
-    throw new ValidationError("setScores", "Pickleball: must have 1-3 games");
-  }
-
-  for (let i = 0; i < body.setScores.length; i++) {
-    const set = body.setScores[i];
-    if (typeof set.teamAPoints !== "number" || typeof set.teamBPoints !== "number") {
-      throw new ValidationError(`setScores[${i}]`, "Points must be numbers");
-    }
-    if (set.teamAPoints < 0 || set.teamBPoints < 0) {
-      throw new ValidationError(`setScores[${i}]`, "Points cannot be negative");
-    }
-
-    const maxScore = Math.max(set.teamAPoints, set.teamBPoints);
-    const minScore = Math.min(set.teamAPoints, set.teamBPoints);
-
-    // Standard pickleball: first to 11, win by 2
-    if (maxScore < 11) {
-      throw new ValidationError(`setScores[${i}]`, "Winner must reach at least 11 points");
-    }
-    if (maxScore - minScore < 2) {
-      throw new ValidationError(`setScores[${i}]`, "Must win by at least 2 points");
-    }
+  const issues = validateMatchScores(body?.setScores, scoring.config, scoring.enforce, sportType);
+  if (issues.length > 0) {
+    throw new ValidationError(issues[0].field, issues[0].message);
   }
 }
 

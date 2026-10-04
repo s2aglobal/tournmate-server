@@ -2,6 +2,7 @@ import { onDocumentCreated } from "firebase-functions/v2/firestore";
 import { logger } from "firebase-functions/v2";
 import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
 import { sendToRegionTopicExcluding, sendToCountryTopicExcluding } from "../services/notifications";
+import { parseSportType, sportName, sportEmoji } from "../types";
 
 const MAX_CREATES_PER_DAY = 8;
 
@@ -54,19 +55,31 @@ export const onPlaySessionCreated = onDocumentCreated(
     });
     const fullDateStr = `${dateStr} at ${timeStr}`;
 
+    // Notify players of this sport only (badminton uses the original topics).
+    const sport = parseSportType(data.sportType);
+    const emoji = sportEmoji(sport);
+
     // Exclude the creator from receiving their own notification
     const creatorUid = data.hostId || "";
 
     // --- Send push notifications ---
-    if (data.countryCode && data.postalCode) {
+    // Unknown sports parse as `generic`; nobody subscribes to generic topics,
+    // so skip the region/country broadcast (the creator's inbox doc below still goes out).
+    if (sport === "generic") {
+      logger.info(
+        `Session ${sessionId}: sport ${JSON.stringify(data.sportType)} parses as generic; ` +
+        "skipping region/country broadcast.",
+      );
+    } else if (data.countryCode && data.postalCode) {
       // Regional (same ZIP)
       await sendToRegionTopicExcluding(
         data.countryCode,
         data.postalCode,
         creatorUid,
-        "Open Play Near You! 🏸",
+        `${sportName(sport)} Open Play Near You! ${emoji}`,
         `${data.title} on ${fullDateStr} at ${data.venue}`,
         { type: "session_created", sessionId, createdBy: creatorUid },
+        sport,
       );
 
       // Country-wide (different ZIP or no ZIP)
@@ -74,18 +87,20 @@ export const onPlaySessionCreated = onDocumentCreated(
         data.countryCode,
         data.postalCode,
         creatorUid,
-        `Open Play in ${data.venue}! 🏸`,
+        `${sportName(sport)} Open Play in ${data.venue}! ${emoji}`,
         `${data.title} on ${fullDateStr}`,
         { type: "session_created", sessionId, createdBy: creatorUid },
+        sport,
       );
     } else if (data.countryCode) {
       await sendToCountryTopicExcluding(
         data.countryCode,
         "",
         creatorUid,
-        `Open Play in ${data.venue}! 🏸`,
+        `${sportName(sport)} Open Play in ${data.venue}! ${emoji}`,
         `${data.title} on ${fullDateStr}`,
         { type: "session_created", sessionId, createdBy: creatorUid },
+        sport,
       );
     }
 

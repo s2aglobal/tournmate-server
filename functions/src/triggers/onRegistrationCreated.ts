@@ -3,6 +3,7 @@ import { logger } from "firebase-functions/v2";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { RegistrationDoc, TournamentDoc } from "../types";
 import { sendToPlayer } from "../services/notifications";
+import { refreshRegistrationCount } from "../services/registrationCount";
 
 /**
  * Fires when a new registration is created.
@@ -15,6 +16,9 @@ export const onRegistrationCreated = onDocumentCreated(
     if (!data) return;
 
     const db = getFirestore();
+
+    // Keep the tournament's registrationCount in sync ("Filling fast" sort).
+    await refreshRegistrationCount(db, data.tournamentId);
 
     // Look up the tournament for context
     const tDoc = await db.collection("tournaments").doc(data.tournamentId).get();

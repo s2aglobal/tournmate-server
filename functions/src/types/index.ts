@@ -1,14 +1,87 @@
 import { Timestamp } from "firebase-admin/firestore";
+import { logger } from "firebase-functions/v2";
 
 // ─── Sport Types ────────────────────────────────────────
 
+// Raw values match the iOS/Android `SportType` enums exactly.
+// The sport catalog (which of these are offered, and which are live) is
+// `config/sports` — see `config/sportsCatalog.ts`. `football` and `generic`
+// are legacy/fallback ids that are not in the catalog.
 export type SportType =
   | "badminton"
   | "pickleball"
   | "tennis"
-  | "tableTennis";
+  | "padel"
+  | "table_tennis"
+  | "squash"
+  | "volleyball"
+  | "beach_volleyball"
+  | "basketball"
+  | "football"
+  | "soccer"
+  | "cricket"
+  | "roundnet"
+  | "golf"
+  | "disc_golf"
+  | "bowling"
+  | "darts"
+  | "generic";
 
 export const DEFAULT_SPORT: SportType = "badminton";
+
+export const SPORT_TYPES: readonly SportType[] = [
+  "badminton", "pickleball", "tennis", "padel", "table_tennis", "squash",
+  "volleyball", "beach_volleyball", "basketball", "football", "soccer",
+  "cricket", "roundnet", "golf", "disc_golf", "bowling", "darts", "generic",
+];
+
+export const SPORT_LABELS: Record<SportType, { name: string; emoji: string }> = {
+  badminton: { name: "Badminton", emoji: "🏸" },
+  pickleball: { name: "Pickleball", emoji: "🏓" },
+  tennis: { name: "Tennis", emoji: "🎾" },
+  padel: { name: "Padel", emoji: "🎾" },
+  table_tennis: { name: "Table Tennis", emoji: "🏓" },
+  squash: { name: "Squash", emoji: "🟢" },
+  volleyball: { name: "Volleyball", emoji: "🏐" },
+  beach_volleyball: { name: "Beach Volleyball", emoji: "🏐" },
+  basketball: { name: "Basketball", emoji: "🏀" },
+  football: { name: "Football", emoji: "🏈" },
+  soccer: { name: "Soccer", emoji: "⚽" },
+  cricket: { name: "Cricket", emoji: "🏏" },
+  roundnet: { name: "Roundnet", emoji: "🟡" },
+  golf: { name: "Golf", emoji: "⛳" },
+  disc_golf: { name: "Disc Golf", emoji: "🥏" },
+  bowling: { name: "Bowling", emoji: "🎳" },
+  darts: { name: "Darts", emoji: "🎯" },
+  generic: { name: "Sports", emoji: "🏆" },
+};
+
+export function isSportType(raw: unknown): raw is SportType {
+  return typeof raw === "string" && SPORT_TYPES.includes(raw as SportType);
+}
+
+export function sportName(sport: SportType): string {
+  return SPORT_LABELS[sport].name;
+}
+
+export function sportEmoji(sport: SportType): string {
+  return SPORT_LABELS[sport].emoji;
+}
+
+/**
+ * Parses a stored sport value.
+ * - Missing (undefined/null/empty) → badminton: pre-multi-sport docs have no sportType.
+ * - Known id → itself.
+ * - Unknown non-empty value (e.g. written by a newer app) → `generic`, with a warning.
+ *   Never coerce unknown values to badminton, or they would leak into badminton
+ *   topics and ratings. Callers must not broadcast region/country pushes for `generic`.
+ */
+export function parseSportType(raw: unknown): SportType {
+  if (raw === undefined || raw === null || raw === "") return DEFAULT_SPORT;
+  if (isSportType(raw)) return raw;
+  logger.warn(`parseSportType: unknown sport ${JSON.stringify(raw)}; treating as generic.`);
+  return "generic";
+}
 
 // ─── Enums ──────────────────────────────────────────────
 
@@ -34,6 +107,7 @@ export type MatchStatus =
 
 export type Gender = "male" | "female";
 
+// Matches the apps' AgeGroup raw values (BWF, USA Pickleball, and USTA divisions).
 export type AgeGroup =
   | "open"
   | "u13"
@@ -41,11 +115,21 @@ export type AgeGroup =
   | "u17"
   | "u19"
   | "u24"
+  | "u12"
+  | "u14"
+  | "u16"
+  | "u18"
+  | "adult18"
   | "senior"
   | "veterans35"
   | "masters40"
   | "masters50"
-  | "grandMasters55";
+  | "grandMasters55"
+  | "age60"
+  | "age65"
+  | "age70"
+  | "age75"
+  | "age80";
 
 export const AGE_GROUP_RULES: Record<AgeGroup, { min?: number; max?: number }> = {
   open: {},
@@ -54,11 +138,21 @@ export const AGE_GROUP_RULES: Record<AgeGroup, { min?: number; max?: number }> =
   u17: { max: 17 },
   u19: { max: 19 },
   u24: { max: 24 },
+  u12: { max: 13 },
+  u14: { max: 15 },
+  u16: { max: 17 },
+  u18: { max: 19 },
+  adult18: { min: 18 },
   senior: { min: 19 },
   veterans35: { min: 35 },
   masters40: { min: 40 },
   masters50: { min: 50 },
   grandMasters55: { min: 55 },
+  age60: { min: 60 },
+  age65: { min: 65 },
+  age70: { min: 70 },
+  age75: { min: 75 },
+  age80: { min: 80 },
 };
 
 export function isAgeEligible(age: number, ageGroup: AgeGroup): boolean {
@@ -75,7 +169,11 @@ export interface PlayerDoc {
   phone: string;
   email: string;
   genderRaw: string;
+  /** Legacy single rating — the badminton rating (read by app versions before multi-sport). */
   elo: number;
+  /** Per-sport ratings keyed by SportType raw value. */
+  eloRatings?: Record<string, number>;
+  preferredSport?: string;
   streak: number;
   firebaseUid?: string;
   avatarId: string;
@@ -89,6 +187,8 @@ export interface PlayerDoc {
 
 export interface TournamentDoc {
   title: string;
+  /** Server-maintained count of registrations (see services/registrationCount.ts). */
+  registrationCount?: number;
   date: Timestamp;
   location: string;
   locationAddress: string;
@@ -111,6 +211,13 @@ export interface TournamentDoc {
   postalCode?: string;
   timeZone?: string;
   formatConfigData?: string;
+  /**
+   * JSON-encoded scoring settings written by the apps, e.g.
+   * {"gamesPerMatch":3,"pointsToWin":21,"winBy":2,"pointCap":30,"scoringSystem":"rally"}.
+   * Absent on tournaments created before scoring settings; those are scored
+   * leniently. See services/scoring.ts.
+   */
+  scoringConfigData?: string;
   ageGroupRaw?: string;
   createdAt: Timestamp;
 }
@@ -135,6 +242,9 @@ export interface MatchDoc {
   submittedBy?: string;
   confirmedBy?: string;
   setScores?: Array<{ teamAPoints: number; teamBPoints: number }>;
+  sportType?: string;
+  /** Set by onMatchFinished once Elo has been applied, so retries don't double-count. */
+  eloApplied?: boolean;
   createdAt: Timestamp;
 }
 

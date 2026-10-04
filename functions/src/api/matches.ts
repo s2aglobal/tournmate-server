@@ -7,8 +7,9 @@ import {
   TournamentDoc,
   RegistrationDoc,
   PlayerDoc,
+  parseSportType,
 } from "../types";
-import { calculateEloChange } from "../services/elo";
+import { matchWinner, resolveScoring } from "../services/scoring";
 
 const router = Router();
 const db = () => getFirestore();
@@ -67,8 +68,6 @@ router.post("/:matchId/submit-score", async (req, res) => {
     const { matchId } = req.params;
     const body = req.body as SubmitScoreBody;
 
-    validateSetScores(body);
-
     const matchDoc = await db().collection("matches").doc(matchId).get();
     if (!matchDoc.exists) {
       res.status(404).json({ error: "Match not found" });
@@ -81,6 +80,17 @@ router.post("/:matchId/submit-score", async (req, res) => {
       res.status(400).json({ error: "Score already submitted for this match" });
       return;
     }
+
+    // Scores are validated against the tournament's sport and scoring rules
+    // (scoringConfigData), exactly as the apps validate them.
+    const tDoc = await db().collection("tournaments").doc(match.tournamentId).get();
+    if (!tDoc.exists) {
+      res.status(404).json({ error: "Tournament not found" });
+      return;
+    }
+    const tournament = tDoc.data() as TournamentDoc;
+    const sport = parseSportType(tournament.sportType);
+    validateSetScores(body, sport, resolveScoring(tournament.scoringConfigData, sport));
 
     // Verify the submitter is part of this match
     const player = await findPlayerByUid(req.uid!);
@@ -104,28 +114,24 @@ router.post("/:matchId/submit-score", async (req, res) => {
       isPlayerInRegistration(teamA, player.id) ||
       isPlayerInRegistration(teamB, player.id);
 
-    if (!isInMatch) {
-      // Also allow tournament organizer to submit
-      const tDoc = await db().collection("tournaments").doc(match.tournamentId).get();
-      const tournament = tDoc.data() as TournamentDoc;
-      if (tournament.createdBy !== req.uid!) {
-        res.status(403).json({ error: "Only match participants or the organizer can submit scores" });
-        return;
-      }
+    // Also allow the tournament organizer to submit
+    if (!isInMatch && tournament.createdBy !== req.uid!) {
+      res.status(403).json({ error: "Only match participants or the organizer can submit scores" });
+      return;
     }
 
-    // Calculate sets won
+    // Games won per side (validation guarantees no tied games).
     let setsWonA = 0;
     let setsWonB = 0;
     for (const set of body.setScores) {
       if (set.teamAPoints > set.teamBPoints) setsWonA++;
-      else setsWonB++;
+      else if (set.teamBPoints > set.teamAPoints) setsWonB++;
     }
 
-    // Determine winner
-    let winnerRegistrationId: string | undefined;
-    if (setsWonA > setsWonB) winnerRegistrationId = match.teamAId;
-    else if (setsWonB > setsWonA) winnerRegistrationId = match.teamBId;
+    // Winner: the side that won the match (same rule as services/elo.ts).
+    const winnerSide = matchWinner(body.setScores);
+    const winnerRegistrationId =
+      winnerSide === "A" ? match.teamAId : winnerSide === "B" ? match.teamBId : undefined;
 
     const updateData: Record<string, unknown> = {
       setScores: body.setScores,
@@ -187,12 +193,8 @@ router.post("/:matchId/confirm", async (req, res) => {
       statusRaw: "finished",
     };
 
+    // Elo and streaks are applied by the onMatchFinished trigger.
     await matchDoc.ref.update(updateData);
-
-    // Apply ELO changes
-    if (match.winnerRegistrationId) {
-      await applyEloChanges(match);
-    }
 
     res.json({ message: "Score confirmed, match finalized" });
   } catch (err) {
@@ -232,74 +234,5 @@ router.post("/:matchId/dispute", async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 });
-
-/**
- * Applies ELO rating changes after a confirmed match.
- * Collects all players from winning and losing teams, updates ratings and streaks.
- */
-async function applyEloChanges(match: MatchDoc): Promise<void> {
-  if (!match.winnerRegistrationId) return;
-
-  const winnerTeamId = match.winnerRegistrationId;
-  const loserTeamId =
-    winnerTeamId === match.teamAId ? match.teamBId : match.teamAId;
-
-  const winnerReg = await db().collection("registrations").doc(winnerTeamId).get();
-  const loserReg = await db().collection("registrations").doc(loserTeamId).get();
-
-  if (!winnerReg.exists || !loserReg.exists) return;
-
-  const wData = winnerReg.data() as RegistrationDoc;
-  const lData = loserReg.data() as RegistrationDoc;
-
-  // Collect all player IDs
-  const winnerIds = [wData.playerId, wData.partnerId].filter(Boolean) as string[];
-  const loserIds = [lData.playerId, lData.partnerId].filter(Boolean) as string[];
-
-  // Fetch all players
-  const allIds = [...winnerIds, ...loserIds];
-  const playerDocs = await Promise.all(
-    allIds.map((id) => db().collection("players").doc(id).get()),
-  );
-  const playerMap = new Map<string, { ref: FirebaseFirestore.DocumentReference; data: PlayerDoc }>();
-  for (const doc of playerDocs) {
-    if (doc.exists) {
-      playerMap.set(doc.id, { ref: doc.ref, data: doc.data() as PlayerDoc });
-    }
-  }
-
-  // Calculate and apply ELO for each winner-loser pair
-  for (const wId of winnerIds) {
-    for (const lId of loserIds) {
-      const winner = playerMap.get(wId);
-      const loser = playerMap.get(lId);
-      if (!winner || !loser) continue;
-
-      const { winnerDelta, loserDelta } = calculateEloChange(
-        winner.data.elo,
-        loser.data.elo,
-      );
-      winner.data.elo += winnerDelta;
-      loser.data.elo += loserDelta;
-    }
-  }
-
-  // Update streaks and persist
-  const batch = db().batch();
-  for (const wId of winnerIds) {
-    const p = playerMap.get(wId);
-    if (!p) continue;
-    p.data.streak = Math.max(p.data.streak, 0) + 1;
-    batch.update(p.ref, { elo: p.data.elo, streak: p.data.streak });
-  }
-  for (const lId of loserIds) {
-    const p = playerMap.get(lId);
-    if (!p) continue;
-    p.data.streak = Math.min(p.data.streak, 0) - 1;
-    batch.update(p.ref, { elo: p.data.elo, streak: p.data.streak });
-  }
-
-  await batch.commit();
-}
 
 export default router;
