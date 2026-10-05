@@ -9,10 +9,6 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function isOwner(uid) {
-      return request.auth.uid == uid;
-    }
-
     function isNonEmptyString(field) {
       return field is string && field.size() > 0;
     }
