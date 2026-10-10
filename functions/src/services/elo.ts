@@ -62,6 +62,28 @@ export function applyMatchResult(
   }
 }
 
+/**
+ * Applies one result between two sides of any size, using each side's average
+ * rating. Every player on a side moves by the same amount. `scoreA` is 1 for
+ * an A win, 0.5 for a tie, 0 for a B win.
+ *
+ * Used for ties and whenever a side has more than two players (team sports):
+ * pairwise `applyMatchResult` would apply 11 × 11 updates for a cricket match
+ * and swing ratings far too much.
+ */
+export function applyTeamResult(
+  sideA: Array<Record<string, number>>,
+  sideB: Array<Record<string, number>>,
+  sport: SportType,
+  scoreA: number,
+): void {
+  const avg = (side: Array<Record<string, number>>) =>
+    side.reduce((sum, r) => sum + (r[sport] ?? DEFAULT_ELO), 0) / side.length;
+  const delta = ELO_K * (scoreA - expected(avg(sideA), avg(sideB)));
+  for (const r of sideA) r[sport] = (r[sport] ?? DEFAULT_ELO) + delta;
+  for (const r of sideB) r[sport] = (r[sport] ?? DEFAULT_ELO) - delta;
+}
+
 /** Winning registration id from the stored winner, set scores, or simple score. */
 export function winnerRegistrationId(match: MatchDoc): string | undefined {
   if (match.winnerRegistrationId) return match.winnerRegistrationId;
@@ -115,7 +137,14 @@ export async function applyEloForMatch(db: Firestore, matchRef: DocumentReferenc
     const match = matchSnap.data() as MatchDoc | undefined;
     if (!match || match.statusRaw !== "finished" || match.eloApplied) return;
 
-    const winnerId = winnerRegistrationId(match);
+    if (match.resultType === "noResult") {
+      logger.info(`Match ${matchRef.id}: no result; skipping Elo.`);
+      tx.update(matchRef, { eloApplied: true });
+      return;
+    }
+    // A tie (cricket) rates as a draw. Side A is then simply team A.
+    const tie = match.resultType === "tie";
+    const winnerId = tie ? match.teamAId : winnerRegistrationId(match);
     if (!winnerId) {
       logger.info(`Match ${matchRef.id}: no winner (draw or missing score); skipping Elo.`);
       tx.update(matchRef, { eloApplied: true });
@@ -143,7 +172,11 @@ export async function applyEloForMatch(db: Firestore, matchRef: DocumentReferenc
       return;
     }
 
-    const teamIds = (reg: RegistrationDoc) => [reg.playerId, reg.partnerId].filter(Boolean) as string[];
+    // Team sports rate the players named for the event; guests have no id.
+    const teamIds = (reg: RegistrationDoc) =>
+      reg.rosterIds && reg.rosterIds.length > 0
+        ? [...new Set(reg.rosterIds)]
+        : [reg.playerId, reg.partnerId].filter(Boolean) as string[];
     const winners = await loadPlayers(db, tx, teamIds(winnerReg.data() as RegistrationDoc));
     const losers = await loadPlayers(db, tx, teamIds(loserReg.data() as RegistrationDoc));
     if (winners.length === 0 || losers.length === 0) {
@@ -151,20 +184,25 @@ export async function applyEloForMatch(db: Firestore, matchRef: DocumentReferenc
       return;
     }
 
-    applyMatchResult(winners.map((e) => e.ratings), losers.map((e) => e.ratings), sport);
+    if (tie || winners.length > 2 || losers.length > 2) {
+      applyTeamResult(winners.map((e) => e.ratings), losers.map((e) => e.ratings), sport, tie ? 0.5 : 1);
+    } else {
+      applyMatchResult(winners.map((e) => e.ratings), losers.map((e) => e.ratings), sport);
+    }
 
+    // A tie leaves streaks as they are.
     const write = (e: PlayerEntry, won: boolean) => {
       const streak = e.doc.streak ?? 0;
       tx.update(e.ref, {
         eloRatings: e.ratings,
         elo: e.ratings.badminton ?? DEFAULT_ELO,
-        streak: won ? Math.max(streak, 0) + 1 : Math.min(streak, 0) - 1,
+        streak: tie ? streak : won ? Math.max(streak, 0) + 1 : Math.min(streak, 0) - 1,
       });
     };
     winners.forEach((e) => write(e, true));
     losers.forEach((e) => write(e, false));
     tx.update(matchRef, { eloApplied: true });
 
-    logger.info(`Match ${matchRef.id}: Elo applied for ${sport} (${winners.length}v${losers.length}).`);
+    logger.info(`Match ${matchRef.id}: Elo applied for ${sport} (${winners.length}v${losers.length}${tie ? ", tie" : ""}).`);
   });
 }

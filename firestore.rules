@@ -43,8 +43,12 @@ service cloud.firestore {
       return ['pickleball', 'badminton', 'tennis'];
     }
 
+    // `liveMinAppVersion` holds sports that only newer app versions offer
+    // (cricket needs teams). Older apps ignore it; for writes they count as live.
     function liveSportsFrom(cfg) {
-      return cfg.data.get('live', null) is list ? cfg.data.live : launchLiveSports();
+      let base = cfg.data.get('live', null) is list ? cfg.data.live : launchLiveSports();
+      let gated = cfg.data.get('liveMinAppVersion', null) is map ? cfg.data.liveMinAppVersion.keys() : [];
+      return base.concat(gated);
     }
 
     function liveSports() {
@@ -131,12 +135,43 @@ service cloud.firestore {
         && isNonEmptyString(request.resource.data.tournamentId)
         && isNonEmptyString(request.resource.data.playerId);
 
-      // Only allow updating partnerId (for doubles pairing)
+      // Doubles: pick a partner. Team sports: the captain changes who plays
+      // for this event (roster, guests) or the shown team name.
       allow update: if isAuthenticated()
-        && onlyUpdates(['partnerId']);
+        && onlyUpdates(['partnerId', 'rosterIds', 'guestNames', 'teamName']);
 
       // Only the registrant can delete their own registration
       allow delete: if isAuthenticated();
+    }
+
+    // ─── Teams (team sports: cricket first) ─────────────
+    match /teams/{teamId} {
+      allow read: if true;
+
+      // A team belongs to one sport, which must be live.
+      allow create: if isAuthenticated()
+        && request.resource.data.createdBy == request.auth.uid
+        && isNonEmptyString(request.resource.data.name)
+        && request.resource.data.name.size() <= 40
+        && isNonEmptyString(request.resource.data.captainId)
+        && request.resource.data.playerIds is list
+        && request.resource.data.playerIds.size() <= 30
+        && request.resource.data.sportType in liveSports();
+
+      // The creator manages the team. Anyone signed in may only add or
+      // remove one player at a time (joining by invite link, or leaving).
+      allow update: if isAuthenticated()
+        && unchanged('createdBy')
+        && unchanged('sportType')
+        && request.resource.data.playerIds is list
+        && request.resource.data.playerIds.size() <= 30
+        && (resource.data.createdBy == request.auth.uid
+            || (onlyUpdates(['playerIds'])
+                && (request.resource.data.playerIds.size() - resource.data.playerIds.size() == 1
+                    || resource.data.playerIds.size() - request.resource.data.playerIds.size() == 1)));
+
+      allow delete: if isAuthenticated()
+        && resource.data.createdBy == request.auth.uid;
     }
 
     // ─── Matches ────────────────────────────────────────
