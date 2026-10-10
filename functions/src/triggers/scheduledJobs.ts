@@ -1,6 +1,7 @@
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import { logger } from "firebase-functions/v2";
 import { getFirestore, Timestamp } from "firebase-admin/firestore";
+import { RegistrationDoc, registrationPlayerIds } from "../types";
 
 /**
  * Runs every hour. Cleans up stale data and logs health metrics.
@@ -128,9 +129,7 @@ export const dailyReminders = onSchedule("every day 00:00", async () => {
     // Collect unique player document IDs
     const playerDocIds = new Set<string>();
     for (const reg of regsSnap.docs) {
-      const data = reg.data();
-      playerDocIds.add(data.playerId);
-      if (data.partnerId) playerDocIds.add(data.partnerId);
+      for (const id of registrationPlayerIds(reg.data() as RegistrationDoc)) playerDocIds.add(id);
     }
 
     // Look up firebaseUid for each player and write reminder notifications
