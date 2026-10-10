@@ -43,8 +43,12 @@ service cloud.firestore {
       return ['pickleball', 'badminton', 'tennis'];
     }
 
+    // `liveMinAppVersion` holds sports that only newer app versions offer
+    // (cricket needs teams). Older apps ignore it; for writes they count as live.
     function liveSportsFrom(cfg) {
-      return cfg.data.get('live', null) is list ? cfg.data.live : launchLiveSports();
+      let base = cfg.data.get('live', null) is list ? cfg.data.live : launchLiveSports();
+      let gated = cfg.data.get('liveMinAppVersion', null) is map ? cfg.data.liveMinAppVersion.keys() : [];
+      return base.concat(gated);
     }
 
     function liveSports() {
