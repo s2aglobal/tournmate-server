@@ -15,11 +15,15 @@ cd functions && npm run build
 node tools/cricket/oracle.js "$PWD/lib/services/cricket.js"
 node tools/cricket/leagues.js "$PWD/lib/services/cricket.js"     # writes leagues.json here
 
-# iOS parity (needs Xcode; IOS = path to tournmate-ios)
+# iOS parity (needs Xcode + a booted simulator; IOS = path to tournmate-ios).
+# CricketRules.swift uses other Domain types, so build the whole Domain layer for the simulator.
 node tools/cricket/gen.js "$PWD/lib/services/cricket.js" /tmp/ts.txt
-xcrun swiftc -O -o /tmp/sc "$IOS/TournMate/Domain/CricketRules.swift" tools/cricket/swift-scorecards/main.swift && /tmp/sc /tmp/swift.txt
-cmp /tmp/ts.txt /tmp/swift.txt && echo IDENTICAL
-xcrun swiftc -O -o /tmp/lg "$IOS/TournMate/Domain/CricketRules.swift" tools/cricket/swift-leagues/main.swift && /tmp/lg leagues.json
+SDK=$(xcrun --sdk iphonesimulator --show-sdk-path); SIM=$(xcrun simctl list devices booted | grep -Eo '[0-9A-F-]{36}' | head -1)
+SRC="$IOS/TournMate/Domain/*.swift $IOS/TournMate/Services/Region/PostalCodeRules.swift $IOS/Tools/DrawTests/Stubs.swift"
+xcrun swiftc -O -sdk "$SDK" -target arm64-apple-ios17.0-simulator -o /tmp/sc $SRC tools/cricket/swift-scorecards/main.swift
+xcrun simctl spawn "$SIM" /tmp/sc /tmp/swift.txt && cmp /tmp/ts.txt /tmp/swift.txt && echo IDENTICAL
+xcrun swiftc -O -sdk "$SDK" -target arm64-apple-ios17.0-simulator -o /tmp/lg $SRC tools/cricket/swift-leagues/main.swift
+xcrun simctl spawn "$SIM" /tmp/lg "$PWD/leagues.json"
 ```
 
-Results on 2026-10-10: the oracle matched everything after the rain-revised super-over fix. The scorecard diff was byte-identical. Leagues: server NRR exact, and iOS matched except rounding of exact halves (fixed to JavaScript's `Math.round`).
+Results on 2026-10-10, after the fixes: the oracle matched all 78.3M scorecards; the scorecard diff was byte-identical (5,193,720 cases); leagues: server NRR exact, and iOS identical (0 of 25,916 team totals differ).
