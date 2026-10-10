@@ -110,6 +110,13 @@ expectValid("revised target chased",
 expectValid("revised target defended",
   { innings: [inn(A, 160, 6, "20"), inn(B, 110, 5, "15")], revisedTarget: { runs: 124, overs: 15 } }, T20,
   "won by 13 runs (revised target)", A);
+expectValid("revised target tied",
+  { innings: [inn(A, 160, 6, "20"), inn(B, 123, 5, "15")], revisedTarget: { runs: 124, overs: 15 } }, T20,
+  "Match tied", null);
+expectValid("revised target tie decided by super over",
+  { innings: [inn(A, 160, 6, "20"), inn(B, 123, 5, "15")], revisedTarget: { runs: 124, overs: 15 },
+    superOverWinnerRegistrationId: B }, T20,
+  "won the super over", B);
 expectValid("box6 last man stands all out",
   { innings: [inn(A, 70, 6, "5.3"), inn(B, 71, 5, "5.5")] }, BOX6,
   "won by 1 wicket (1 ball left)", B);

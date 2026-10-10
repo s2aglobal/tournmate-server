@@ -295,7 +295,8 @@ export function validateCricketResult(
   }
 
   if (result.superOverWinnerRegistrationId !== undefined) {
-    const tied = !result.revisedTarget && second.runs === first.runs;
+    // Level scores: one run short of the target (a revised target included).
+    const tied = second.runs === target - 1;
     if (!tied) add("superOver", "A super over is only played when the scores are level.");
     else if (!r.superOver) add("superOver", "This tournament doesn't use super overs.");
     else if (result.superOverWinnerRegistrationId !== teamAId && result.superOverWinnerRegistrationId !== teamBId) {
