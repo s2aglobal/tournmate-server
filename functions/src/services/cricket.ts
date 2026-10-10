@@ -7,6 +7,10 @@
  * holds the shared cases.
  *
  * Stored data
+ * Event types are limited-overs only (T20, One Day, T10, box cricket).
+ * Multi-day / Test cricket (four innings, declarations, draws) is not
+ * supported yet.
+ *
  * - tournaments.rulesData: JSON string, see `CricketRules`
  *     {"eventTypeId":"t20","playersPerSide":11,"overs":20,"ballsPerOver":6,
  *      "lastManStands":false,"superOver":true}
@@ -22,7 +26,7 @@
 
 // ─── Rules ──────────────────────────────────────────────
 
-export type CricketEventTypeId = "t20" | "t10" | "box8" | "box6" | "custom";
+export type CricketEventTypeId = "t20" | "odi" | "t10" | "box8" | "box6" | "custom";
 
 export interface CricketRules {
   eventTypeId: CricketEventTypeId;
@@ -55,6 +59,7 @@ function rules(
 /** Event types offered in the tournament wizard, in display order. */
 export const CRICKET_EVENT_TYPES: readonly CricketEventType[] = [
   { id: "t20", label: "T20", rules: rules("t20", 11, 20) },
+  { id: "odi", label: "One Day (50 overs)", rules: rules("odi", 11, 50) },
   { id: "t10", label: "T10", rules: rules("t10", 11, 10) },
   { id: "box8", label: "Box cricket (8-a-side)", rules: rules("box8", 8, 8) },
   { id: "box6", label: "Box cricket (6-a-side)", rules: rules("box6", 6, 6, true) },

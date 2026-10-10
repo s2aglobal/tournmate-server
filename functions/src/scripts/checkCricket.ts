@@ -74,6 +74,7 @@ check("format 120", formatOvers(120) === "20");
 // ─── Rules ──────────────────────────────────────────────
 check("rules default", JSON.stringify(decodeCricketRules("{}")) === JSON.stringify(T20));
 check("rules box6", decodeCricketRules('{"eventTypeId":"box6"}')?.lastManStands === true);
+check("rules odi", decodeCricketRules('{"eventTypeId":"odi"}')?.overs === 50);
 check("rules custom overs", decodeCricketRules('{"eventTypeId":"t20","overs":15}')?.overs === 15);
 check("rules reject 0 overs", decodeCricketRules('{"overs":0}') === null);
 check("rules reject bad json", decodeCricketRules("{") === null);
@@ -82,6 +83,9 @@ check("rules reject bad json", decodeCricketRules("{") === null);
 expectValid("chase won by wickets",
   { innings: [inn(A, 158, 7, "20"), inn(B, 159, 4, "18.2")] }, T20,
   "won by 6 wickets (10 balls left)", B);
+expectValid("ODI defended",
+  { innings: [inn(A, 287, 6, "50"), inn(B, 241, 10, "44.3")] }, CRICKET_EVENT_TYPES.find((e) => e.id === "odi")!.rules,
+  "won by 46 runs", A);
 expectValid("chase on last ball",
   { innings: [inn(A, 140, 9, "20"), inn(B, 141, 8, "20")] }, T20,
   "won by 2 wickets", B);
