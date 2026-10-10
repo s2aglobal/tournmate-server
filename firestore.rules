@@ -73,6 +73,26 @@ service cloud.firestore {
         || request.resource.data.sportType in liveSports();
     }
 
+    // ─── Team sports ────────────────────────────────────
+    // A cricket tournament is always a team event, and its registrations
+    // must be team entries. Older app versions don't know the team format
+    // and would otherwise register individuals (e.g. from a shared link).
+    // One get() of the tournament per registration create.
+    function teamEntryIfTeamEvent() {
+      let t = get(/databases/$(database)/documents/tournaments/$(request.resource.data.tournamentId));
+      return t.data.get('formatRaw', '') != 'team'
+        || (isNonEmptyString(request.resource.data.get('teamId', ''))
+            && isNonEmptyString(request.resource.data.get('teamName', ''))
+            && request.resource.data.get('rosterIds', null) is list
+            && !('partnerId' in request.resource.data));
+    }
+
+    // Cricket tournaments must use the team format.
+    function teamFormatForTeamSport() {
+      return request.resource.data.get('sportType', '') != 'cricket'
+        || request.resource.data.get('formatRaw', '') == 'team';
+    }
+
     // ─── Players ────────────────────────────────────────
     match /players/{playerId} {
       allow read: if true;
@@ -113,6 +133,7 @@ service cloud.firestore {
         && isNonEmptyString(request.resource.data.location)
         && request.resource.data.date is timestamp
         && hasLiveSportOrNone()
+        && teamFormatForTeamSport()
         // registrationCount is server-maintained (registration triggers).
         && !('registrationCount' in request.resource.data);
 
@@ -121,7 +142,8 @@ service cloud.firestore {
         && resource.data.createdBy == request.auth.uid
         && unchanged('createdBy')
         && unchangedOptional('registrationCount')
-        && sportUnchangedOrLive();
+        && sportUnchangedOrLive()
+        && teamFormatForTeamSport();
 
       allow delete: if isAuthenticated()
         && resource.data.createdBy == request.auth.uid;
@@ -133,7 +155,8 @@ service cloud.firestore {
 
       allow create: if isAuthenticated()
         && isNonEmptyString(request.resource.data.tournamentId)
-        && isNonEmptyString(request.resource.data.playerId);
+        && isNonEmptyString(request.resource.data.playerId)
+        && teamEntryIfTeamEvent();
 
       // Doubles: pick a partner. Team sports: the captain changes who plays
       // for this event (roster, guests) or the shown team name.
