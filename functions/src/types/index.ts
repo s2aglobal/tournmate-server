@@ -297,6 +297,8 @@ export interface MatchDoc {
   playerOfMatchName?: string;
   /** Registration id of the Player of the Match's team. */
   playerOfMatchTeamId?: string;
+  /** Cricket: optional batting/bowling figures per player (JSON, see services/cricketPlayerStats.ts). */
+  playerStatsData?: string;
   sportType?: string;
   /** Set by onMatchFinished once Elo has been applied, so retries don't double-count. */
   eloApplied?: boolean;

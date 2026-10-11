@@ -16,6 +16,10 @@
  *      group stage is played; one semi-final was decided by a super over and
  *      the other is waiting for a result.
  *
+ * Played matches carry batting and bowling figures for some players (as an
+ * organizer would enter them), so the Top performers leaderboards and player
+ * profiles have data.
+ *
  * The expected tables and results are printed at the end.
  *
  * Every document written has `qaSeed: true` (and a "QA " title prefix where
@@ -51,6 +55,16 @@ import {
   outcomeSummary,
   validateCricketResult,
 } from "../services/cricket";
+import {
+  BattingFigures,
+  BowlingFigures,
+  PlayerStats,
+  battingLeaders,
+  bowlingLeaders,
+  formatBest,
+  formatHighest,
+  validatePlayerStats,
+} from "../services/cricketPlayerStats";
 
 const PROJECT_ID = "tournmate-dev";
 
@@ -279,6 +293,52 @@ async function main() {
     return { regId, name: o.name, players: o.players, guests: o.guests, captain: roles.captain, pomKey, pomName };
   };
 
+  const members = (e: Entry) => [
+    ...e.players.map((p) => ({ key: key(p), name: p.name })),
+    ...e.guests.map((g) => ({ key: guestKey(g), name: g })),
+  ];
+
+  /**
+   * Figures that fit the scorecard: the batting side's top four share about
+   * 90% of the runs (the rest are extras), the bowling side's first three
+   * bowlers share the balls, most of the runs and all but one wicket.
+   */
+  const figuresFor = (result: CricketResult, a: Entry, b: Entry, seed: number): PlayerStats => {
+    const batting: BattingFigures[] = [];
+    const bowling: BowlingFigures[] = [];
+    for (const [idx, innings] of result.innings.entries()) {
+      const bat = innings.battingRegistrationId === a.regId ? a : b;
+      const field = bat === a ? b : a;
+      const batters = members(bat).slice(0, 4);
+      const shares = [0.4, 0.25, 0.15, 0.1];
+      let outsLeft = innings.wickets;
+      batters.forEach((m, i) => {
+        const out = outsLeft > 0 && i !== (seed + idx) % batters.length;
+        if (out) outsLeft--;
+        batting.push({
+          teamRegistrationId: bat.regId, key: m.key, name: m.name,
+          runs: Math.floor(innings.runs * shares[i]), balls: Math.floor(innings.balls * shares[i] * 0.9), out,
+        });
+      });
+      const bowlers = members(field).slice(-3);
+      const ballShares = [0.4, 0.3, 0.3];
+      const wicketShares = [Math.ceil(innings.wickets / 2), Math.floor(innings.wickets / 3), 0];
+      let ballsLeft = innings.balls;
+      bowlers.forEach((m, i) => {
+        const balls = i === bowlers.length - 1 ? ballsLeft : Math.floor(innings.balls * ballShares[i]);
+        ballsLeft -= balls;
+        bowling.push({
+          teamRegistrationId: field.regId, key: m.key, name: m.name, balls,
+          runs: Math.floor(innings.runs * 0.3), wickets: Math.min(wicketShares[i], innings.wickets),
+        });
+      });
+    }
+    return { batting, bowling };
+  };
+
+  /** Every seeded match's figures, for the expected leaderboards. */
+  const seededStats = new Map<string, PlayerStats[]>();
+
   /** A finished cricket match: validated with the server rules, outcome and summary derived. */
   const played = async (o: {
     tid: string; title: string; rules: CricketRules; organizer: string; a: Entry; b: Entry;
@@ -290,12 +350,17 @@ async function main() {
     const names = new Map([[o.a.regId, o.a.name], [o.b.regId, o.b.name]]);
     const summary = outcomeSummary(outcome, (id) => names.get(id) ?? "?");
     const runs = (id: string) => o.result.innings.find((i) => i.battingRegistrationId === id)?.runs;
+    const stats = figuresFor(o.result, o.a, o.b, o.round + (o.bracketPosition ?? 0));
+    const statIssues = validatePlayerStats(stats, o.result, o.a.regId, o.b.regId, (rid) => names.get(rid) ?? "?");
+    if (statIssues.length) throw new Error(`${o.title} ${o.a.name} v ${o.b.name} figures: ${statIssues.map((i) => i.message).join("; ")}`);
+    seededStats.set(o.tid, [...(seededStats.get(o.tid) ?? []), stats]);
     const id = newId();
     const data: Record<string, unknown> = {
       tournamentId: o.tid, teamAId: o.a.regId, teamBId: o.b.regId, statusRaw: "finished",
       createdAt: Timestamp.fromMillis(Date.now() - 5 * DAY + o.round * 60_000 + (o.bracketPosition ?? 0) * 1000),
       round: o.round, sportType: "cricket",
       resultType: outcome.resultType, resultData: sortedJson(o.result), summary,
+      playerStatsData: sortedJson(stats),
       submittedBy: o.organizer, confirmedBy: o.organizer,
       // Seeded results must not move real ratings.
       eloApplied: true,
@@ -357,6 +422,14 @@ async function main() {
     return rows.map((r, i) =>
       `${i + 1}. ${r.name}  P${r.p} W${r.wins} L${r.losses} T${r.ties} NR${r.nr} PTS ${r.pts} NRR ${formatNetRunRate(r.nrr)}`,
     ).join("\n    ");
+  };
+
+  /** Expected Top performers card for a tournament (top 3 each). */
+  const performers = (tid: string): string => {
+    const all = seededStats.get(tid) ?? [];
+    const bat = battingLeaders(all).slice(0, 3).map((e) => `${e.name} ${e.runs} (HS ${formatHighest(e)})`).join(", ");
+    const bowl = bowlingLeaders(all).slice(0, 3).map((e) => `${e.name} ${e.wickets} wkts (best ${formatBest(e)})`).join(", ");
+    return `Top performers — most runs: ${bat}; most wickets: ${bowl}`;
   };
 
   // Roles helper: captain = first player, vice = second, keeper = third (or a guest), roles spread.
@@ -439,7 +512,8 @@ async function main() {
         `${title} (before C v D):\n    ${table([A, B, C, D], results, r)}\n` +
         `    Player of the match: ${A.pomName} (Lions) ×3, Ravi Kumar (Kings, guest captain) ×1; none for the no result.\n` +
         `    Player of the tournament card: ${A.pomName} "3 awards", then Ravi Kumar "1 award".\n` +
-        "    Score Kings v Dragons yourself (try a revised target, or the last ball) and watch the table and NRR move.",
+        "    Score Kings v Dragons yourself (try a revised target, or the last ball) and watch the table and NRR move.\n" +
+        `    ${performers(t.id)}`,
       );
     }
 
@@ -491,7 +565,8 @@ async function main() {
         `    Group B:\n    ${table(entries.slice(4, 8), groupResults.B, r)}\n` +
         "    Knockout: QA Hornets beat QA Eagles in the super over (\"won the super over\"); " +
         "QA Cobras v QA Falcons is waiting — a tie there needs the super over (knockouts can't end level or with no result). " +
-        "After both semis, Generate next round creates the final.",
+        "After both semis, Generate next round creates the final.\n" +
+        `    ${performers(t.id)}`,
       );
     }
   }

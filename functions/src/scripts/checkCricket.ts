@@ -25,6 +25,20 @@ import {
   validateCricketResult,
 } from "../services/cricket";
 import { applyTeamResult } from "../services/elo";
+import {
+  PlayerStats,
+  averageHundredths,
+  battingLeaders,
+  bowlingLeaders,
+  decodePlayerStats,
+  economyHundredths,
+  formatBest,
+  formatHighest,
+  formatHundredths,
+  formatTenths,
+  strikeRateTenths,
+  validatePlayerStats,
+} from "../services/cricketPlayerStats";
 
 let failures = 0;
 
@@ -184,6 +198,88 @@ check("tie moves the stronger side down", a11[0].cricket < 1300 && b11[0].cricke
 const fresh = [{} as Record<string, number>];
 applyTeamResult(fresh, side(1, 1200), "cricket", 1);
 check("unrated player starts at 1200", fresh[0].cricket === 1212);
+
+// ─── Player stats (batting / bowling figures) ───────────
+// Mirrored by CricketPlayerStatsSelfCheck (iOS) and CricketPlayerStatsTest (Android).
+{
+  const names = (id: string) => (id === A ? "Strikers" : "Royals");
+  const card: CricketResult = { innings: [inn(A, 158, 7, "20"), inn(B, 159, 4, "18.2")] };
+  const bat = (team: string, k: string, runs: number, balls: number, out = true) =>
+    ({ teamRegistrationId: team, key: k, name: k, runs, balls, out });
+  const bowl = (team: string, k: string, balls: number, runs: number, wickets: number) =>
+    ({ teamRegistrationId: team, key: k, name: k, balls, runs, wickets });
+  const msgs = (s: PlayerStats) => validatePlayerStats(s, card, A, B, names).map((i) => i.message);
+  const good: PlayerStats = {
+    batting: [bat(A, "P1", 60, 40), bat(A, "P2", 45, 30, false), bat(B, "Q1", 80, 50), bat(B, "guest:Ravi", 70, 55, false)],
+    bowling: [bowl(B, "Q2", 24, 30, 3), bowl(A, "P3", 24, 41, 2), bowl(A, "guest:Sam", 20, 35, 1)],
+  };
+  check("stats valid", msgs(good).length === 0, msgs(good).join("; "));
+  check("stats empty valid", msgs({ batting: [], bowling: [] }).length === 0);
+  const expect = (name: string, s: PlayerStats, message: string) =>
+    check(name, msgs(s).includes(message), msgs(s).join("; "));
+  expect("stats batting runs over total", { batting: [bat(A, "P1", 100, 60), bat(A, "P2", 59, 40)], bowling: [] },
+    "Strikers's batters scored 159 runs, more than the team's 158.");
+  expect("stats batting balls over innings", { batting: [bat(B, "Q1", 10, 111)], bowling: [] },
+    "Royals's batters faced 111 balls, more than the innings' 110.");
+  expect("stats too many outs", { batting: [1, 2, 3, 4, 5].map((n) => bat(B, `Q${n}`, 1, 1)), bowling: [] },
+    "5 Royals batters are out, but the team lost 4 wickets.");
+  expect("stats bowling balls over innings", { batting: [], bowling: [bowl(A, "P3", 60, 50, 1), bowl(A, "P4", 51, 50, 1)] },
+    "Strikers's bowlers bowled 111 balls, more than the innings' 110.");
+  expect("stats bowling runs over total", { batting: [], bowling: [bowl(B, "Q2", 24, 159, 1)] },
+    "Royals's bowlers conceded 159 runs, more than the 158 scored.");
+  expect("stats bowling wickets over fallen", { batting: [], bowling: [bowl(A, "P3", 24, 20, 5)] },
+    "Strikers's bowlers took 5 wickets, more than the 4 that fell.");
+  expect("stats unknown team", { batting: [bat("regX", "Z", 1, 1)], bowling: [] }, "Z isn't in either team.");
+  expect("stats listed twice", { batting: [bat(A, "p1", 1, 1), bat(A, "P1", 2, 2)], bowling: [] }, "P1 is listed twice.");
+  expect("stats negative", { batting: [bat(A, "P1", -1, 1)], bowling: [] }, "P1's figures must be whole numbers, 0 or more.");
+  const nr: CricketResult = { innings: [inn(A, 40, 1, "5")], noResult: true };
+  check("stats team that didn't bat",
+    validatePlayerStats({ batting: [bat(B, "Q1", 1, 1)], bowling: [] }, nr, A, B, names).some((i) => i.message === "Royals didn't bat."));
+  check("stats team that didn't bowl",
+    validatePlayerStats({ batting: [], bowling: [bowl(A, "P3", 6, 5, 0)] }, nr, A, B, names).some((i) => i.message === "Strikers didn't bowl."));
+  check("stats partial no result ok",
+    validatePlayerStats({ batting: [bat(A, "P1", 30, 20, false)], bowling: [bowl(B, "Q2", 18, 22, 1)] }, nr, A, B, names).length === 0);
+
+  // Integer rounding (half up), identical everywhere.
+  check("SR 45/30 = 150.0", formatTenths(strikeRateTenths(45, 30)) === "150.0");
+  check("SR 1/3 = 33.3", formatTenths(strikeRateTenths(1, 3)) === "33.3");
+  check("SR 2/3 = 66.7", formatTenths(strikeRateTenths(2, 3)) === "66.7");
+  check("SR half up 1/16 = 6.3", formatTenths(strikeRateTenths(1, 16)) === "6.3");
+  check("SR no balls", formatTenths(strikeRateTenths(5, 0)) === "–");
+  check("econ 41/24 = 10.25", formatHundredths(economyHundredths(41, 24)) === "10.25");
+  check("econ 35/20 = 10.50", formatHundredths(economyHundredths(35, 20)) === "10.50");
+  check("econ half up 1/8 = 0.75", formatHundredths(economyHundredths(1, 8)) === "0.75");
+  check("econ 7/23 = 1.83", formatHundredths(economyHundredths(7, 23)) === "1.83");
+  check("avg 105/2 = 52.50", formatHundredths(averageHundredths(105, 2)) === "52.50");
+  check("avg 10/3 = 3.33", formatHundredths(averageHundredths(10, 3)) === "3.33");
+  check("avg never out", formatHundredths(averageHundredths(10, 0)) === "–");
+
+  // Leaderboards over two matches.
+  const m2: PlayerStats = {
+    batting: [bat(A, "P1", 20, 10), bat(B, "guest:Ravi", 75, 40), bat(A, "P2", 105, 60, true)],
+    bowling: [bowl(A, "P3", 24, 18, 3), bowl(B, "Q2", 24, 25, 3), bowl(B, "Q9", 12, 9, 0)],
+  };
+  const bl = battingLeaders([good, m2]);
+  check("leaders: batting order", bl.map((e) => `${e.key}:${e.runs}`).join(" ") === "P2:150 guest:Ravi:145 P1:80 Q1:80",
+    bl.map((e) => `${e.key}:${e.runs}`).join(" "));
+  const srTie = battingLeaders([{ batting: [bat(A, "Slow", 30, 40), bat(B, "Fast", 30, 20)], bowling: [] }]);
+  check("leaders: level runs → higher strike rate first", srTie[0].key === "FAST");
+  const p2 = bl.find((e) => e.key === "P2")!;
+  check("leaders: highest with not out", formatHighest(p2) === "105" && p2.notOuts === 1 && p2.innings === 2);
+  const ravi = bl.find((e) => e.key === "guest:Ravi")!;
+  check("leaders: guest highest not out", formatHighest(ravi) === "75" && formatHighest({ ...ravi, highest: 70, highestNotOut: true }) === "70*");
+  const wl = bowlingLeaders([good, m2]);
+  check("leaders: most wickets then economy", wl[0].key === "Q2" && wl[0].wickets === 6 && wl[1].key === "P3" && wl[1].wickets === 5,
+    wl.map((e) => `${e.key}:${e.wickets}`).join(" "));
+  check("leaders: best figures", formatBest(wl.find((e) => e.key === "P3")!) === "3/18" && formatBest(wl.find((e) => e.key === "Q2")!) === "3/25");
+  check("leaders: wicketless bowler last", wl[wl.length - 1].key === "Q9" && formatBest(wl[wl.length - 1]) === "0/9");
+  check("leaders: key case merges", battingLeaders([{ batting: [bat(A, "p1", 5, 5), bat(A, "P1", 6, 6)], bowling: [] }]).length === 1);
+
+  const json = JSON.stringify(good);
+  check("decode player stats", decodePlayerStats(json)?.bowling.length === 3);
+  check("decode player stats rejects junk", decodePlayerStats('{"batting":[{"runs":"x"}]}') === null);
+  check("decode player stats missing", decodePlayerStats(undefined) === null);
+}
 
 console.log(failures === 0 ? "\nAll cricket checks passed." : `\n${failures} cricket check(s) failed.`);
 process.exit(failures === 0 ? 0 : 1);
