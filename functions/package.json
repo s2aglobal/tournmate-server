@@ -12,6 +12,7 @@
     "lint": "eslint src/ --ext .ts",
     "seed:test-users": "npm run build && node lib/scripts/seedTestUsers.js",
     "seed:sports-config": "npm run build && node lib/scripts/seedSportsConfig.js",
+    "seed:qa-cricket": "npm run build && node lib/scripts/seedQaCricket.js",
     "backfill:registration-counts": "npm run build && node lib/scripts/backfillRegistrationCounts.js",
     "check:scoring": "npm run build && node lib/scripts/checkScoring.js",
     "check:cricket": "npm run build && node lib/scripts/checkCricket.js",
