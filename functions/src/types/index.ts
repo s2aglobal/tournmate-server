@@ -228,7 +228,7 @@ export interface TournamentDoc {
 
 export interface RegistrationDoc {
   tournamentId: string;
-  /** Singles/doubles: the player. Team sports: the captain who registered the team. */
+  /** Singles/doubles: the player. Team sports: whoever registered the team. */
   playerId: string;
   partnerId?: string;
   /** Team sports: the team (teams/{id}) and the players named for this event. */
@@ -237,6 +237,15 @@ export interface RegistrationDoc {
   rosterIds?: string[];
   /** Players without an account, shown on the scorecard but not rated. */
   guestNames?: string[];
+  /**
+   * Team sports: roles for this event, keyed by player id or `guest:<name>`.
+   * Whoever registered (playerId) needn't be the captain, or play.
+   */
+  captainId?: string;
+  viceCaptainId?: string;
+  keeperId?: string;
+  /** key → "batter" | "bowler" | "allRounder" | "wicketkeeperBatter". */
+  playerRoles?: Record<string, string>;
   createdAt: Timestamp;
 }
 
@@ -283,6 +292,11 @@ export interface MatchDoc {
   resultData?: string;
   /** Human-readable result, e.g. "Dallas Royals won by 6 wickets". */
   summary?: string;
+  /** Cricket: Player of the Match (player id or `guest:<name>`), optional. */
+  playerOfMatchKey?: string;
+  playerOfMatchName?: string;
+  /** Registration id of the Player of the Match's team. */
+  playerOfMatchTeamId?: string;
   sportType?: string;
   /** Set by onMatchFinished once Elo has been applied, so retries don't double-count. */
   eloApplied?: boolean;

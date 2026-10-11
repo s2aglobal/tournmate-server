@@ -77,14 +77,28 @@ service cloud.firestore {
     // A cricket tournament is always a team event, and its registrations
     // must be team entries. Older app versions don't know the team format
     // and would otherwise register individuals (e.g. from a shared link).
-    // One get() of the tournament per registration create.
-    function teamEntryIfTeamEvent() {
+    // One get() of the tournament per registration create, plus one
+    // getAfter() of the entry lock for team events.
+    function teamEntryIfTeamEvent(registrationId) {
       let t = get(/databases/$(database)/documents/tournaments/$(request.resource.data.tournamentId));
       return t.data.get('formatRaw', '') != 'team'
         || (isNonEmptyString(request.resource.data.get('teamId', ''))
             && isNonEmptyString(request.resource.data.get('teamName', ''))
             && request.resource.data.get('rosterIds', null) is list
-            && !('partnerId' in request.resource.data));
+            && !('partnerId' in request.resource.data)
+            && holdsTeamEntryLock(registrationId));
+    }
+
+    // One team entry per person per tournament: a team registration must be
+    // written in the same batch as teamEntries/{tournamentId}_{playerId}
+    // (lower case), which can be created once and never overwritten.
+    function teamEntryLockPath(tournamentId, playerId) {
+      return /databases/$(database)/documents/teamEntries/$(tournamentId.lower() + '_' + playerId.lower());
+    }
+
+    function holdsTeamEntryLock(registrationId) {
+      return getAfter(teamEntryLockPath(request.resource.data.tournamentId, request.resource.data.playerId))
+        .data.registrationId == registrationId;
     }
 
     // Cricket tournaments must use the team format.
@@ -156,15 +170,37 @@ service cloud.firestore {
       allow create: if isAuthenticated()
         && isNonEmptyString(request.resource.data.tournamentId)
         && isNonEmptyString(request.resource.data.playerId)
-        && teamEntryIfTeamEvent();
+        && teamEntryIfTeamEvent(registrationId);
 
-      // Doubles: pick a partner. Team sports: the captain changes who plays
-      // for this event (roster, guests) or the shown team name.
+      // Doubles: pick a partner. Team sports: who plays for this event
+      // (roster, guests), their roles, or the shown team name.
       allow update: if isAuthenticated()
-        && onlyUpdates(['partnerId', 'rosterIds', 'guestNames', 'teamName']);
+        && onlyUpdates(['partnerId', 'rosterIds', 'guestNames', 'teamName',
+                        'captainId', 'viceCaptainId', 'keeperId', 'playerRoles']);
 
       // Only the registrant can delete their own registration
       allow delete: if isAuthenticated();
+    }
+
+    // ─── Team entry locks ───────────────────────────────
+    // teamEntries/{tournamentId}_{playerId}: one per person per tournament,
+    // created with their team registration (see holdsTeamEntryLock).
+    match /teamEntries/{entryId} {
+      allow read: if isAuthenticated();
+
+      allow create: if isAuthenticated()
+        && entryId == request.resource.data.tournamentId.lower() + '_' + request.resource.data.playerId.lower()
+        && getAfter(/databases/$(database)/documents/registrations/$(request.resource.data.registrationId))
+             .data.playerId == request.resource.data.playerId;
+
+      // Never overwritten: a second entry by the same person fails here.
+      allow update: if false;
+
+      // Freed together with (or after) its registration. Older entries have
+      // no lock, so deleting a missing one is allowed.
+      allow delete: if isAuthenticated()
+        && (resource == null
+            || !existsAfter(/databases/$(database)/documents/registrations/$(resource.data.registrationId)));
     }
 
     // ─── Teams (team sports: cricket first) ─────────────
