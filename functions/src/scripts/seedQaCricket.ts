@@ -31,6 +31,12 @@
  * Usage (from tournmate-server/functions, on a machine with dev credentials):
  *   npm run build && node lib/scripts/seedQaCricket.js --dry-run
  *   npm run build && node lib/scripts/seedQaCricket.js
+ *   npm run build && node lib/scripts/seedQaCricket.js --marketing
+ *
+ * --marketing: the same tournaments with store-screenshot names: no "QA "
+ * prefix, real-sounding tournament, team and player names (every player is
+ * a named guest; a test account registers each team as its manager), and a
+ * T20 league with T20 scores. Still `qaSeed: true`, so the cleanup removes it.
  *   ... --organizers=<uid>[,<uid>]   (default: the QA simulator + emulator users)
  *
  * Credentials: Application Default Credentials
@@ -74,8 +80,12 @@ const DEFAULT_ORGANIZERS: { uid: string; label: string }[] = [
   { uid: "9enzsOvCuMOHeHl3Z504SbBL9E53", label: "Android" },
 ];
 
+const MK = process.argv.includes("--marketing");
+/** "QA " in test data; nothing in marketing data. */
+const QA = MK ? "" : "QA ";
+
 const VENUE = {
-  name: "QA Merion Cricket Ground", address: "Merion Cricket Ct, Austin, TX",
+  name: `${QA}Merion Cricket Ground`, address: "Merion Cricket Ct, Austin, TX",
   lat: 30.1866, lng: -97.7433,
 };
 
@@ -109,6 +119,24 @@ function sortedJson(value: unknown): string {
 }
 
 interface Created { kind: string; id: string; title: string; note?: string }
+
+/** Real-sounding player names for --marketing (each used once per tournament). */
+const NAME_POOL = [
+  "Arjun Mehta", "Liam Carter", "Imran Ali", "Noah Fernandes", "Rohan Iyer", "Ethan Brooks", "Sahil Verma",
+  "Marcus Grant", "Kabir Singh", "Daniel Reid", "Aditya Rao", "Jordan Hayes", "Faisal Khan", "Owen Mitchell",
+  "Vikram Nair", "Lucas Bennett", "Zain Qureshi", "Ryan Walsh", "Nikhil Joshi", "Caleb Morgan", "Hamza Sheikh",
+  "Tyler Cooper", "Ishaan Kapoor", "Mason Clarke", "Dev Malhotra", "Aaron Pierce", "Yusuf Rahman", "Ben Archer",
+  "Karthik Menon", "Jake Sullivan", "Omar Siddiqui", "Chris Lawson", "Pranav Desai", "Nathan Price", "Tariq Aziz",
+  "Sean Fletcher", "Harsh Agarwal", "Kyle Bishop", "Rahul Bose", "Andre Thomas", "Varun Pillai", "Eli Turner",
+  "Shiv Reddy", "Jason Ward", "Asif Mirza", "Luke Hammond", "Manish Gupta", "Dylan Foster", "Amir Hussain",
+  "Cole Jenkins", "Siddharth Rao", "Ian Murphy", "Neil D'Souza", "Ravi Shankar", "Tom Whitaker", "Akash Patil",
+  "Reece Holder", "Sameer Bhat", "Jamal Pierre", "Gautam Sethi", "Chris Gayle-Watson", "Anil Kumble-Shah",
+  "Deepak Chahar-Lal", "Mitchell Owens", "Pavan Kulkarni", "Leon Baptiste", "Rakesh Yadav", "Shane Dowrich-Hall",
+  "Vivek Oberoi-Nath", "Darren Sammy-Cole", "Ajay Bhatia", "Ross Fielding", "Sunil Narine-Ross", "Hari Prasad",
+  "Josh Hazel", "Rizwan Malik", "Kevin Peters", "Tanmay Saxena", "Ali Haider", "Matt Henry-Lowe", "Sachin Tiwari",
+  "Dwayne Bravo-King", "Raj Malhotra", "Joel Garner-Webb", "Krish Bajaj", "Andy Flower-Grant", "Mohit Sharma-Lee",
+  "Brian Lara-Cruz", "Nitin Menon", "Grant Elliot-Shaw", "Farhan Akhtar-Ali", "Paul Collingwood-Ray",
+].filter((n) => !n.includes("-"));
 
 class Writer {
   private batch: WriteBatch;
@@ -259,6 +287,7 @@ async function main() {
       captain: string; vice?: string; keeper?: string; playing: Record<string, string>;
     }; minutes: number; pom: number | string;
   }): Promise<Entry> => {
+    if (MK) o = marketingEntry(o);
     const teamId = newId();
     const registrant = o.registrant ?? o.players[0];
     await w.set("teams", teamId, {
@@ -292,6 +321,30 @@ async function main() {
     const pomName = typeof o.pom === "number" ? o.players[o.pom].name : o.pom;
     return { regId, name: o.name, players: o.players, guests: o.guests, captain: roles.captain, pomKey, pomName };
   };
+
+  /**
+   * --marketing: every player becomes a named guest (generated names in place
+   * of test accounts and "X Guest n"; real names like "Ravi Kumar" kept), and
+   * the first test account registers the team as its non-playing manager.
+   */
+  function marketingEntry<T extends { tid: string; players: PlayerRef[]; guests: string[]; registrant?: PlayerRef; pom: number | string }>(o: T): T {
+    const used = usedNames.get(o.tid) ?? new Set<string>();
+    usedNames.set(o.tid, used);
+    const next = () => {
+      const n = NAME_POOL.find((x) => !used.has(x));
+      if (!n) throw new Error("Name pool exhausted");
+      used.add(n);
+      return n;
+    };
+    const real = o.guests.filter((g) => !/ Guest \d+$/.test(g));
+    real.forEach((g) => used.add(g));
+    const forPlayers = o.players.map(() => next());
+    const forGuests = o.guests.filter((g) => / Guest \d+$/.test(g)).map(() => next());
+    const guests = [...forPlayers, ...real, ...forGuests];
+    const pom = typeof o.pom === "number" ? guests[o.pom] : o.pom;
+    return { ...o, registrant: o.registrant ?? o.players[0], players: [], guests, pom };
+  }
+  const usedNames = new Map<string, Set<string>>();
 
   const members = (e: Entry) => [
     ...e.players.map((p) => ({ key: key(p), name: p.name })),
@@ -448,19 +501,19 @@ async function main() {
 
     // ── 1. Open entry: T20 knockout, Random seeding, 5 teams, no draw ──
     {
-      const title = `QA Cricket Open Entry${tag}`;
+      const title = MK ? `Lone Star T20 Cup${tag}` : `QA Cricket Open Entry${tag}`;
       const t = await tournament({
         title, days: 6, matchFormatRaw: "singleElimination", eventType: "t20",
         formatConfig: { seedingMode: "random", maxParticipants: 8 }, organizer: o.uid, regCount: 5,
         note: "T20 knockout, Random seeding, 5 teams, no draw yet",
       });
       const specs: { name: string; players: PlayerRef[]; guests: string[]; registrant?: PlayerRef }[] = [
-        { name: "QA Austin Strikers", players: test.slice(0, 3), guests: guests("Strikers", 8) },
-        { name: "QA Round Rock Royals", players: test.slice(3, 6), guests: guests("Royals", 9) },
+        { name: `${QA}Austin Strikers`, players: test.slice(0, 3), guests: guests("Strikers", 8) },
+        { name: `${QA}Round Rock Royals`, players: test.slice(3, 6), guests: guests("Royals", 9) },
         // Registered by a manager who doesn't play (test7 isn't on the roster).
-        { name: "QA Cedar Park Chargers", players: test.slice(7, 9), guests: guests("Chargers", 9), registrant: test[6] },
-        { name: "QA Pflugerville Panthers", players: test.slice(9, 11), guests: guests("Panthers", 2) },  // 4 of 11: short side
-        { name: "QA Georgetown Giants", players: test.slice(11, 14), guests: guests("Giants", 12) },     // 11 + 4 subs: full squad
+        { name: `${QA}Cedar Park Chargers`, players: test.slice(7, 9), guests: guests("Chargers", 9), registrant: test[6] },
+        { name: `${QA}Pflugerville Panthers`, players: test.slice(9, 11), guests: guests("Panthers", 2) },  // 4 of 11: short side
+        { name: `${QA}Georgetown Giants`, players: test.slice(11, 14), guests: guests("Giants", 12) },     // 11 + 4 subs: full squad
       ];
       for (const [i, s] of specs.entries()) {
         await enter({
@@ -478,34 +531,36 @@ async function main() {
 
     // ── 2. League: Box 6 round robin, 4 teams ──
     {
-      const title = `QA Cricket League${tag}`;
+      const title = MK ? `Austin Premier League${tag}` : `QA Cricket League${tag}`;
       const t = await tournament({
-        title, days: -2, matchFormatRaw: "roundRobin", eventType: "box6",
+        title, days: -2, matchFormatRaw: "roundRobin", eventType: MK ? "t20" : "box6",
         formatConfig: { maxParticipants: 4 }, organizer: o.uid, regCount: 4,
         note: "Box 6 (6 overs, 6-a-side, last man stands) round robin, 5 of 6 played",
       });
       const [A, B, C, D] = [
-        await enter({ tid: t.id, title, organizer: o.uid, name: "QA Lakeway Lions", players: test.slice(0, 3), guests: guests("Lions", 3), roles: standardRoles, minutes: 0, pom: 1 }),
-        await enter({ tid: t.id, title, organizer: o.uid, name: "QA Bee Cave Bulls", players: test.slice(3, 6), guests: guests("Bulls", 3), roles: standardRoles, minutes: 1, pom: 0 }),
-        await enter({ tid: t.id, title, organizer: o.uid, name: "QA Kyle Kings", players: test.slice(6, 8), guests: ["Ravi Kumar", "Kyle Guest 2", "Kyle Guest 3", "Kyle Guest 4"], roles: (k) => ({ ...standardRoles(k), captain: guestKey("Ravi Kumar") }), minutes: 2, pom: "Ravi Kumar" }),
-        await enter({ tid: t.id, title, organizer: o.uid, name: "QA Dripping Springs Dragons", players: test.slice(8, 11), guests: guests("Dragons", 3), roles: standardRoles, minutes: 3, pom: 2 }),
+        await enter({ tid: t.id, title, organizer: o.uid, name: `${QA}Lakeway Lions`, players: test.slice(0, 3), guests: guests("Lions", 3), roles: standardRoles, minutes: 0, pom: 1 }),
+        await enter({ tid: t.id, title, organizer: o.uid, name: `${QA}Bee Cave Bulls`, players: test.slice(3, 6), guests: guests("Bulls", 3), roles: standardRoles, minutes: 1, pom: 0 }),
+        await enter({ tid: t.id, title, organizer: o.uid, name: `${QA}Kyle Kings`, players: test.slice(6, 8), guests: ["Ravi Kumar", "Kyle Guest 2", "Kyle Guest 3", "Kyle Guest 4"], roles: (k) => ({ ...standardRoles(k), captain: guestKey("Ravi Kumar") }), minutes: 2, pom: "Ravi Kumar" }),
+        await enter({ tid: t.id, title, organizer: o.uid, name: `${QA}Dripping Springs Dragons`, players: test.slice(8, 11), guests: guests("Dragons", 3), roles: standardRoles, minutes: 3, pom: 2 }),
       ];
       const r = t.rules; // 6 overs = 36 balls, all out = 6 wickets
       const inn = (e: Entry, runs: number, wickets: number, balls: number) => ({ battingRegistrationId: e.regId, runs, wickets, balls });
       const results: CricketResult[] = [];
       const base = { tid: t.id, title, rules: r, organizer: o.uid };
+      // --marketing plays T20 (120 balls, 10 wickets): the same results at T20 scale.
+      const sc = (box: [number, number, number], t20: [number, number, number]) => (MK ? t20 : box);
       // R1: Lions 62/4 (6) beat Dragons 48/6 (5) — won by 14 runs.
-      results.push(await played({ ...base, a: A, b: D, round: 1, result: { innings: [inn(A, 62, 4, 36), inn(D, 48, 6, 30)] }, pom: A }));
+      results.push(await played({ ...base, a: A, b: D, round: 1, result: { innings: [inn(A, ...sc([62, 4, 36], [182, 5, 120])), inn(D, ...sc([48, 6, 30], [154, 10, 117]))] }, pom: A }));
       // R1: Bulls 55/5 (6); Kings 56/3 (5.3) — Kings won by 3 wickets (3 balls left).
-      results.push(await played({ ...base, a: B, b: C, round: 1, result: { innings: [inn(B, 55, 5, 36), inn(C, 56, 3, 33)] }, pom: C }));
+      results.push(await played({ ...base, a: B, b: C, round: 1, result: { innings: [inn(B, ...sc([55, 5, 36], [165, 7, 120])), inn(C, ...sc([56, 3, 33], [166, 4, 111]))] }, pom: C }));
       // R2: Kings 58/2 (6); Lions 58/6 (6) — match tied (league, no super over played).
-      results.push(await played({ ...base, a: A, b: C, round: 2, result: { innings: [inn(C, 58, 2, 36), inn(A, 58, 6, 36)] }, pom: A }));
+      results.push(await played({ ...base, a: A, b: C, round: 2, result: { innings: [inn(C, ...sc([58, 2, 36], [171, 6, 120])), inn(A, ...sc([58, 6, 36], [171, 8, 120]))] }, pom: A }));
       // R2: Dragons v Bulls — no result after 2 overs (rain). Kept as a partial first innings.
-      const nr: CricketResult = { innings: [inn(D, 20, 1, 12)], noResult: true };
+      const nr: CricketResult = { innings: [inn(D, ...sc([20, 1, 12], [64, 2, 48]))], noResult: true };
       await played({ ...base, a: D, b: B, round: 2, result: nr, pom: D });
       results.push(Object.assign({ teams: [D.regId, B.regId] }, nr));
       // R3: Lions 70/3 (6) beat Bulls 41/6 (4.4) — won by 29 runs.
-      results.push(await played({ ...base, a: A, b: B, round: 3, result: { innings: [inn(A, 70, 3, 36), inn(B, 41, 6, 28)] }, pom: A }));
+      results.push(await played({ ...base, a: A, b: B, round: 3, result: { innings: [inn(A, ...sc([70, 3, 36], [198, 4, 120])), inn(B, ...sc([41, 6, 28], [151, 10, 110]))] }, pom: A }));
       // R3: Kings v Dragons — left for the tester.
       await scheduled({ tid: t.id, title, a: C, b: D, round: 3 });
       expectations.push(
@@ -519,7 +574,7 @@ async function main() {
 
     // ── 3. Groups: T10 group + knockout, 8 teams ──
     {
-      const title = `QA Cricket Groups${tag}`;
+      const title = MK ? `Texas T10 Championship${tag}` : `QA Cricket Groups${tag}`;
       const t = await tournament({
         title, days: -1, matchFormatRaw: "groupKnockout", eventType: "t10",
         formatConfig: { groupCount: 2, teamsPerGroup: 4, advancingPerGroup: 2, maxParticipants: 8 },
@@ -527,10 +582,11 @@ async function main() {
         note: "T10 group + knockout, groups played, semi-finals: one super over, one to score",
       });
       const names = ["Hornets", "Falcons", "Wolves", "Sharks", "Cobras", "Eagles", "Rhinos", "Bisons"];
+      const CITIES = ["Austin", "Dallas", "Houston", "Plano", "Frisco", "Irving", "Katy", "Sugar Land"];
       const entries: Entry[] = [];
       for (let i = 0; i < 8; i++) {
         entries.push(await enter({
-          tid: t.id, title, organizer: o.uid, name: `QA ${names[i]}`, players: test.slice(2 * i, 2 * i + 2),
+          tid: t.id, title, organizer: o.uid, name: MK ? `${CITIES[i]} ${names[i]}` : `QA ${names[i]}`, players: test.slice(2 * i, 2 * i + 2),
           guests: guests(names[i], 9), roles: standardRoles, minutes: i, pom: i % 2,
         }));
       }
@@ -563,8 +619,8 @@ async function main() {
       expectations.push(
         `${title}:\n    Group A:\n    ${table(entries.slice(0, 4), groupResults.A, r)}\n` +
         `    Group B:\n    ${table(entries.slice(4, 8), groupResults.B, r)}\n` +
-        "    Knockout: QA Hornets beat QA Eagles in the super over (\"won the super over\"); " +
-        "QA Cobras v QA Falcons is waiting — a tie there needs the super over (knockouts can't end level or with no result). " +
+        `    Knockout: ${a1.name} beat ${b2.name} in the super over ("won the super over"); ` +
+        `${b1.name} v ${a2.name} is waiting — a tie there needs the super over (knockouts can't end level or with no result). ` +
         "After both semis, Generate next round creates the final.\n" +
         `    ${performers(t.id)}`,
       );
