@@ -17,6 +17,15 @@
  *   node lib/scripts/seedSportsConfig.js --project tournmate-dev --force    # overwrite
  *   node lib/scripts/seedSportsConfig.js --project tournmate-dev --dry-run  # print only
  *
+ * Turning sports on or off (e.g. cricket on dev for testing): `--live` sets the
+ * whole live list and implies --force. Prod keeps the default unless you pass it.
+ *   node lib/scripts/seedSportsConfig.js --project tournmate-dev --live pickleball,badminton,tennis
+ *
+ * Sports that need a newer app (cricket): `--gated <sport>=<ios>/<android>`
+ * puts them in `liveMinAppVersion`, so older apps keep showing them as "Soon".
+ * Repeat for several sports. Implies --force.
+ *   node lib/scripts/seedSportsConfig.js --project tournmate-dev --gated cricket=1.8/1.1
+ *
  * Or via npm (args after `--`):
  *   npm run seed:sports-config -- --project tournmate-dev
  *
@@ -27,32 +36,84 @@
 import { initializeApp, getApps } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 import {
+  CATALOG_SPORT_IDS,
   DEFAULT_SPORTS_CONFIG,
   SPORTS_CONFIG_COLLECTION,
   SPORTS_CONFIG_DOC_ID,
+  SportsConfig,
+  SportMinAppVersion,
 } from "../config/sportsCatalog";
+import type { SportType } from "../types";
 
-function parseArgs(argv: string[]): { projectId?: string; force: boolean; dryRun: boolean } {
+interface Args {
+  projectId?: string;
+  force: boolean;
+  dryRun: boolean;
+  live?: SportType[];
+  gated: Partial<Record<SportType, SportMinAppVersion>>;
+}
+
+const VERSION = /^\d+(\.\d+){0,2}$/;
+
+function parseGated(value: string | undefined): [SportType, SportMinAppVersion] {
+  const m = /^([a-z_]+)=([^/]*)\/([^/]*)$/.exec(value ?? "");
+  const sport = m?.[1] as SportType | undefined;
+  const ios = m?.[2] || undefined;
+  const android = m?.[3] || undefined;
+  if (!m || !sport || !CATALOG_SPORT_IDS.includes(sport) ||
+      (ios && !VERSION.test(ios)) || (android && !VERSION.test(android)) || (!ios && !android)) {
+    console.error(`--gated needs <sport>=<ios version>/<android version>, e.g. cricket=1.8/1.1 (got ${value})`);
+    process.exit(1);
+  }
+  return [sport, { ...(ios ? { ios } : {}), ...(android ? { android } : {}) }];
+}
+
+function parseLive(value: string | undefined): SportType[] {
+  const ids = (value ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+  const unknown = ids.filter((id) => !CATALOG_SPORT_IDS.includes(id as SportType));
+  if (ids.length === 0 || unknown.length > 0) {
+    console.error(`--live needs catalog sport ids${unknown.length ? `; unknown: ${unknown.join(", ")}` : ""}`);
+    process.exit(1);
+  }
+  return ids as SportType[];
+}
+
+function parseArgs(argv: string[]): Args {
   let projectId: string | undefined;
   let force = false;
   let dryRun = false;
+  let live: SportType[] | undefined;
+  const gated: Partial<Record<SportType, SportMinAppVersion>> = {};
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === "--force") force = true;
     else if (arg === "--dry-run") dryRun = true;
     else if (arg === "--project") projectId = argv[++i];
     else if (arg.startsWith("--project=")) projectId = arg.slice("--project=".length);
+    else if (arg === "--live") { live = parseLive(argv[++i]); force = true; }
+    else if (arg.startsWith("--live=")) { live = parseLive(arg.slice("--live=".length)); force = true; }
+    else if (arg === "--gated") { const [s, v] = parseGated(argv[++i]); gated[s] = v; force = true; }
+    else if (arg.startsWith("--gated=")) { const [s, v] = parseGated(arg.slice("--gated=".length)); gated[s] = v; force = true; }
     else {
       console.error(`Unknown argument: ${arg}`);
       process.exit(1);
     }
   }
   projectId = projectId || process.env.GOOGLE_CLOUD_PROJECT || process.env.GCLOUD_PROJECT;
-  return { projectId, force, dryRun };
+  return { projectId, force, dryRun, live, gated };
 }
 
 async function main(): Promise<void> {
-  const { projectId, force, dryRun } = parseArgs(process.argv.slice(2));
+  const { projectId, force, dryRun, live, gated } = parseArgs(process.argv.slice(2));
+  const config: SportsConfig = { ...DEFAULT_SPORTS_CONFIG, ...(live ? { live } : {}) };
+  if (Object.keys(gated).length > 0) {
+    const both = Object.keys(gated).filter((s) => config.live.includes(s as SportType));
+    if (both.length > 0) {
+      console.error(`${both.join(", ")} can't be in both --live and --gated: every app version reads "live".`);
+      process.exit(1);
+    }
+    config.liveMinAppVersion = gated;
+  }
   if (!projectId) {
     console.error(
       "A project is required: pass --project <id> or set GOOGLE_CLOUD_PROJECT.\n" +
@@ -67,7 +128,7 @@ async function main(): Promise<void> {
   console.log(`Target:  ${target}${force ? " (--force)" : ""}${dryRun ? " (--dry-run)" : ""}`);
 
   if (dryRun) {
-    console.log(JSON.stringify(DEFAULT_SPORTS_CONFIG, null, 2));
+    console.log(JSON.stringify(config, null, 2));
     return;
   }
 
@@ -77,12 +138,13 @@ async function main(): Promise<void> {
   const written = await getFirestore().runTransaction(async (tx) => {
     const snap = await tx.get(ref);
     if (snap.exists && !force) return false;
-    tx.set(ref, DEFAULT_SPORTS_CONFIG);
+    tx.set(ref, config);
     return true;
   });
 
   if (written) {
-    console.log(`Wrote ${target}: live = ${DEFAULT_SPORTS_CONFIG.live.join(", ")}`);
+    const gatedText = config.liveMinAppVersion ? `; gated = ${JSON.stringify(config.liveMinAppVersion)}` : "";
+    console.log(`Wrote ${target}: live = ${config.live.join(", ")}${gatedText}`);
   } else {
     console.log(`${target} already exists; left unchanged. Pass --force to overwrite.`);
   }

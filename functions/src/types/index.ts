@@ -218,14 +218,58 @@ export interface TournamentDoc {
    * leniently. See services/scoring.ts.
    */
   scoringConfigData?: string;
+  /** Cricket: event type id (t20, t10, box8, box6, custom). See services/cricket.ts. */
+  eventTypeId?: string;
+  /** Cricket: rules JSON (players per side, overs, balls per over, …). See services/cricket.ts. */
+  rulesData?: string;
   ageGroupRaw?: string;
   createdAt: Timestamp;
 }
 
 export interface RegistrationDoc {
   tournamentId: string;
+  /** Singles/doubles: the player. Team sports: whoever registered the team. */
   playerId: string;
   partnerId?: string;
+  /** Team sports: the team (teams/{id}) and the players named for this event. */
+  teamId?: string;
+  teamName?: string;
+  rosterIds?: string[];
+  /** Players without an account, shown on the scorecard but not rated. */
+  guestNames?: string[];
+  /**
+   * Team sports: roles for this event, keyed by player id or `guest:<name>`.
+   * Whoever registered (playerId) needn't be the captain, or play.
+   */
+  captainId?: string;
+  viceCaptainId?: string;
+  keeperId?: string;
+  /** key → "batter" | "bowler" | "allRounder" | "wicketkeeperBatter". */
+  playerRoles?: Record<string, string>;
+  createdAt: Timestamp;
+}
+
+/**
+ * Everyone a registration speaks for: the player, a doubles partner, and for
+ * team sports the players named for the event. De-duplicated.
+ */
+export function registrationPlayerIds(reg: RegistrationDoc): string[] {
+  return [...new Set([reg.playerId, reg.partnerId, ...(reg.rosterIds ?? [])]
+    .filter((id): id is string => typeof id === "string" && id.length > 0))];
+}
+
+/** A persistent team for team sports (cricket first). */
+export interface TeamDoc {
+  name: string;
+  sportType: string;
+  /** Player id of the captain. */
+  captainId: string;
+  playerIds: string[];
+  colorHex?: string;
+  homeCountryCode?: string;
+  homePostalCode?: string;
+  /** Firebase uid of the creator; only they can rename or delete the team. */
+  createdBy: string;
   createdAt: Timestamp;
 }
 
@@ -242,6 +286,19 @@ export interface MatchDoc {
   submittedBy?: string;
   confirmedBy?: string;
   setScores?: Array<{ teamAPoints: number; teamBPoints: number }>;
+  /** Cricket and other non-set sports: "win" | "tie" | "noResult". Absent = win (set-based sports). */
+  resultType?: string;
+  /** Cricket: scorecard JSON (see services/cricket.ts `CricketResult`). */
+  resultData?: string;
+  /** Human-readable result, e.g. "Dallas Royals won by 6 wickets". */
+  summary?: string;
+  /** Cricket: Player of the Match (player id or `guest:<name>`), optional. */
+  playerOfMatchKey?: string;
+  playerOfMatchName?: string;
+  /** Registration id of the Player of the Match's team. */
+  playerOfMatchTeamId?: string;
+  /** Cricket: optional batting/bowling figures per player (JSON, see services/cricketPlayerStats.ts). */
+  playerStatsData?: string;
   sportType?: string;
   /** Set by onMatchFinished once Elo has been applied, so retries don't double-count. */
   eloApplied?: boolean;

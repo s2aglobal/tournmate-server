@@ -1,7 +1,7 @@
 import { onDocumentUpdated } from "firebase-functions/v2/firestore";
 import { logger } from "firebase-functions/v2";
 import { getFirestore } from "firebase-admin/firestore";
-import { TournamentDoc, RegistrationDoc, PlayerDoc } from "../types";
+import { TournamentDoc, RegistrationDoc, PlayerDoc, registrationPlayerIds } from "../types";
 import { sendToPlayer } from "../services/notifications";
 
 /**
@@ -34,9 +34,7 @@ export const onTournamentCancelled = onDocumentUpdated(
     // Collect unique player IDs
     const playerIds = new Set<string>();
     for (const doc of regsSnap.docs) {
-      const reg = doc.data() as RegistrationDoc;
-      playerIds.add(reg.playerId);
-      if (reg.partnerId) playerIds.add(reg.partnerId);
+      for (const id of registrationPlayerIds(doc.data() as RegistrationDoc)) playerIds.add(id);
     }
 
     // Notify each player

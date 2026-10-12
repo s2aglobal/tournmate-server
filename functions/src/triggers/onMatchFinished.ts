@@ -1,7 +1,7 @@
 import { onDocumentUpdated } from "firebase-functions/v2/firestore";
 import { logger } from "firebase-functions/v2";
 import { getFirestore } from "firebase-admin/firestore";
-import { MatchDoc, RegistrationDoc, PlayerDoc } from "../types";
+import { MatchDoc, RegistrationDoc, PlayerDoc, registrationPlayerIds } from "../types";
 import { sendToPlayer } from "../services/notifications";
 import { applyEloForMatch } from "../services/elo";
 
@@ -45,15 +45,15 @@ export const onMatchFinished = onDocumentUpdated(
     const teamA = teamADoc.data() as RegistrationDoc;
     const teamB = teamBDoc.data() as RegistrationDoc;
 
-    // Collect all player IDs from both teams
-    const allPlayerIds = [
-      teamA.playerId,
-      teamA.partnerId,
-      teamB.playerId,
-      teamB.partnerId,
-    ].filter(Boolean) as string[];
+    // Collect all player IDs from both teams (team sports: the whole roster)
+    const allPlayerIds = [...new Set([
+      ...registrationPlayerIds(teamA),
+      ...registrationPlayerIds(teamB),
+    ])];
 
-    const scoreText = `${after.scoreA ?? 0} - ${after.scoreB ?? 0}`;
+    // Cricket stores a sentence ("Dallas Royals won by 6 wickets"); set-based
+    // sports show the games score.
+    const resultText = after.summary ?? `Final score: ${after.scoreA ?? 0} - ${after.scoreB ?? 0}`;
 
     for (const pid of allPlayerIds) {
       const playerDoc = await db.collection("players").doc(pid).get();
@@ -66,7 +66,7 @@ export const onMatchFinished = onDocumentUpdated(
           recipientId: player.firebaseUid,
           type: "match_finished",
           title: "Match Result",
-          body: `Final score: ${scoreText}`,
+          body: resultText,
           tournamentId: after.tournamentId,
           read: false,
           createdAt: new Date(),
@@ -78,7 +78,7 @@ export const onMatchFinished = onDocumentUpdated(
         await sendToPlayer(
           player.fcmToken,
           "Match Result",
-          `Final score: ${scoreText}`,
+          resultText,
           {
             type: "match_finished",
             matchId: event.params.matchId,

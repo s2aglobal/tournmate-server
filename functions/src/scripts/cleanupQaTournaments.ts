@@ -1,7 +1,8 @@
 /**
  * Deletes the QA seed data written by seedQaTournaments.ts from
  * **tournmate-dev only**: every doc with `qaSeed == true` in tournaments,
- * registrations, matches, notifications and playSessions. Nothing else is
+ * registrations, matches, notifications, playSessions, teams and
+ * teamEntries (seedQaTournaments.ts and seedQaCricket.ts). Nothing else is
  * touched (the query is the only selector).
  *
  * Usage (from tournmate-server/functions):
@@ -17,7 +18,7 @@ import { initializeApp, getApps } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 
 const PROJECT_ID = "tournmate-dev";
-const COLLECTIONS = ["tournaments", "registrations", "matches", "notifications", "playSessions"];
+const COLLECTIONS = ["tournaments", "registrations", "matches", "notifications", "playSessions", "teams", "teamEntries"];
 
 async function main() {
   const args = process.argv.slice(2);

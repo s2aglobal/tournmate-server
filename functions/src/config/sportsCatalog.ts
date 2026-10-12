@@ -23,10 +23,24 @@ export interface SportCategory {
   sports: SportType[];
 }
 
+/** Minimum app versions ("1.8", "1.1.0") that support a sport. */
+export interface SportMinAppVersion {
+  ios?: string;
+  android?: string;
+}
+
 export interface SportsConfig {
   schemaVersion: 1;
   /** Sports that can be selected / published. Every other catalog sport shows as "Soon". */
   live: SportType[];
+  /**
+   * Sports that are live only on app versions that support them (cricket
+   * needs teams). Apps older than the minimum ignore this key and keep the
+   * sport as "Soon"; a platform without an entry keeps it "Soon" too.
+   * firestore.rules treats these sports as live for creates.
+   * Never put such a sport in `live`, which every app version reads.
+   */
+  liveMinAppVersion?: Partial<Record<SportType, SportMinAppVersion>>;
   categories: SportCategory[];
 }
 
