@@ -50,7 +50,7 @@ export { onPlaySessionCreated } from "./triggers/onPlaySessionCreated";
 export { onSessionJoined } from "./triggers/onSessionJoined";
 
 // ─── Callables ──────────────────────────────────────────
-export { generateDraw, advanceRound, resetDraw, generateRandomPairs } from "./callables/draw";
+export { generateDraw, advanceRound, resetDraw, generateRandomPairs, createManualMatches } from "./callables/draw";
 
 // ─── Scheduled Jobs ─────────────────────────────────────
 export { hourlyCleanup, dailyReminders, spamCleanup } from "./triggers/scheduledJobs";

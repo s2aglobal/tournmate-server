@@ -3,6 +3,7 @@ import { getFirestore } from "firebase-admin/firestore";
 import { fail } from "./errors";
 import {
   advanceRoundAction,
+  createManualMatchesAction,
   generateDrawAction,
   generateRandomPairsAction,
   resetDrawAction,
@@ -43,3 +44,7 @@ export const generateRandomPairs = onCall(OPTIONS, async (request) => {
   const r = await generateRandomPairsAction(getFirestore(), { uid: callerUid(request) }, tournamentIdOf(request));
   return { status: r.status, pairs: r.pairs, leftover: r.leftover, matchesCreated: 0, message: r.message };
 });
+
+/** Manual draw: `{ tournamentId, pairs: [{ teamAId, teamBId, round? }] }` → one match per pair. */
+export const createManualMatches = onCall(OPTIONS, async (request) =>
+  createManualMatchesAction(getFirestore(), { uid: callerUid(request) }, request.data));

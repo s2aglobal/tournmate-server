@@ -349,6 +349,56 @@ export async function resetDrawAction(db: Firestore, actor: Actor, tournamentId:
   });
 }
 
+// ─── createManualMatches ────────────────────────────────
+
+/**
+ * Manual draw: the organizer adds matches (the apps' "Create match": one
+ * match with a round, no bracket position). Both registrations must belong
+ * to the tournament; a team can't play itself. Matches may be added while
+ * earlier rounds are being played, like the apps allow.
+ */
+export async function createManualMatchesAction(db: Firestore, actor: Actor, data: unknown): Promise<DrawResult> {
+  const input = (data ?? {}) as { tournamentId?: unknown; pairs?: unknown };
+  const tid = await resolveTournamentRef(db, input.tournamentId);
+  if (!Array.isArray(input.pairs) || input.pairs.length === 0 || input.pairs.length > 200) {
+    fail("invalid-argument", "INVALID_ARGUMENT", "Pick two teams for each match.");
+  }
+  const pairs = input.pairs.map((p) => {
+    const x = (p ?? {}) as { teamAId?: unknown; teamBId?: unknown; round?: unknown };
+    if (typeof x.teamAId !== "string" || typeof x.teamBId !== "string") {
+      fail("invalid-argument", "INVALID_ARGUMENT", "Pick two teams for each match.");
+    }
+    const round = x.round === undefined || x.round === null ? 1 : x.round;
+    if (typeof round !== "number" || !Number.isInteger(round) || round < 1 || round > 100) {
+      fail("invalid-argument", "INVALID_ARGUMENT", "Round must be a whole number from 1.");
+    }
+    return { teamAId: x.teamAId, teamBId: x.teamBId, round };
+  });
+  return db.runTransaction(async (tx) => {
+    const state = load(await loadDrawState(db, tid, tx));
+    requireOrganizer(state, actor);
+    requireActive(state);
+    if (state.tournament.matchFormat !== "manualDraw") {
+      fail("failed-precondition", "INVALID_ARGUMENT", "Matches can only be added by hand in a manual draw.");
+    }
+    const find = entryLookup(state);
+    const list = pairs.map((p) => {
+      const a = find(p.teamAId);
+      const b = find(p.teamBId);
+      if (!a || !b) fail("not-found", "NOT_FOUND", "That team isn't registered for this tournament.");
+      if (a.docId.toUpperCase() === b.docId.toUpperCase()) {
+        fail("invalid-argument", "INVALID_ARGUMENT", "Pick two different teams.");
+      }
+      return { a, b, f: { round: p.round } };
+    });
+    writeMatches(db, tx, state.tournament, list);
+    return {
+      status: "created", matchesCreated: list.length,
+      message: list.length === 1 ? "Match created!" : `${list.length} matches created!`,
+    };
+  });
+}
+
 // ─── generateRandomPairs ────────────────────────────────
 
 export interface PairingResult extends DrawResult {

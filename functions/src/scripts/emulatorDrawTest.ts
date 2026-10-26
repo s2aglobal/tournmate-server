@@ -180,6 +180,34 @@ async function main(): Promise<void> {
     (await genderOf(d.data().playerId)) === "male" && (await genderOf(d.data().partnerId)) === "female"))).every(Boolean));
   check("pairing refused for singles", (await call("generateRandomPairs", ORGANIZER, { tournamentId: ko })).error?.details?.reason === "INVALID_ARGUMENT");
 
+  // ── Manual draw ──
+  const md = await seedTournament({ matchFormatRaw: "manualDraw" });
+  const mdRegs: string[] = [];
+  for (let i = 0; i < 4; i++) mdRegs.push(await register(md, players[i], 8_000_000 + i));
+  check("manual: generateDraw refused", (await call("generateDraw", ORGANIZER, { tournamentId: md })).error?.details?.reason === "INVALID_ARGUMENT");
+  check("manual: non-organizer refused", (await call("createManualMatches", "uid-p0",
+    { tournamentId: md, pairs: [{ teamAId: mdRegs[0], teamBId: mdRegs[1] }] })).error?.details?.reason === "NOT_ORGANIZER");
+  check("manual: self pair refused", (await call("createManualMatches", ORGANIZER,
+    { tournamentId: md, pairs: [{ teamAId: mdRegs[0], teamBId: mdRegs[0].toLowerCase() }] })).error?.details?.reason === "INVALID_ARGUMENT");
+  check("manual: other tournament's team refused", (await call("createManualMatches", ORGANIZER,
+    { tournamentId: md, pairs: [{ teamAId: mdRegs[0], teamBId: regs[1] }] })).error?.details?.reason === "NOT_FOUND");
+  check("manual: wrong format refused", (await call("createManualMatches", ORGANIZER,
+    { tournamentId: rr, pairs: [{ teamAId: mdRegs[0], teamBId: mdRegs[1] }] })).error?.details?.reason === "INVALID_ARGUMENT");
+  check("manual: bad round refused", (await call("createManualMatches", ORGANIZER,
+    { tournamentId: md, pairs: [{ teamAId: mdRegs[0], teamBId: mdRegs[1], round: 0 }] })).error?.details?.reason === "INVALID_ARGUMENT");
+  const mc = await call("createManualMatches", ORGANIZER, { tournamentId: md, pairs: [
+    { teamAId: mdRegs[0].toLowerCase(), teamBId: mdRegs[1] }, { teamAId: mdRegs[2], teamBId: mdRegs[3], round: 1 }] });
+  ms = await matchesOf(db, md);
+  check("manual: 2 matches", mc.result?.matchesCreated === 2 && ms.length === 2, JSON.stringify(mc));
+  const mm = ms.find((m) => m.teamBId === mdRegs[1]);
+  check("manual: doc shape", mm !== undefined && mm.teamAId === mdRegs[0] && mm.round === 1 && mm.statusRaw === "scheduled" &&
+    JSON.stringify(Object.keys(mm).filter((k) => k !== "id").sort()) ===
+      JSON.stringify(["createdAt", "round", "sportType", "statusRaw", "teamAId", "teamBId", "tournamentId"]), JSON.stringify(mm));
+  await db.collection("matches").doc(ms[0].id).update({ statusRaw: "finished", scoreA: 21, scoreB: 3 });
+  const later = await call("createManualMatches", ORGANIZER, { tournamentId: md, pairs: [{ teamAId: mdRegs[0], teamBId: mdRegs[2], round: 2 }] });
+  check("manual: next round added while round 1 is scored", later.result?.matchesCreated === 1, JSON.stringify(later));
+  check("manual: reset refused after scores", (await call("resetDraw", ORGANIZER, { tournamentId: md })).error?.details?.reason === "DRAW_LOCKED");
+
   // ── Auto draw job (run in-process): closed doubles tournament with solos ──
   const { runAutoDraw } = await import("../triggers/autoDrawJob");
   const auto = await seedTournament({ formatRaw: "openDoubles", randomPairing: true, registrationDeadline: Timestamp.fromMillis(Date.now() - 60_000) });
