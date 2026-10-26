@@ -1,0 +1,9 @@
+{
+  "functions": [{ "source": "../../functions", "codebase": "default" }],
+  "emulators": {
+    "auth": { "port": 9199 },
+    "firestore": { "port": 8189 },
+    "functions": { "port": 5101 },
+    "ui": { "enabled": false }
+  }
+}
