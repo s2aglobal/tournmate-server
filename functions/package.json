@@ -18,7 +18,10 @@
     "check:cricket": "npm run build && node lib/scripts/checkCricket.js",
     "qa:seed": "npm run build && node lib/scripts/seedQaTournaments.js",
     "qa:checks": "npm run build && node lib/scripts/qaServerChecks.js",
-    "qa:cleanup": "npm run build && node lib/scripts/cleanupQaTournaments.js"
+    "qa:cleanup": "npm run build && node lib/scripts/cleanupQaTournaments.js",
+    "backfill:member-uids": "npm run build && node lib/scripts/backfillMemberUids.js",
+    "check:prod-data": "npm run build && node lib/scripts/checkProdData.js",
+    "test:emulator-core": "npm run build && firebase emulators:exec --only firestore --project demo-tournmate \"node lib/scripts/emulatorCoreChecks.js\""
   },
   "engines": {
     "node": "24"
