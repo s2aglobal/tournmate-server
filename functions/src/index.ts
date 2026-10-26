@@ -55,6 +55,8 @@ export { onRegistrationWrittenMemberUids, onMatchWrittenMemberUids } from "./tri
 export { createSession, updateSession, joinSession, leaveSession, cancelSession } from "./callables/openPlay";
 export { setGender } from "./callables/profile";
 export { register, withdraw, joinAsPartner, updateRoster, setRoles } from "./callables/registrations";
+export { generateDraw, advanceRound, resetDraw, generateRandomPairs, createManualMatches } from "./callables/draw";
 
 // ─── Scheduled Jobs ─────────────────────────────────────
 export { hourlyCleanup, dailyReminders, spamCleanup } from "./triggers/scheduledJobs";
+export { autoDrawJob } from "./triggers/autoDrawJob";

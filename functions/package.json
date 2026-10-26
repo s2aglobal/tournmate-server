@@ -17,6 +17,8 @@
     "check:scoring": "npm run build && node lib/scripts/checkScoring.js",
     "check:cricket": "npm run build && node lib/scripts/checkCricket.js",
     "check:openplay": "npm run build && node lib/scripts/checkOpenPlay.js",
+    "check:draw": "npm run build && node lib/scripts/checkDraw.js",
+    "test:draw-emulator": "npm run build && cd .. && firebase emulators:exec --only firestore,functions --project demo-tournmate \"node functions/lib/scripts/emulatorDrawTest.js\"",
     "qa:seed": "npm run build && node lib/scripts/seedQaTournaments.js",
     "qa:checks": "npm run build && node lib/scripts/qaServerChecks.js",
     "qa:cleanup": "npm run build && node lib/scripts/cleanupQaTournaments.js",
