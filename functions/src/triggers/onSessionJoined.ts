@@ -88,11 +88,29 @@ export const onSessionJoined = onDocumentUpdated(
     const beforeAttendees: string[] = before.attendeeIds ?? [];
     const afterAttendees: string[] = after.attendeeIds ?? [];
 
-    // --- Someone JOINED ---
-    if (afterAttendees.length > beforeAttendees.length) {
-      const joined = afterAttendees.filter((id) => !beforeAttendees.includes(id));
-      if (joined.length === 0) return;
+    const joined = afterAttendees.filter((id) => !beforeAttendees.includes(id));
+    const left = beforeAttendees.filter((id) => !afterAttendees.includes(id));
 
+    // --- SWAP: someone left and a waitlisted player was promoted (leaveSession) ---
+    if (joined.length > 0 && left.length > 0) {
+      if (left.includes(hostId) || isAutoRemoval(before, after, left)) return;
+      await syncAttendeeUids(db, sessionId, after, left, "remove");
+      await syncAttendeeUids(db, sessionId, after, joined, "add");
+      const names = async (ids: string[]) => {
+        const snaps = await Promise.all(ids.map((id) => playerSnap(db, id)));
+        return snaps.map((p) => (p.data()?.name as string) || "A player").join(", ");
+      };
+      const waitlist: string[] = before.waitlistIds ?? [];
+      const fromWaitlist = joined.every((id) => sameIdIn(waitlist, id));
+      const body = `${await names(left)} left, ${await names(joined)} joined` +
+        `${fromWaitlist ? " from the waitlist" : ""} "${sessionTitle}"`;
+      logger.info(`Session ${sessionId}: ${body}`);
+      await notifyHost(db, hostId, "session_joined", joinedTitle, body, sessionId);
+      return;
+    }
+
+    // --- Someone JOINED ---
+    if (joined.length > 0) {
       const removed = await removeInvalidJoiners(db, sessionId, after, joined);
       const newAttendees = joined.filter((id) => !removed.includes(id));
       if (newAttendees.length === 0) return;
@@ -145,9 +163,8 @@ export const onSessionJoined = onDocumentUpdated(
     }
 
     // --- Someone LEFT ---
-    if (afterAttendees.length < beforeAttendees.length) {
-      const leftAttendees = beforeAttendees.filter((id) => !afterAttendees.includes(id));
-      if (leftAttendees.length === 0) return;
+    if (left.length > 0) {
+      const leftAttendees = left;
 
       // Don't notify host if they removed themselves (cancelled session etc.)
       if (leftAttendees.includes(hostId)) return;
@@ -202,6 +219,18 @@ export const onSessionJoined = onDocumentUpdated(
     }
   },
 );
+
+/** Inbox notification + push to the host (auth uid). */
+async function notifyHost(
+  db: Firestore, hostId: string, type: string, title: string, body: string, sessionId: string,
+): Promise<void> {
+  await db.collection("notifications").add({
+    recipientId: hostId, type, title, body, sessionId, read: false, createdAt: FieldValue.serverTimestamp(),
+  });
+  const hostSnap = await db.collection("players").where("firebaseUid", "==", hostId).limit(1).get();
+  const token = hostSnap.empty ? undefined : (hostSnap.docs[0].data() as PlayerDoc).fcmToken;
+  if (token) await sendToPlayer(token, title, body, { type, sessionId });
+}
 
 /** A player doc by id in either case (web profiles have lower-case doc ids). */
 async function playerSnap(db: Firestore, playerId: string): Promise<DocumentSnapshot> {

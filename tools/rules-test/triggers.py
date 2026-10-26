@@ -170,6 +170,23 @@ expect(len(n) == 1 and len([x for x in notifications("he") if x.get("type") == "
 expect(update_time("playSessions/CALL") == written and doc("playSessions/CALL").get("attendeeUids") == ["he"],
        "callable leave: no follow-up attendeeUids write")
 
+# ── callable-shaped leave with waitlist promotion (same size swap) ──
+player("PW", "pw", "male")
+player("PX", "px", "male")
+set_doc("playSessions/SWAP", "owner", session("hs", ["HS", "PW"], "2030-08-12T18:00:00Z", game="singles",
+                                              attendeeUids=["hs", "pw"], maxPlayers=2, waitlistIds=["PX"]))
+player("HS", "hs", "male")
+time.sleep(2)
+merge("playSessions/SWAP", "owner", {"attendeeIds": ["HS", "PX"], "attendeeUids": ["hs", "px"], "waitlistIds": []})
+n = wait_for(lambda: [x for x in notifications("hs") if x.get("type") == "session_joined"])
+time.sleep(3)
+all_host = [x for x in notifications("hs") if x.get("type") in ("session_joined", "session_left")]
+expect(len(all_host) == 1 and "Pw left, Px joined from the waitlist" in all_host[0]["body"],
+       "waitlist promotion: host notified once of the swap", [x["body"] for x in all_host])
+d = doc("playSessions/SWAP")
+expect(d.get("attendeeIds") == ["HS", "PX"] and d.get("attendeeUids") == ["hs", "px"] and "autoRemoved" not in d,
+       "waitlist promotion: session untouched by the trigger")
+
 # ── onPlaySessionCreated: host limit (>3 upcoming) ──
 for i in range(3):
     set_doc(f"playSessions/LIM{i}", "owner",
