@@ -235,4 +235,14 @@ expect(merge("playSessions/SFL", "host", {"status": "active"}), 403, "host can't
 expect(delete(S3, "j1"), 403, "non-host delete rejected")
 expect(delete(S3, "host"), 200, "host deletes session")
 
+# ─── Ratings: raterId is the rater's player id (iOS/Android addRating) ──
+print("# ratings")
+def rating(rater, player="J2", stars=4):
+    return {"playerId": player, "raterId": rater, "stars": stars, "createdAt": Ts(CREATED)}
+expect(set_doc("ratings/RT1", "j1", rating("J1")), 200, "app rating (raterId = own player id)")
+expect(set_doc("ratings/RT2", "j1", rating("j1")), 200, "rating with raterId = auth uid")
+expect(set_doc("ratings/RT3", "j1", rating("J3")), 403, "rating as someone else's player rejected")
+expect(set_doc("ratings/RT4", "j1", rating("J1", player="J1")), 403, "rating yourself rejected")
+expect(set_doc("ratings/RT5", "j1", rating("J1", stars=6)), 403, "6 stars rejected")
+
 print(f"# {failures} failure(s)")

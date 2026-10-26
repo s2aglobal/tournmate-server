@@ -343,6 +343,20 @@ async function registrationChecks(db: Firestore): Promise<void> {
   check("new partner + old partner notified", await notified(db, "u7", "partner_added") && await notified(db, "u2", "partner_removed"));
   await ok("organizer swaps back to p2", changePartner, P.org.uid, { registrationId: rd, partnerId: P.p2.id });
   check("partner back to p2", (await reg(rd))?.partnerId === P.p2.id && await notified(db, "u7", "partner_removed"));
+  // Picking a partner who has a solo entry merges it (apps' "pick partner" from the solo list).
+  const r8 = (await ok<{ registrationId: string }>("p8 solo doubles", register, P.p8.uid, { tournamentId: "T-DOUBLES" }))!.registrationId;
+  await db.collection("teamEntries").doc(`t-doubles_${P.p8.id.toLowerCase()}`).set({ tournamentId: "T-DOUBLES", playerId: P.p8.id, registrationId: r8 });
+  await ok("registrant swaps p2 → p8 (p8 solo)", changePartner, P.p1.uid, { registrationId: rd, partnerId: P.p8.id });
+  check("p8 solo entry + lock removed, partner = p8", !(await reg(r8)) && (await reg(rd))?.partnerId === P.p8.id
+    && !(await db.collection("teamEntries").doc(`t-doubles_${P.p8.id.toLowerCase()}`).get()).exists
+    && JSON.stringify((await reg(rd))?.memberUids) === JSON.stringify(["u1", "u8"]));
+  await ok("swap back to p2", changePartner, P.p1.uid, { registrationId: rd, partnerId: P.p2.id });
+  const r7 = (await ok<{ registrationId: string }>("p7 solo doubles", register, P.p7.uid, { tournamentId: "T-DOUBLES" }))!.registrationId;
+  const r8b = (await ok<{ registrationId: string }>("p8 solo again", register, P.p8.uid, { tournamentId: "T-DOUBLES" }))!.registrationId;
+  await ok("solo p7 picks solo p8", changePartner, P.p7.uid, { registrationId: r7, partnerId: P.p8.id });
+  check("p8 merged into p7's entry", !(await reg(r8b)) && (await reg(r7))?.partnerId === P.p8.id
+    && await notified(db, "u8", "partner_added"));
+  await expectFail("partner in a pair can't be picked", changePartner, P.p5.uid, { registrationId: r5, partnerId: P.p7.id }, "ALREADY_REGISTERED");
   await expectFail("change partner after draw", changePartner, P.p7.uid, { registrationId: "R-DRAWN", partnerId: P.p8.id }, "DRAW_EXISTS");
   await expectFail("change partner on singles", changePartner, P.p2.uid,
     { registrationId: (await db.collection("registrations").where("tournamentId", "==", "T-SINGLES").where("playerId", "==", P.p2.id).get()).docs[0].id, partnerId: P.p8.id },

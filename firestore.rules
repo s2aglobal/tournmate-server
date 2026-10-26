@@ -313,7 +313,9 @@ service cloud.firestore {
       allow create: if isAuthenticated()
         && isNonEmptyString(request.resource.data.playerId)
         && isNonEmptyString(request.resource.data.raterId)
-        && request.resource.data.raterId == request.auth.uid
+        // The apps store the rater's player id (web/older docs: the auth uid).
+        && (request.resource.data.raterId == request.auth.uid
+            || isOwnPlayer(request.resource.data.raterId))
         && request.resource.data.playerId != request.resource.data.raterId
         && request.resource.data.stars is int
         && request.resource.data.stars >= 1

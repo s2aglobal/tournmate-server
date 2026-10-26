@@ -497,9 +497,11 @@ export const joinAsPartner = onCall(CALLABLE_OPTS, async (req) => {
 
 /**
  * changePartner({ registrationId, partnerId }) -> { registrationId }
- * Registrant or organizer swaps the partner on a doubles entry until the
- * draw is made. The new partner can't already be in another entry in this
- * tournament. Old and new partner are told.
+ * Registrant or organizer sets or swaps the partner on a doubles entry until
+ * the draw is made. If the new partner has their own solo entry (no partner)
+ * it merges into this one: deleted, with any lock, in the same transaction
+ * (as the apps' "pick partner" from the solo list always allowed). A partner
+ * already in a pair or team is refused. Old and new partner are told.
  */
 export const changePartner = onCall(CALLABLE_OPTS, async (req) => {
   const uid = requireUid(req);
@@ -520,6 +522,11 @@ export const changePartner = onCall(CALLABLE_OPTS, async (req) => {
     const partner = await playerById(db, partnerId, tx);
     const oldPartner = typeof reg.partnerId === "string" && reg.partnerId
       ? await playerById(db, reg.partnerId, tx) : null;
+    // The new partner's current entry (and its lock, if any), read before any write.
+    const partnerEntry = partner ? entryHolding(regs, partner.id, regSnap.id) : undefined;
+    const partnerLockRef = partnerEntry && typeof partnerEntry.get("playerId") === "string"
+      ? teamEntryLock(db, t.id, partnerEntry.get("playerId")) : undefined;
+    const partnerLock = partnerLockRef ? await tx.get(partnerLockRef) : undefined;
 
     const organizer = isOrganizer(t.data, uid);
     if (!sameId(reg.playerId, me.id) && !organizer) {
@@ -537,10 +544,21 @@ export const changePartner = onCall(CALLABLE_OPTS, async (req) => {
     if (!registrant) fail("not-found", "NOT_FOUND", "That player no longer exists.");
     if (sameId(partner.id, reg.playerId)) fail("invalid-argument", "INVALID_ARGUMENT", "A player can't partner themself.");
     if (sameId(partner.id, reg.partnerId)) return { id: regSnap.id, changed: false, t, partner, oldPartner: null };
-    if (entryHolding(regs, partner.id, regSnap.id)) {
-      fail("already-exists", "ALREADY_REGISTERED", `${partner.data.name || "That player"} is already registered in this tournament.`);
+    let mergeSolo = false;
+    if (partnerEntry) {
+      const pe = partnerEntry.data();
+      mergeSolo = sameId(pe.playerId, partner.id) && !pe.partnerId && !isTeamEntry(pe);
+      if (!mergeSolo) {
+        fail("already-exists", "ALREADY_REGISTERED", `${partner.data.name || "That player"} is already registered in this tournament.`);
+      }
     }
     checkMixedPair(format, registrant, partner);
+    if (mergeSolo && partnerEntry) {
+      tx.delete(partnerEntry.ref); // their solo entry merges into this one
+      if (partnerLockRef && partnerLock?.exists && sameId(partnerLock.get("registrationId"), partnerEntry.id)) {
+        tx.delete(partnerLockRef);
+      }
+    }
     tx.update(regSnap.ref, { partnerId: partner.id, memberUids: uidsOf([registrant, partner]) });
     return { id: regSnap.id, changed: true, t, partner, oldPartner };
   });
