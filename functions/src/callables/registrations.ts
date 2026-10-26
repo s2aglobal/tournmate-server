@@ -8,7 +8,8 @@ import { fail } from "./errors";
 import {
   CALLABLE_OPTS, Data, dataOf, optionalString, optionalStringArray, requirePlayer, requireString, requireUid,
 } from "./shared";
-import { PlayerRef, playerById, sameId } from "../services/identity";
+import { PlayerRef, playerById, resolveDocId, sameId } from "../services/identity";
+import { notifyPlayer } from "../services/notifyPlayer";
 import {
   TeamRoles, isPlayingRole, normalizeRoles, roleKey, rolesFromFirestore, rolesToFirestore, rosterKeys,
   PlayingRole,
@@ -47,14 +48,14 @@ interface Ctx {
 // ─── Reads ──────────────────────────────────────────────
 
 async function getTournament({ db, tx }: Ctx, id: string): Promise<Tournament> {
-  const ref = db.collection("tournaments").doc(id);
+  const ref = db.collection("tournaments").doc(await resolveDocId(db, "tournaments", id));
   const snap = await tx.get(ref);
   if (!snap.exists) fail("not-found", "NOT_FOUND", "This tournament no longer exists.");
   return { id: snap.id, ref, data: snap.data() as TournamentDoc };
 }
 
 async function getRegistration({ db, tx }: Ctx, id: string): Promise<QueryDocumentSnapshot> {
-  const snap = await tx.get(db.collection("registrations").doc(id));
+  const snap = await tx.get(db.collection("registrations").doc(await resolveDocId(db, "registrations", id)));
   if (!snap.exists) fail("not-found", "NOT_FOUND", "This registration no longer exists.");
   return snap as QueryDocumentSnapshot;
 }
@@ -414,7 +415,7 @@ export const withdraw = onCall(CALLABLE_OPTS, async (req) => {
 
     if (isRegistrant || organizer) {
       tx.delete(regSnap.ref);
-      if (lockRef && lock?.exists && lock.get("registrationId") === registrationId) tx.delete(lockRef);
+      if (lockRef && lock?.exists && sameId(lock.get("registrationId"), regSnap.id)) tx.delete(lockRef);
       return "deleted" as const;
     }
     if (isPartner) {
@@ -490,6 +491,79 @@ export const joinAsPartner = onCall(CALLABLE_OPTS, async (req) => {
     tx.update(regSnap.ref, { partnerId: me.id, memberUids: uidsOf([registrant, me]) });
   });
   return { registrationId };
+});
+
+// ─── changePartner ──────────────────────────────────────
+
+/**
+ * changePartner({ registrationId, partnerId }) -> { registrationId }
+ * Registrant or organizer swaps the partner on a doubles entry until the
+ * draw is made. The new partner can't already be in another entry in this
+ * tournament. Old and new partner are told.
+ */
+export const changePartner = onCall(CALLABLE_OPTS, async (req) => {
+  const uid = requireUid(req);
+  const d = dataOf(req);
+  const registrationId = requireString(d, "registrationId", 64);
+  const partnerId = requireString(d, "partnerId", 64);
+  const db = getFirestore();
+
+  const result = await db.runTransaction(async (tx) => {
+    const ctx = { db, tx };
+    const regSnap = await getRegistration(ctx, registrationId);
+    const reg = regSnap.data();
+    const t = await getTournament(ctx, reg.tournamentId);
+    const me = await requirePlayer(db, uid, tx);
+    const regs = await registrationsFor(ctx, t.id);
+    const hasDraw = await drawExists(ctx, t.id);
+    const registrant = await playerById(db, reg.playerId, tx);
+    const partner = await playerById(db, partnerId, tx);
+    const oldPartner = typeof reg.partnerId === "string" && reg.partnerId
+      ? await playerById(db, reg.partnerId, tx) : null;
+
+    const organizer = isOrganizer(t.data, uid);
+    if (!sameId(reg.playerId, me.id) && !organizer) {
+      fail("permission-denied", "NOT_PARTICIPANT", "Only the player who entered (or the organizer) can change partners.");
+    }
+    const format = t.data.formatRaw as TournamentFormat;
+    if (isCricket(t.data) || isTeamEntry(reg) || isSinglesFormat(format)) {
+      fail("failed-precondition", "INVALID_ARGUMENT", "This entry doesn't take a partner.");
+    }
+    if (t.data.randomPairing && !organizer) {
+      fail("invalid-argument", "INVALID_ARGUMENT", "Partners are paired randomly in this tournament.");
+    }
+    if (hasDraw) fail("failed-precondition", "DRAW_EXISTS", "Partners can't change once the draw has been made.");
+    if (!partner) fail("not-found", "NOT_FOUND", "That partner no longer exists.");
+    if (!registrant) fail("not-found", "NOT_FOUND", "That player no longer exists.");
+    if (sameId(partner.id, reg.playerId)) fail("invalid-argument", "INVALID_ARGUMENT", "A player can't partner themself.");
+    if (sameId(partner.id, reg.partnerId)) return { id: regSnap.id, changed: false, t, partner, oldPartner: null };
+    if (entryHolding(regs, partner.id, regSnap.id)) {
+      fail("already-exists", "ALREADY_REGISTERED", `${partner.data.name || "That player"} is already registered in this tournament.`);
+    }
+    checkMixedPair(format, registrant, partner);
+    tx.update(regSnap.ref, { partnerId: partner.id, memberUids: uidsOf([registrant, partner]) });
+    return { id: regSnap.id, changed: true, t, partner, oldPartner };
+  });
+
+  if (result.changed) {
+    const name = result.t.data.title ? `"${result.t.data.title}"` : "the tournament";
+    const data = { tournamentId: result.t.id, registrationId: result.id };
+    await notifyPlayer(db, result.partner.data, {
+      type: "partner_added",
+      title: "New Partner 🤝",
+      body: `You've been added as a partner in ${name}.`,
+      data,
+    });
+    if (result.oldPartner && !sameId(result.oldPartner.id, result.partner.id)) {
+      await notifyPlayer(db, result.oldPartner.data, {
+        type: "partner_removed",
+        title: "Partner Changed",
+        body: `You're no longer partnered in ${name}.`,
+        data,
+      });
+    }
+  }
+  return { registrationId: result.id };
 });
 
 // ─── updateRoster ───────────────────────────────────────

@@ -206,8 +206,8 @@ async function main() {
   {
     const p = await pair(4);
     const mid = await match(tid, p.ra, p.rb);
-    const r = await call("submitScore", { matchId: mid, setScores: [{ teamAPoints: 21, teamBPoints: 19 }, { teamAPoints: 18, teamBPoints: 21 }, { teamAPoints: 21, teamBPoints: 17 }] }, org);
-    check("organizer sets: finished", r.result && r.result.status === "finished");
+    const r = await call("submitScore", { matchId: mid.toLowerCase(), setScores: [{ teamAPoints: 21, teamBPoints: 19 }, { teamAPoints: 18, teamBPoints: 21 }, { teamAPoints: 21, teamBPoints: 17 }] }, org);
+    check("organizer sets: finished (match id sent lower case)", r.result && r.result.status === "finished", JSON.stringify(r));
     const m = await getMatch(mid);
     check("organizer sets: submitted + confirmed by organizer", m.submittedBy === org.uid && m.confirmedBy === org.uid && m.scoreA === 2 && m.scoreB === 1);
     await expectEloOnce("organizer sets", p.pa, p.pb, mid);

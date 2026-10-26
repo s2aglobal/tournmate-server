@@ -1,6 +1,7 @@
 import { Firestore, DocumentReference } from "firebase-admin/firestore";
 import { logger } from "firebase-functions/v2";
 import { MatchDoc, PlayerDoc, RegistrationDoc, TournamentDoc, SportType, parseSportType } from "../types";
+import { resolveDocId } from "./identity";
 
 /**
  * Elo engine — the single authority for ratings. Matches the iOS
@@ -166,9 +167,11 @@ export async function planElo(
   }
   const loserId = winnerId === match.teamAId ? match.teamBId : match.teamAId;
 
-  const winnerReg = await tx.get(db.collection("registrations").doc(winnerId));
-  const loserReg = await tx.get(db.collection("registrations").doc(loserId));
-  const tournamentSnap = await tx.get(db.collection("tournaments").doc(match.tournamentId));
+  // Ids resolved in either case (legacy lower-case docs).
+  const winnerReg = await tx.get(db.collection("registrations").doc(await resolveDocId(db, "registrations", winnerId)));
+  const loserReg = await tx.get(db.collection("registrations").doc(await resolveDocId(db, "registrations", loserId)));
+  const tournamentSnap = await tx.get(
+    db.collection("tournaments").doc(await resolveDocId(db, "tournaments", match.tournamentId)));
   if (!winnerReg.exists || !loserReg.exists) {
     logger.warn(`Match ${matchId}: registration missing; skipping Elo.`);
     return { markApplied: false, write: NO_WRITES };

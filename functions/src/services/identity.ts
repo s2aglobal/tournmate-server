@@ -45,3 +45,18 @@ export async function playerById(db: Firestore, id: string, tx?: Transaction): P
   }
   return null;
 }
+
+/**
+ * The stored doc id for `id` in `collection`, trying it as given, UPPER and
+ * lower case (apps write UPPER case UUIDs; web/server and some legacy docs
+ * are lower case). Returns `id` unchanged when no variant exists, so callers
+ * keep their own NOT_FOUND handling. Doc ids never change case, so resolving
+ * outside a transaction is safe.
+ */
+export async function resolveDocId(db: Firestore, collection: string, id: string): Promise<string> {
+  if (!id) return id;
+  for (const candidate of [...new Set([id, id.toUpperCase(), id.toLowerCase()])]) {
+    if ((await db.collection(collection).doc(candidate).get()).exists) return candidate;
+  }
+  return id;
+}

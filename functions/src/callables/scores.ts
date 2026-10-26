@@ -16,6 +16,7 @@ import {
 } from "../services/cricket";
 import { PlayerStats, decodePlayerStats, validatePlayerStats } from "../services/cricketPlayerStats";
 import { planElo } from "../services/elo";
+import { resolveDocId } from "../services/identity";
 import { isTeamEvent, matchWinnerId } from "../services/standings";
 import { notifyMatchFinished, notifyScoreDisputed, notifyScoreSubmitted, safely } from "../services/matchNotifications";
 
@@ -127,11 +128,11 @@ async function load(db: Firestore, tx: Transaction, matchId: string): Promise<Lo
   const matchSnap = await tx.get(db.collection("matches").doc(matchId));
   if (!matchSnap.exists) fail("not-found", "NOT_FOUND", "This match no longer exists.");
   const match = matchSnap.data() as MatchDoc;
-  const tSnap = await tx.get(db.collection("tournaments").doc(match.tournamentId));
+  const tSnap = await tx.get(db.collection("tournaments").doc(await resolveDocId(db, "tournaments", match.tournamentId)));
   if (!tSnap.exists) fail("not-found", "NOT_FOUND", "This tournament no longer exists.");
   const [a, b] = await Promise.all([
-    tx.get(db.collection("registrations").doc(match.teamAId)),
-    tx.get(db.collection("registrations").doc(match.teamBId)),
+    resolveDocId(db, "registrations", match.teamAId).then((id) => tx.get(db.collection("registrations").doc(id))),
+    resolveDocId(db, "registrations", match.teamBId).then((id) => tx.get(db.collection("registrations").doc(id))),
   ]);
   return {
     match,
@@ -445,7 +446,7 @@ async function afterFinish(db: Firestore, matchId: string, c: Committed): Promis
 export const submitScore = onCall(OPTIONS, async (req) => {
   const uid = requireUid(req);
   const data = input(req);
-  const matchId = requireMatchId(data);
+  const matchId = await resolveDocId(getFirestore(), "matches", requireMatchId(data));
   const db = getFirestore();
   const playerIds = await playerIdsForUid(db, uid);
 
@@ -510,7 +511,7 @@ async function requireOpponent(
 /** `confirmScore({ matchId })` → `{ status: "finished" }`. Opposing side only. */
 export const confirmScore = onCall(OPTIONS, async (req) => {
   const uid = requireUid(req);
-  const matchId = requireMatchId(input(req));
+  const matchId = await resolveDocId(getFirestore(), "matches", requireMatchId(input(req)));
   const db = getFirestore();
   const playerIds = await playerIdsForUid(db, uid);
 
@@ -531,7 +532,7 @@ export const confirmScore = onCall(OPTIONS, async (req) => {
 export const disputeScore = onCall(OPTIONS, async (req) => {
   const uid = requireUid(req);
   const data = input(req);
-  const matchId = requireMatchId(data);
+  const matchId = await resolveDocId(getFirestore(), "matches", requireMatchId(data));
   const reason = typeof data.reason === "string" ? data.reason.trim().slice(0, 500) : "";
   const db = getFirestore();
   const playerIds = await playerIdsForUid(db, uid);
@@ -562,7 +563,7 @@ export const disputeScore = onCall(OPTIONS, async (req) => {
 export const resolveDispute = onCall(OPTIONS, async (req) => {
   const uid = requireUid(req);
   const data = input(req);
-  const matchId = requireMatchId(data);
+  const matchId = await resolveDocId(getFirestore(), "matches", requireMatchId(data));
   const db = getFirestore();
 
   const committed = await db.runTransaction(async (tx) => {

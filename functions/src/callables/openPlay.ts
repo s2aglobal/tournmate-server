@@ -7,7 +7,7 @@ import {
   requirePlayer, requireString, requireUid,
 } from "./shared";
 import { capacityFor, findClashingSessions, sessionWindow } from "../services/openPlay";
-import { PlayerRef, playerById, playerForUid, sameId } from "../services/identity";
+import { PlayerRef, playerById, playerForUid, resolveDocId, sameId } from "../services/identity";
 import { notifyPlayer } from "../services/notifyPlayer";
 import { PlayerDoc, isSportType, parseSportType, sportEmoji } from "../types";
 
@@ -231,8 +231,8 @@ export const createSession = onCall(CALLABLE_OPTS, async (req) => {
 export const updateSession = onCall(CALLABLE_OPTS, async (req) => {
   const uid = requireUid(req);
   const d = dataOf(req);
-  const sessionId = requireString(d, "sessionId", 64);
   const db = getFirestore();
+  const sessionId = await resolveDocId(db, "playSessions", requireString(d, "sessionId", 64));
   const f = readSessionFields(d);
 
   await db.runTransaction(async (tx) => {
@@ -297,8 +297,8 @@ export const updateSession = onCall(CALLABLE_OPTS, async (req) => {
 /** joinSession({ sessionId }) -> { status: "joined" | "waitlisted" } */
 export const joinSession = onCall(CALLABLE_OPTS, async (req) => {
   const uid = requireUid(req);
-  const sessionId = requireString(dataOf(req), "sessionId", 64);
   const db = getFirestore();
+  const sessionId = await resolveDocId(db, "playSessions", requireString(dataOf(req), "sessionId", 64));
 
   return db.runTransaction(async (tx) => {
     const ref = db.collection("playSessions").doc(sessionId);
@@ -351,8 +351,8 @@ export const joinSession = onCall(CALLABLE_OPTS, async (req) => {
  */
 export const leaveSession = onCall(CALLABLE_OPTS, async (req) => {
   const uid = requireUid(req);
-  const sessionId = requireString(dataOf(req), "sessionId", 64);
   const db = getFirestore();
+  const sessionId = await resolveDocId(db, "playSessions", requireString(dataOf(req), "sessionId", 64));
 
   const result = await db.runTransaction(async (tx) => {
     const ref = db.collection("playSessions").doc(sessionId);
@@ -433,8 +433,8 @@ export const leaveSession = onCall(CALLABLE_OPTS, async (req) => {
 /** cancelSession({ sessionId }) -> { status: "cancelled" }. Host only; notifies attendees + waitlist. */
 export const cancelSession = onCall(CALLABLE_OPTS, async (req) => {
   const uid = requireUid(req);
-  const sessionId = requireString(dataOf(req), "sessionId", 64);
   const db = getFirestore();
+  const sessionId = await resolveDocId(db, "playSessions", requireString(dataOf(req), "sessionId", 64));
 
   const s = await db.runTransaction(async (tx) => {
     const ref = db.collection("playSessions").doc(sessionId);
@@ -468,4 +468,49 @@ export const cancelSession = onCall(CALLABLE_OPTS, async (req) => {
     }
   }
   return { status: "cancelled" };
+});
+
+// ─── finishSession ──────────────────────────────────────
+
+/**
+ * finishSession({ sessionId }) -> { status: "completed" }. Host only; an
+ * active session becomes `status: "completed"` (what the apps write today).
+ * The onSessionJoined trigger tells the attendees.
+ */
+export const finishSession = onCall(CALLABLE_OPTS, async (req) => {
+  const uid = requireUid(req);
+  const db = getFirestore();
+  const sessionId = await resolveDocId(db, "playSessions", requireString(dataOf(req), "sessionId", 64));
+
+  await db.runTransaction(async (tx) => {
+    const ref = db.collection("playSessions").doc(sessionId);
+    const snap = await tx.get(ref);
+    if (!snap.exists) fail("not-found", "NOT_FOUND", "This session no longer exists.");
+    const data = snap.data()!;
+    if (data.hostId !== uid) fail("permission-denied", "NOT_HOST", "Only the host can finish this session.");
+    if (data.status === "completed") return;
+    if ((data.status ?? "active") !== "active") {
+      fail("failed-precondition", "SESSION_CLOSED", "This session is no longer active.");
+    }
+    tx.update(ref, { status: "completed" });
+  });
+  return { status: "completed" as const };
+});
+
+// ─── deleteSession ──────────────────────────────────────
+
+/** deleteSession({ sessionId }) -> { status: "deleted" }. Host only; already gone counts as deleted. */
+export const deleteSession = onCall(CALLABLE_OPTS, async (req) => {
+  const uid = requireUid(req);
+  const db = getFirestore();
+  const sessionId = await resolveDocId(db, "playSessions", requireString(dataOf(req), "sessionId", 64));
+
+  await db.runTransaction(async (tx) => {
+    const ref = db.collection("playSessions").doc(sessionId);
+    const snap = await tx.get(ref);
+    if (!snap.exists) return;
+    if (snap.get("hostId") !== uid) fail("permission-denied", "NOT_HOST", "Only the host can delete this session.");
+    tx.delete(ref);
+  });
+  return { status: "deleted" as const };
 });

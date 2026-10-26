@@ -130,7 +130,7 @@ async function notified(db: Firestore, uid: string, type: string): Promise<boole
 
 async function openPlayChecks(db: Firestore): Promise<void> {
   console.log("\n── Open Play ──");
-  const { createSession, updateSession, joinSession, leaveSession, cancelSession } = openPlay;
+  const { createSession, updateSession, joinSession, leaveSession, cancelSession, finishSession, deleteSession } = openPlay;
   const base1 = { venue: "Court A", title: "Morning", gameType: "doubles", sportType: "badminton", timeZone: "America/Chicago" };
 
   await expectFail("create unauthenticated", createSession, null, { ...base1, date: at(10) }, "UNAUTHENTICATED");
@@ -235,6 +235,30 @@ async function openPlayChecks(db: Firestore): Promise<void> {
     && !(await notified(db, "u-host", "session_cancelled")));
   await expectFail("join cancelled session", joinSession, P.p5.uid, { sessionId: s2 }, "SESSION_CLOSED");
   await ok("cancel again (idempotent)", cancelSession, P.host.uid, { sessionId: s2 });
+  await expectFail("finish cancelled session", finishSession, P.host.uid, { sessionId: s2 }, "SESSION_CLOSED");
+
+  // Lower-case legacy doc id, addressed with the UPPER case id; finish + delete.
+  const lowerId = "bbbbbbbb-0000-0000-0000-00000000000f";
+  await db.collection("playSessions").doc(lowerId).set({
+    venue: "Lower Court", date: Timestamp.fromMillis(at(30)), status: "active", gameType: "doubles",
+    hostId: "u-other", attendeeIds: [], createdAt: Timestamp.now(),
+  });
+  const lowerJoin = await ok<{ status: string }>("join lower-case session by UPPER id", joinSession, P.p4.uid, { sessionId: up(lowerId) });
+  check("joined the lower-case doc", lowerJoin?.status === "joined"
+    && JSON.stringify((await session(db, lowerId)).attendeeIds) === JSON.stringify([up(P.p4.id)])
+    && !(await db.collection("playSessions").doc(up(lowerId)).get()).exists);
+  await expectFail("non-host finish", finishSession, P.p4.uid, { sessionId: up(lowerId) }, "NOT_HOST");
+  const fin = await ok<{ status: string }>("host finishes (UPPER id)", finishSession, "u-other", { sessionId: up(lowerId) });
+  check("finish shape + status completed", JSON.stringify(fin) === JSON.stringify({ status: "completed" })
+    && (await session(db, lowerId)).status === "completed");
+  await ok("finish again (idempotent)", finishSession, "u-other", { sessionId: lowerId });
+  await expectFail("join completed session", joinSession, P.p5.uid, { sessionId: lowerId }, "SESSION_CLOSED");
+  await expectFail("non-host delete", deleteSession, P.p4.uid, { sessionId: up(lowerId) }, "NOT_HOST");
+  const del = await ok<{ status: string }>("host deletes (UPPER id)", deleteSession, "u-other", { sessionId: up(lowerId) });
+  check("delete shape + doc gone", JSON.stringify(del) === JSON.stringify({ status: "deleted" })
+    && !(await db.collection("playSessions").doc(lowerId).get()).exists);
+  await ok("delete again (idempotent)", deleteSession, "u-other", { sessionId: lowerId });
+  await expectFail("finish missing session", finishSession, "u-other", { sessionId: lowerId }, "NOT_FOUND");
 
   // Old-app docs: no maxPlayers / endsAt / durationMinutes.
   await db.collection("playSessions").doc("LEGACY-STARTED").set({
@@ -268,7 +292,7 @@ async function profileChecks(): Promise<void> {
 
 async function registrationChecks(db: Firestore): Promise<void> {
   console.log("\n── Registration ──");
-  const { register, withdraw, joinAsPartner, updateRoster, setRoles } = regs;
+  const { register, withdraw, joinAsPartner, changePartner, updateRoster, setRoles } = regs;
   const reg = async (id: string) => (await db.collection("registrations").doc(id).get()).data();
 
   // Singles + capacity.
@@ -306,6 +330,23 @@ async function registrationChecks(db: Firestore): Promise<void> {
   // Mixed.
   await expectFail("mixed: two men", register, P.p1.uid, { tournamentId: "T-MIXED", partnerId: P.p4.id }, "INVALID_ARGUMENT");
   await ok("mixed: man + woman", register, P.p1.uid, { tournamentId: "T-MIXED", partnerId: P.p2.id });
+
+  // Change partner (registration addressed in lower case).
+  await expectFail("stranger changes partner", changePartner, P.p7.uid, { registrationId: rd, partnerId: P.p8.id }, "NOT_PARTICIPANT");
+  await expectFail("new partner already registered", changePartner, P.p1.uid, { registrationId: rd, partnerId: P.p3.id }, "ALREADY_REGISTERED");
+  await expectFail("partner self", changePartner, P.p1.uid, { registrationId: rd, partnerId: P.p1.id }, "INVALID_ARGUMENT");
+  const cp = await ok<{ registrationId: string }>("registrant swaps p2 → p7", changePartner, P.p1.uid,
+    { registrationId: rd.toLowerCase(), partnerId: P.p7.id.toLowerCase() });
+  const dcp = await reg(rd);
+  check("changePartner shape + partner/memberUids", JSON.stringify(cp) === JSON.stringify({ registrationId: rd })
+    && dcp?.partnerId === P.p7.id && JSON.stringify(dcp?.memberUids) === JSON.stringify(["u1", "u7"]), JSON.stringify(dcp));
+  check("new partner + old partner notified", await notified(db, "u7", "partner_added") && await notified(db, "u2", "partner_removed"));
+  await ok("organizer swaps back to p2", changePartner, P.org.uid, { registrationId: rd, partnerId: P.p2.id });
+  check("partner back to p2", (await reg(rd))?.partnerId === P.p2.id && await notified(db, "u7", "partner_removed"));
+  await expectFail("change partner after draw", changePartner, P.p7.uid, { registrationId: "R-DRAWN", partnerId: P.p8.id }, "DRAW_EXISTS");
+  await expectFail("change partner on singles", changePartner, P.p2.uid,
+    { registrationId: (await db.collection("registrations").where("tournamentId", "==", "T-SINGLES").where("playerId", "==", P.p2.id).get()).docs[0].id, partnerId: P.p8.id },
+    "INVALID_ARGUMENT");
 
   // Withdraw.
   await ok("partner withdraws", withdraw, P.p2.uid, { registrationId: rd });
