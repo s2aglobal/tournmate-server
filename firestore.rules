@@ -272,11 +272,11 @@ service cloud.firestore {
       allow read: if true;
 
       // Only the tournament organizer creates matches (bracket generation).
-      // eloApplied (Elo is applied once, by the server) and teamAUids /
-      // teamBUids (participants' auth uids) are server-only.
+      // eloApplied (Elo is applied once, by the server), teamAUids /
+      // teamBUids (participants' auth uids) and disputeReason are server-only.
       allow create: if isAuthenticated()
         && isNonEmptyString(request.resource.data.tournamentId)
-        && !request.resource.data.keys().hasAny(['eloApplied', 'teamAUids', 'teamBUids'])
+        && !request.resource.data.keys().hasAny(['eloApplied', 'teamAUids', 'teamBUids', 'disputeReason'])
         && isOrganizerOf(request.resource.data.tournamentId);
 
       // Authenticated users can update scores/status
@@ -291,7 +291,8 @@ service cloud.firestore {
         && unchangedOptional('createdAt')
         && unchangedOptional('eloApplied')
         && unchangedOptional('teamAUids')
-        && unchangedOptional('teamBUids');
+        && unchangedOptional('teamBUids')
+        && unchangedOptional('disputeReason');
 
       // Only the organizer deletes matches (reset bracket)
       allow delete: if isAuthenticated()

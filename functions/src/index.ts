@@ -49,6 +49,7 @@ export { onMatchFinished } from "./triggers/onMatchFinished";
 export { onPlaySessionCreated } from "./triggers/onPlaySessionCreated";
 export { onSessionJoined } from "./triggers/onSessionJoined";
 export { onMatchWritten } from "./triggers/onMatchWritten";
+export { onRegistrationWrittenStandings } from "./triggers/onRegistrationWrittenStandings";
 export { onRegistrationWrittenMemberUids, onMatchWrittenMemberUids } from "./triggers/memberUids";
 
 // ─── Callables (server authority) ───────────────────────

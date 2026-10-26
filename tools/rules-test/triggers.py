@@ -47,6 +47,13 @@ def plain(v):
     return None
 
 
+def update_time(path):
+    r = urllib.request.Request(f"{BASE}/{D}/{path}")
+    r.add_header("Authorization", "Bearer owner")
+    with urllib.request.urlopen(r) as resp:
+        return json.load(resp).get("updateTime")
+
+
 def doc(path):
     return {k: plain(v) for k, v in read(path).items()}
 
@@ -137,6 +144,31 @@ expect(ok, "attendeeUids gains the joiner's uid", doc("playSessions/UIDS").get("
 merge("playSessions/UIDS", "owner", {"attendeeIds": ["HB"]})
 ok = wait_for(lambda: doc("playSessions/UIDS").get("attendeeUids") == ["hb"])
 expect(ok, "attendeeUids loses the leaver's uid", doc("playSessions/UIDS").get("attendeeUids"))
+
+# ── callable-shaped writes (joinSession / leaveSession already validated and set attendeeUids) ──
+player("PH", "ph", "male")
+player("HE", "he", "male")
+set_doc("playSessions/CALL", "owner", session("he", ["HE"], "2030-08-10T18:00:00Z", attendeeUids=["he"],
+                                              maxPlayers=4, waitlistIds=[]))
+time.sleep(2)
+merge("playSessions/CALL", "owner", {"attendeeIds": ["HE", "PH"], "attendeeUids": ["he", "ph"]})
+n = wait_for(lambda: [x for x in notifications("he") if x.get("type") == "session_joined"])
+written = update_time("playSessions/CALL")
+time.sleep(3)
+d = doc("playSessions/CALL")
+expect(d.get("attendeeIds") == ["HE", "PH"] and "autoRemoved" not in d, "callable join: trigger removes nobody")
+expect(len([x for x in notifications("he") if x.get("type") == "session_joined"]) == 1,
+       "callable join: host notified exactly once")
+expect(update_time("playSessions/CALL") == written, "callable join: no follow-up attendeeUids write")
+expect(not [x for x in notifications("ph") if x.get("type") == "session_removed"], "callable join: joiner not removed")
+merge("playSessions/CALL", "owner", {"attendeeIds": ["HE"], "attendeeUids": ["he"]})
+n = wait_for(lambda: [x for x in notifications("he") if x.get("type") == "session_left"])
+written = update_time("playSessions/CALL")
+time.sleep(3)
+expect(len(n) == 1 and len([x for x in notifications("he") if x.get("type") == "session_left"]) == 1,
+       "callable leave: host notified exactly once")
+expect(update_time("playSessions/CALL") == written and doc("playSessions/CALL").get("attendeeUids") == ["he"],
+       "callable leave: no follow-up attendeeUids write")
 
 # ── onPlaySessionCreated: host limit (>3 upcoming) ──
 for i in range(3):

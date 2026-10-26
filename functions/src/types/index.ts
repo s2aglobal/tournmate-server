@@ -307,6 +307,8 @@ export interface MatchDoc {
   teamBUids?: string[];
   /** Set once Elo has been applied (score callables or onMatchFinished), so retries don't double-count. */
   eloApplied?: boolean;
+  /** Server-only: the opposing side's reason while the score is disputed. */
+  disputeReason?: string;
   createdAt: Timestamp;
 }
 

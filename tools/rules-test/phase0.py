@@ -97,7 +97,9 @@ expect(merge("matches/M1", "j2", {"confirmedBy": "J2", "statusRaw": "finished", 
 expect(merge("matches/M1", "org", {"eloApplied": True}), 403, "client write of eloApplied rejected")
 expect(merge("matches/M1", "j1", {"teamAUids": ["j1"]}), 403, "client write of teamAUids rejected")
 expect(set_doc("matches/M7", "org", match("T1", extra={"teamBUids": ["x"]})), 403, "create with teamBUids rejected")
-set_doc("matches/M6", "owner", match("T1", extra={"eloApplied": True}))
+expect(merge("matches/M1", "j2", {"disputeReason": "wrong score"}), 403, "client write of disputeReason rejected")
+expect(set_doc("matches/M8", "org", match("T1", extra={"disputeReason": "x"})), 403, "create with disputeReason rejected")
+set_doc("matches/M6", "owner", match("T1", extra={"eloApplied": True, "disputeReason": "server"}))
 expect(merge("matches/M6", "org", {"scoreA": 2, "scoreB": 0, "statusRaw": "finished"}), 200,
        "score edit on a match with server eloApplied passes")
 expect(delete("matches/M1", "j1"), 403, "non-organizer delete rejected")

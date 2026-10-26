@@ -236,7 +236,11 @@ async function syncAttendeeUids(
 ): Promise<void> {
   if (!Array.isArray(session.attendeeUids) || playerIds.length === 0) return;
   const snaps = await Promise.all(playerIds.map((id) => playerSnap(db, id)));
-  const uids = snaps.map((p) => p.data()?.firebaseUid as string | undefined).filter((u): u is string => !!u);
+  // The callables keep attendeeUids themselves; skip when nothing changes so
+  // their joins / leaves don't cost a second write (and a second trigger run).
+  const current = new Set(session.attendeeUids as string[]);
+  const uids = snaps.map((p) => p.data()?.firebaseUid as string | undefined)
+    .filter((u): u is string => !!u && (op === "add" ? !current.has(u) : current.has(u)));
   if (uids.length === 0) return;
   await db.collection("playSessions").doc(sessionId).update({
     attendeeUids: op === "add" ? FieldValue.arrayUnion(...uids) : FieldValue.arrayRemove(...uids),

@@ -405,6 +405,11 @@ interface Committed {
 async function commit(db: Firestore, tx: Transaction, matchId: string, l: Loaded, p: Patch): Promise<Committed> {
   let ratedNow = false;
   const ref = db.collection("matches").doc(matchId);
+  // `disputeReason` (server-only) describes the current dispute; any other
+  // outcome (resolved, resubmitted, finished) clears it.
+  if (p.after.statusRaw !== "disputed" && l.match.disputeReason !== undefined) {
+    p.delete("disputeReason");
+  }
   if (p.after.statusRaw === "finished" && l.match.eloApplied !== true) {
     const plan = await planElo(db, tx, matchId, p.after);
     if (plan.markApplied) {
@@ -536,7 +541,7 @@ export const disputeScore = onCall(OPTIONS, async (req) => {
     const l = await load(db, tx, matchId);
     tournament = l.tournament;
     await requireOpponent(db, tx, l, uid, playerIds, "dispute");
-    return commit(db, tx, matchId, l, new Patch(l.match).set("statusRaw", "disputed"));
+    return commit(db, tx, matchId, l, new Patch(l.match).set("statusRaw", "disputed").setOrDelete("disputeReason", reason || null));
   });
 
   logger.info(`disputeScore ${matchId}: disputed`);

@@ -186,12 +186,14 @@ async function main() {
     const told = await waitFor(async () => (await db.collection("notifications")
       .where("recipientId", "==", org.uid).where("type", "==", "score_disputed").get()).size > 0);
     check("dispute: organizer notified", !!told);
+    check("dispute: reason stored", (await getMatch(mid)).disputeReason === "Wrong score");
     expectError("resolve: participant refused", await call("resolveDispute", { matchId: mid, setScores: [{ teamAPoints: 10, teamBPoints: 21 }, { teamAPoints: 10, teamBPoints: 21 }] }, a1), "NOT_ORGANIZER");
     expectError("resolve: invalid", await call("resolveDispute", { matchId: mid, setScores: [{ teamAPoints: 21, teamBPoints: 21 }] }, org), "INVALID_SCORE");
     const r = await call("resolveDispute", { matchId: mid, setScores: [{ teamAPoints: 10, teamBPoints: 21 }, { teamAPoints: 10, teamBPoints: 21 }] }, org);
     check("resolve: finished", r.result && r.result.status === "finished", JSON.stringify(r));
     const m = await getMatch(mid);
     check("resolve: fields", m.winnerRegistrationId === p.rb && m.scoreA === 0 && m.scoreB === 2 && m.confirmedBy === undefined, JSON.stringify(m));
+    check("resolve: dispute reason cleared", m.disputeReason === undefined);
     await expectEloOnce("resolve", p.pb, p.pa, mid);
     // Edit score on a finished match: no second Elo.
     const e = await call("resolveDispute", { matchId: mid, setScores: [{ teamAPoints: 10, teamBPoints: 21 }, { teamAPoints: 12, teamBPoints: 21 }] }, org);
@@ -296,6 +298,20 @@ async function main() {
     check("cricket standings: nrr + awards + top performers", !!s && s.groups[0].rows[0].registrationId === regB &&
       typeof s.groups[0].rows[0].nrr === "number" && s.playerOfTournament && s.playerOfTournament.teamId === regB &&
       s.topPerformers && s.topPerformers.batting[0].runs === 70, JSON.stringify(s));
+
+    // Registration writes rebuild standings too: team rename, then withdraw.
+    await db.collection("registrations").doc(regA).update({ teamName: "Royals XI" });
+    const renamed = await waitFor(async () => {
+      const d = (await db.collection("standings").doc(ct).get()).data();
+      return d && d.groups[0].rows.some((row) => row.teamName === "Royals XI") ? d : null;
+    });
+    check("standings: rebuilt on team rename", !!renamed);
+    await db.collection("registrations").doc(regA).delete();
+    const withdrawn = await waitFor(async () => {
+      const d = (await db.collection("standings").doc(ct).get()).data();
+      return d && !d.groups.some((g) => g.rows.some((row) => row.registrationId === regA)) ? d : null;
+    });
+    check("standings: rebuilt on withdraw", !!withdrawn, JSON.stringify(withdrawn && withdrawn.groups));
   }
 
   console.log(failures === 0 ? "DONE all passed" : `DONE ${failures} failed`);
