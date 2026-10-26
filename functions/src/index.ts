@@ -48,6 +48,10 @@ export { onRegistrationDeleted } from "./triggers/onRegistrationDeleted";
 export { onMatchFinished } from "./triggers/onMatchFinished";
 export { onPlaySessionCreated } from "./triggers/onPlaySessionCreated";
 export { onSessionJoined } from "./triggers/onSessionJoined";
+export { onMatchWritten } from "./triggers/onMatchWritten";
+
+// ─── Callables ──────────────────────────────────────────
+export { submitScore, confirmScore, disputeScore, resolveDispute } from "./callables/scores";
 
 // ─── Scheduled Jobs ─────────────────────────────────────
 export { hourlyCleanup, dailyReminders, spamCleanup } from "./triggers/scheduledJobs";

@@ -127,82 +127,114 @@ async function loadPlayers(
 }
 
 /**
+ * Elo for one finished match, ready to commit with the transaction that
+ * finishes it (or with `applyEloForMatch`).
+ *
+ * - `markApplied`: set `eloApplied: true` on the match in the same commit.
+ *   False only when the data is incomplete (registration or players missing),
+ *   so a later finish can still rate the match.
+ * - `write`: the player updates (ratings and streaks). Call after every read.
+ */
+export interface EloPlan {
+  markApplied: boolean;
+  write: (tx: FirebaseFirestore.Transaction) => void;
+}
+
+const NO_WRITES = () => undefined;
+
+/**
+ * Reads what Elo needs inside `tx` and returns the plan, without writing.
+ * `match` is the match as it will be stored (after the score write).
+ * Callers check `statusRaw === "finished"` and `!eloApplied` first.
+ */
+export async function planElo(
+  db: Firestore,
+  tx: FirebaseFirestore.Transaction,
+  matchId: string,
+  match: MatchDoc,
+): Promise<EloPlan> {
+  if (match.resultType === "noResult") {
+    logger.info(`Match ${matchId}: no result; skipping Elo.`);
+    return { markApplied: true, write: NO_WRITES };
+  }
+  // A tie (cricket) rates as a draw. Side A is then simply team A.
+  const tie = match.resultType === "tie";
+  const winnerId = tie ? match.teamAId : winnerRegistrationId(match);
+  if (!winnerId) {
+    logger.info(`Match ${matchId}: no winner (draw or missing score); skipping Elo.`);
+    return { markApplied: true, write: NO_WRITES };
+  }
+  const loserId = winnerId === match.teamAId ? match.teamBId : match.teamAId;
+
+  const winnerReg = await tx.get(db.collection("registrations").doc(winnerId));
+  const loserReg = await tx.get(db.collection("registrations").doc(loserId));
+  const tournamentSnap = await tx.get(db.collection("tournaments").doc(match.tournamentId));
+  if (!winnerReg.exists || !loserReg.exists) {
+    logger.warn(`Match ${matchId}: registration missing; skipping Elo.`);
+    return { markApplied: false, write: NO_WRITES };
+  }
+
+  const tournament = tournamentSnap.data() as TournamentDoc | undefined;
+  const sport = parseSportType(match.sportType ?? tournament?.sportType);
+  if (sport === "generic") {
+    // Unknown (or explicitly generic) sport: don't rate it, so ratings for
+    // sports we don't know yet never pollute anyone's eloRatings. Mark it
+    // applied so retries and re-finishes don't re-evaluate it.
+    const rawSport = match.sportType ?? tournament?.sportType;
+    logger.info(`Match ${matchId}: sport ${JSON.stringify(rawSport)} parses as generic; skipping Elo.`);
+    return { markApplied: true, write: NO_WRITES };
+  }
+
+  // Team sports rate the players named for the event; guests have no id.
+  const teamIds = (reg: RegistrationDoc) =>
+    reg.rosterIds && reg.rosterIds.length > 0
+      ? [...new Set(reg.rosterIds)]
+      : [reg.playerId, reg.partnerId].filter(Boolean) as string[];
+  const winners = await loadPlayers(db, tx, teamIds(winnerReg.data() as RegistrationDoc));
+  const losers = await loadPlayers(db, tx, teamIds(loserReg.data() as RegistrationDoc));
+  if (winners.length === 0 || losers.length === 0) {
+    logger.warn(`Match ${matchId}: players missing; skipping Elo.`);
+    return { markApplied: false, write: NO_WRITES };
+  }
+
+  if (tie || winners.length > 2 || losers.length > 2) {
+    applyTeamResult(winners.map((e) => e.ratings), losers.map((e) => e.ratings), sport, tie ? 0.5 : 1);
+  } else {
+    applyMatchResult(winners.map((e) => e.ratings), losers.map((e) => e.ratings), sport);
+  }
+
+  return {
+    markApplied: true,
+    write: (t) => {
+      // A tie leaves streaks as they are.
+      const write = (e: PlayerEntry, won: boolean) => {
+        const streak = e.doc.streak ?? 0;
+        t.update(e.ref, {
+          eloRatings: e.ratings,
+          elo: e.ratings.badminton ?? DEFAULT_ELO,
+          streak: tie ? streak : won ? Math.max(streak, 0) + 1 : Math.min(streak, 0) - 1,
+        });
+      };
+      winners.forEach((e) => write(e, true));
+      losers.forEach((e) => write(e, false));
+      logger.info(`Match ${matchId}: Elo applied for ${sport} (${winners.length}v${losers.length}${tie ? ", tie" : ""}).`);
+    },
+  };
+}
+
+/**
  * Applies Elo and streaks for a finished match, once. Runs in a transaction
- * and marks the match `eloApplied`, so trigger retries or a match that is
- * finished again (e.g. after a dispute) never double-count.
+ * and marks the match `eloApplied`, so trigger retries, a match that is
+ * finished again (e.g. after a dispute) or one the score callables already
+ * rated never double-count.
  */
 export async function applyEloForMatch(db: Firestore, matchRef: DocumentReference): Promise<void> {
   await db.runTransaction(async (tx) => {
     const matchSnap = await tx.get(matchRef);
     const match = matchSnap.data() as MatchDoc | undefined;
     if (!match || match.statusRaw !== "finished" || match.eloApplied) return;
-
-    if (match.resultType === "noResult") {
-      logger.info(`Match ${matchRef.id}: no result; skipping Elo.`);
-      tx.update(matchRef, { eloApplied: true });
-      return;
-    }
-    // A tie (cricket) rates as a draw. Side A is then simply team A.
-    const tie = match.resultType === "tie";
-    const winnerId = tie ? match.teamAId : winnerRegistrationId(match);
-    if (!winnerId) {
-      logger.info(`Match ${matchRef.id}: no winner (draw or missing score); skipping Elo.`);
-      tx.update(matchRef, { eloApplied: true });
-      return;
-    }
-    const loserId = winnerId === match.teamAId ? match.teamBId : match.teamAId;
-
-    const winnerReg = await tx.get(db.collection("registrations").doc(winnerId));
-    const loserReg = await tx.get(db.collection("registrations").doc(loserId));
-    const tournamentSnap = await tx.get(db.collection("tournaments").doc(match.tournamentId));
-    if (!winnerReg.exists || !loserReg.exists) {
-      logger.warn(`Match ${matchRef.id}: registration missing; skipping Elo.`);
-      return;
-    }
-
-    const tournament = tournamentSnap.data() as TournamentDoc | undefined;
-    const sport = parseSportType(match.sportType ?? tournament?.sportType);
-    if (sport === "generic") {
-      // Unknown (or explicitly generic) sport: don't rate it, so ratings for
-      // sports we don't know yet never pollute anyone's eloRatings. Mark it
-      // applied so retries and re-finishes don't re-evaluate it.
-      const rawSport = match.sportType ?? tournament?.sportType;
-      logger.info(`Match ${matchRef.id}: sport ${JSON.stringify(rawSport)} parses as generic; skipping Elo.`);
-      tx.update(matchRef, { eloApplied: true });
-      return;
-    }
-
-    // Team sports rate the players named for the event; guests have no id.
-    const teamIds = (reg: RegistrationDoc) =>
-      reg.rosterIds && reg.rosterIds.length > 0
-        ? [...new Set(reg.rosterIds)]
-        : [reg.playerId, reg.partnerId].filter(Boolean) as string[];
-    const winners = await loadPlayers(db, tx, teamIds(winnerReg.data() as RegistrationDoc));
-    const losers = await loadPlayers(db, tx, teamIds(loserReg.data() as RegistrationDoc));
-    if (winners.length === 0 || losers.length === 0) {
-      logger.warn(`Match ${matchRef.id}: players missing; skipping Elo.`);
-      return;
-    }
-
-    if (tie || winners.length > 2 || losers.length > 2) {
-      applyTeamResult(winners.map((e) => e.ratings), losers.map((e) => e.ratings), sport, tie ? 0.5 : 1);
-    } else {
-      applyMatchResult(winners.map((e) => e.ratings), losers.map((e) => e.ratings), sport);
-    }
-
-    // A tie leaves streaks as they are.
-    const write = (e: PlayerEntry, won: boolean) => {
-      const streak = e.doc.streak ?? 0;
-      tx.update(e.ref, {
-        eloRatings: e.ratings,
-        elo: e.ratings.badminton ?? DEFAULT_ELO,
-        streak: tie ? streak : won ? Math.max(streak, 0) + 1 : Math.min(streak, 0) - 1,
-      });
-    };
-    winners.forEach((e) => write(e, true));
-    losers.forEach((e) => write(e, false));
-    tx.update(matchRef, { eloApplied: true });
-
-    logger.info(`Match ${matchRef.id}: Elo applied for ${sport} (${winners.length}v${losers.length}${tie ? ", tie" : ""}).`);
+    const plan = await planElo(db, tx, matchRef.id, match);
+    plan.write(tx);
+    if (plan.markApplied) tx.update(matchRef, { eloApplied: true });
   });
 }

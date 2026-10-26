@@ -354,6 +354,47 @@ export function outcomeSummary(o: CricketOutcome, teamName: (registrationId: str
   return o.winnerRegistrationId ? `${teamName(o.winnerRegistrationId)} ${o.margin}` : o.margin;
 }
 
+// ─── Knockout matches ───────────────────────────────────
+
+/**
+ * Knockout matches must produce a winner to advance: elimination brackets
+ * and the knockout stage of Group + Knockout (no group label). Same rules and
+ * wording as iOS `CricketKnockout` and Android `cricketRequiresWinner` /
+ * `cricketRulesFor` / `knockoutIssue`.
+ */
+export function cricketRequiresWinner(matchFormat: unknown, groupLabel: unknown): boolean {
+  switch (matchFormat) {
+    case "singleElimination": case "doubleElimination": return true;
+    case "groupKnockout": return groupLabel === undefined || groupLabel === null;
+    case "roundRobin": case "swiss": case "manualDraw": return false;
+    // iOS reads a missing or unknown format as single elimination.
+    default: return true;
+  }
+}
+
+/** The tournament's rules for a match; knockout matches can always be decided by a super over. */
+export function knockoutRules(r: CricketRules, matchFormat: unknown, groupLabel: unknown): CricketRules {
+  return cricketRequiresWinner(matchFormat, groupLabel) ? { ...r, superOver: true } : r;
+}
+
+/** A knockout match's tie or no result needs a winner; null when the result is fine. */
+export function knockoutIssue(
+  result: CricketResult,
+  r: CricketRules,
+  matchFormat: unknown,
+  groupLabel: unknown,
+): CricketIssue | null {
+  if (!cricketRequiresWinner(matchFormat, groupLabel)) return null;
+  switch (cricketOutcome(result, r).resultType) {
+    case "tie":
+      return { field: "superOver", message: "This is a knockout match, so a tie needs a winner. Enter who won the super over." };
+    case "noResult":
+      return { field: "noResult", message: "A knockout match needs a winner. Replay it, or decide it with a super over and enter that result." };
+    case "win":
+      return null;
+  }
+}
+
 // ─── Standings ──────────────────────────────────────────
 
 export const CRICKET_POINTS = { win: 2, tie: 1, noResult: 1, loss: 0 } as const;
