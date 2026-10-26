@@ -55,6 +55,8 @@ export { onRegistrationWrittenMemberUids, onMatchWrittenMemberUids } from "./tri
 // ─── Callables (server authority) ───────────────────────
 export { createSession, updateSession, joinSession, leaveSession, cancelSession, finishSession, deleteSession } from "./callables/openPlay";
 export { setGender } from "./callables/profile";
+export { deleteAccount } from "./callables/account";
+export { onAuthUserDeleted } from "./triggers/onAuthUserDeleted";
 export { register, withdraw, joinAsPartner, changePartner, updateRoster, setRoles } from "./callables/registrations";
 export { generateDraw, advanceRound, resetDraw, generateRandomPairs, createManualMatches } from "./callables/draw";
 export { submitScore, confirmScore, disputeScore, resolveDispute } from "./callables/scores";

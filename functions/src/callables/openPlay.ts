@@ -353,7 +353,17 @@ export const leaveSession = onCall(CALLABLE_OPTS, async (req) => {
   const uid = requireUid(req);
   const db = getFirestore();
   const sessionId = await resolveDocId(db, "playSessions", requireString(dataOf(req), "sessionId", 64));
+  return leaveSessionFor(db, sessionId, uid);
+});
 
+/**
+ * Takes the caller (auth `uid`) off a session's attendees or waitlist,
+ * promotes the first waitlisted player who fits, and notifies them. Shared
+ * by leaveSession and deleteAccount.
+ */
+export async function leaveSessionFor(
+  db: Firestore, sessionId: string, uid: string,
+): Promise<{ status: "left"; promotedPlayerId?: string }> {
   const result = await db.runTransaction(async (tx) => {
     const ref = db.collection("playSessions").doc(sessionId);
     const snap = await tx.get(ref);
@@ -426,7 +436,7 @@ export const leaveSession = onCall(CALLABLE_OPTS, async (req) => {
   return result.promoted
     ? { status: result.status, promotedPlayerId: result.promoted.id }
     : { status: result.status };
-});
+}
 
 // ─── cancelSession ──────────────────────────────────────
 
@@ -435,7 +445,11 @@ export const cancelSession = onCall(CALLABLE_OPTS, async (req) => {
   const uid = requireUid(req);
   const db = getFirestore();
   const sessionId = await resolveDocId(db, "playSessions", requireString(dataOf(req), "sessionId", 64));
+  return cancelSessionFor(db, sessionId, uid);
+});
 
+/** Host (auth `uid`) cancels a session and attendees + waitlist are told. Shared by cancelSession and deleteAccount. */
+export async function cancelSessionFor(db: Firestore, sessionId: string, uid: string): Promise<{ status: "cancelled" }> {
   const s = await db.runTransaction(async (tx) => {
     const ref = db.collection("playSessions").doc(sessionId);
     const snap = await tx.get(ref);
@@ -468,7 +482,7 @@ export const cancelSession = onCall(CALLABLE_OPTS, async (req) => {
     }
   }
   return { status: "cancelled" };
-});
+}
 
 // ─── finishSession ──────────────────────────────────────
 

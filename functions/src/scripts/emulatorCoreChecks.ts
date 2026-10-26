@@ -5,7 +5,7 @@
  *
  * Usage (from tournmate-server/functions):
  *   npm run test:emulator-core
- * which runs, under `firebase emulators:exec --only firestore --project demo-tournmate`:
+ * which runs, under `firebase emulators:exec --only firestore,auth --project demo-tournmate`:
  *   node lib/scripts/emulatorCoreChecks.js
  *
  * Exits non-zero if any case fails.
@@ -28,6 +28,7 @@ const profile = require("../callables/profile") as typeof import("../callables/p
 const regs = require("../callables/registrations") as typeof import("../callables/registrations");
 const member = require("../services/memberUids") as typeof import("../services/memberUids");
 const svc = require("../services/openPlay") as typeof import("../services/openPlay");
+const account = require("../callables/account") as typeof import("../callables/account");
 
 let failures = 0;
 let passes = 0;
@@ -457,6 +458,70 @@ async function memberUidChecks(db: Firestore): Promise<void> {
     && JSON.stringify((await db.collection("matches").doc("M-X").get()).get("teamAUids")) === JSON.stringify(["u1", "u5"]));
 }
 
+async function accountChecks(db: Firestore): Promise<void> {
+  console.log("\n── deleteAccount ──");
+  if (!process.env.FIREBASE_AUTH_EMULATOR_HOST) {
+    check("auth emulator running (npm run test:emulator-core)", false);
+    return;
+  }
+  const { getAuth } = await import("firebase-admin/auth");
+  await clear(db);
+  await seed(db);
+  const PD = { id: "DDDDDDDD-0000-0000-0000-000000000001", uid: "u-del" };
+  await db.collection("players").doc(PD.id).set({
+    name: "DEL", email: "del@example.test", genderRaw: "male", elo: 1200, streak: 0,
+    firebaseUid: PD.uid, fcmToken: "tok", createdAt: Timestamp.now(),
+  });
+  await getAuth().createUser({ uid: PD.uid }).catch(() => undefined);
+  const sess = (id: string, extra: Record<string, unknown>) => db.collection("playSessions").doc(id).set({
+    title: id, venue: `Court ${id}`, date: Timestamp.fromMillis(at(100)), durationMinutes: 90,
+    endsAt: Timestamp.fromMillis(at(100) + 90 * 60_000), gameType: "doubles", maxPlayers: 4,
+    sportType: "badminton", status: "active", hostId: P.host.uid, attendeeIds: [up(P.host.id)],
+    waitlistIds: [], attendeeUids: [P.host.uid], createdAt: Timestamp.now(), ...extra,
+  });
+  await sess("DA", { attendeeIds: [up(P.host.id), PD.id, up(P.p1.id), P.p2.id], waitlistIds: [P.p3.id] });
+  await sess("DB", { hostId: PD.uid, attendeeIds: [PD.id, P.p4.id], date: Timestamp.fromMillis(at(110)),
+    endsAt: Timestamp.fromMillis(at(110) + 90 * 60_000) });
+  await sess("DW", { attendeeIds: [up(P.host.id), P.p5.id, P.p6.id, P.p7.id], waitlistIds: [PD.id],
+    date: Timestamp.fromMillis(at(120)), endsAt: Timestamp.fromMillis(at(120) + 90 * 60_000) });
+  await sess("DP", { attendeeIds: [up(P.host.id), PD.id], date: Timestamp.fromMillis(Date.now() - 48 * HOUR),
+    endsAt: Timestamp.fromMillis(Date.now() - 46 * HOUR) });
+  const reg = (id: string, d: Record<string, unknown>) => db.collection("registrations").doc(id).set({ createdAt: Timestamp.now(), ...d });
+  await reg("RD-SOLO", { tournamentId: "T-DOUBLES", playerId: PD.id });
+  await reg("RD-PARTNER", { tournamentId: "T-DOUBLES", playerId: P.p5.id, partnerId: PD.id, memberUids: ["u5", PD.uid] });
+  await reg("RD-DRAWN", { tournamentId: "T-DRAWN", playerId: PD.id });
+  await reg("RD-TEAM", { tournamentId: "T-CRICKET", playerId: PD.id, teamName: "Del XI" });
+  await db.collection("teamEntries").doc(`t-cricket_${PD.id.toLowerCase()}`).set({ tournamentId: "T-CRICKET", playerId: PD.id, registrationId: "RD-TEAM" });
+  for (const r of [PD.uid, PD.uid, "u1"]) {
+    await db.collection("notifications").add({ recipientId: r, type: "x", title: "t", body: "b", read: false });
+  }
+
+  await expectFail("deleteAccount signed out", account.deleteAccount, null, {}, "UNAUTHENTICATED");
+  const r = await ok("deleteAccount", account.deleteAccount, PD.uid, {});
+  check("result shape", JSON.stringify(r) === JSON.stringify({ status: "deleted" }));
+  const da = await session(db, "DA");
+  check("left attended session, waitlisted p3 promoted", !(da.attendeeIds as string[]).includes(PD.id)
+    && (da.attendeeIds as string[]).includes(P.p3.id) && (da.waitlistIds as string[]).length === 0
+    && await notified(db, "u3", "session_waitlist_promoted"), JSON.stringify(da));
+  check("hosted session cancelled, player told", (await session(db, "DB")).status === "cancelled"
+    && await notified(db, "u4", "session_cancelled"));
+  check("off the waitlist", ((await session(db, "DW")).waitlistIds as string[]).length === 0);
+  check("past session untouched", ((await session(db, "DP")).attendeeIds as string[]).includes(PD.id));
+  const regDoc = async (id: string) => (await db.collection("registrations").doc(id).get()).data();
+  check("solo registration deleted", !(await regDoc("RD-SOLO")));
+  const rp = await regDoc("RD-PARTNER");
+  check("taken off partner's entry", rp?.partnerId === undefined && JSON.stringify(rp?.memberUids) === JSON.stringify(["u5"]));
+  check("drawn tournament entry kept", !!(await regDoc("RD-DRAWN")));
+  check("team entry + lock deleted", !(await regDoc("RD-TEAM"))
+    && !(await db.collection("teamEntries").doc(`t-cricket_${PD.id.toLowerCase()}`).get()).exists);
+  check("own notifications deleted, others kept",
+    (await db.collection("notifications").where("recipientId", "==", PD.uid).get()).empty
+    && !(await db.collection("notifications").where("recipientId", "==", "u1").get()).empty);
+  check("player doc deleted", !(await db.collection("players").doc(PD.id).get()).exists);
+  check("auth user deleted", await getAuth().getUser(PD.uid).then(() => false, () => true));
+  await ok("deleteAccount again is a no-op", account.deleteAccount, PD.uid, {});
+}
+
 async function main(): Promise<void> {
   const db = getFirestore();
   await clear(db);
@@ -465,6 +530,7 @@ async function main(): Promise<void> {
   await profileChecks();
   await registrationChecks(db);
   await memberUidChecks(db);
+  await accountChecks(db);
   console.log(`\n${passes} passed, ${failures} failed`);
   process.exit(failures === 0 ? 0 : 1);
 }
