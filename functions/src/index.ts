@@ -49,5 +49,9 @@ export { onMatchFinished } from "./triggers/onMatchFinished";
 export { onPlaySessionCreated } from "./triggers/onPlaySessionCreated";
 export { onSessionJoined } from "./triggers/onSessionJoined";
 
+// ─── Callables ──────────────────────────────────────────
+export { generateDraw, advanceRound, resetDraw, generateRandomPairs } from "./callables/draw";
+
 // ─── Scheduled Jobs ─────────────────────────────────────
 export { hourlyCleanup, dailyReminders, spamCleanup } from "./triggers/scheduledJobs";
+export { autoDrawJob } from "./triggers/autoDrawJob";
