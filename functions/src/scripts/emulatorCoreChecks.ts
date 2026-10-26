@@ -1,0 +1,420 @@
+/**
+ * Emulator checks for the server-core callables (Open Play, setGender,
+ * registrations) and the memberUids sync. Runs the callable handlers
+ * directly (`.run`) against the Firestore emulator; never a real project.
+ *
+ * Usage (from tournmate-server/functions):
+ *   npm run test:emulator-core
+ * which runs, under `firebase emulators:exec --only firestore --project demo-tournmate`:
+ *   node lib/scripts/emulatorCoreChecks.js
+ *
+ * Exits non-zero if any case fails.
+ */
+
+import { initializeApp, getApps } from "firebase-admin/app";
+import { getFirestore, Timestamp, Firestore } from "firebase-admin/firestore";
+
+const projectId = process.env.GCLOUD_PROJECT || process.env.GOOGLE_CLOUD_PROJECT || "";
+if (!process.env.FIRESTORE_EMULATOR_HOST || !projectId.startsWith("demo-")) {
+  console.error("Refusing to run: needs FIRESTORE_EMULATOR_HOST and a demo-* project (use npm run test:emulator-core).");
+  process.exit(1);
+}
+if (getApps().length === 0) initializeApp({ projectId });
+
+// Imported after initializeApp so getFirestore() in the handlers hits the emulator.
+/* eslint-disable @typescript-eslint/no-var-requires */
+const openPlay = require("../callables/openPlay") as typeof import("../callables/openPlay");
+const profile = require("../callables/profile") as typeof import("../callables/profile");
+const regs = require("../callables/registrations") as typeof import("../callables/registrations");
+const member = require("../services/memberUids") as typeof import("../services/memberUids");
+const svc = require("../services/openPlay") as typeof import("../services/openPlay");
+
+let failures = 0;
+let passes = 0;
+function check(name: string, ok: boolean, detail = ""): void {
+  console.log(`${ok ? "PASS" : "FAIL"}  ${name}${detail ? `  (${detail})` : ""}`);
+  if (ok) passes++; else failures++;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Fn = { run: (req: any) => any };
+async function call<T = Record<string, unknown>>(fn: Fn, uid: string | null, data: unknown): Promise<T> {
+  return await fn.run({
+    data,
+    auth: uid ? { uid, token: {} } : undefined,
+    rawRequest: {},
+    acceptsStreaming: false,
+  });
+}
+async function ok<T = Record<string, unknown>>(name: string, fn: Fn, uid: string | null, data: unknown): Promise<T | null> {
+  try {
+    const r = await call<T>(fn, uid, data);
+    check(name, true, JSON.stringify(r));
+    return r;
+  } catch (e) {
+    const err = e as { message?: string; details?: { reason?: string } };
+    check(name, false, `threw ${err.details?.reason ?? ""} ${err.message}`);
+    return null;
+  }
+}
+async function expectFail(name: string, fn: Fn, uid: string | null, data: unknown, reason: string): Promise<void> {
+  try {
+    const r = await call(fn, uid, data);
+    check(name, false, `expected ${reason}, got ${JSON.stringify(r)}`);
+  } catch (e) {
+    const err = e as { message?: string; details?: { reason?: string } };
+    check(name, err.details?.reason === reason, `${err.details?.reason}: ${err.message}`);
+  }
+}
+
+const HOUR = 3600_000;
+const base = Math.ceil(Date.now() / HOUR) * HOUR + 24 * HOUR; // tomorrow, on the hour
+const at = (hours: number) => base + hours * HOUR;
+
+const P = {
+  host: { id: "AAAAAAAA-0000-0000-0000-000000000001", uid: "u-host", g: "male" },
+  p1: { id: "aaaaaaaa-0000-0000-0000-000000000002", uid: "u1", g: "male" }, // lower-case doc id (web)
+  p2: { id: "AAAAAAAA-0000-0000-0000-000000000003", uid: "u2", g: "female" },
+  p3: { id: "AAAAAAAA-0000-0000-0000-000000000004", uid: "u3", g: "female" },
+  p4: { id: "AAAAAAAA-0000-0000-0000-000000000005", uid: "u4", g: "male" },
+  p5: { id: "AAAAAAAA-0000-0000-0000-000000000006", uid: "u5", g: "male" },
+  p6: { id: "AAAAAAAA-0000-0000-0000-000000000007", uid: "u6", g: "preferNotToSay" },
+  p7: { id: "AAAAAAAA-0000-0000-0000-000000000008", uid: "u7", g: "female" },
+  org: { id: "AAAAAAAA-0000-0000-0000-000000000009", uid: "u-org", g: "male" },
+  p8: { id: "AAAAAAAA-0000-0000-0000-00000000000A", uid: "u8", g: "female" },
+};
+const up = (id: string) => id.toUpperCase();
+
+async function clear(db: Firestore): Promise<void> {
+  for (const c of ["players", "playSessions", "tournaments", "registrations", "matches", "teamEntries", "teams", "notifications"]) {
+    const snap = await db.collection(c).get();
+    await Promise.all(snap.docs.map((d) => d.ref.delete()));
+  }
+}
+
+async function seed(db: Firestore): Promise<void> {
+  for (const [key, p] of Object.entries(P)) {
+    await db.collection("players").doc(p.id).set({
+      name: key.toUpperCase(), phone: "", email: `${key}@example.test`, genderRaw: p.g,
+      elo: 1200, streak: 0, firebaseUid: p.uid, avatarId: "a1", createdAt: Timestamp.now(),
+    });
+  }
+  const deadline = Timestamp.fromMillis(Date.now() + 7 * 24 * HOUR);
+  const date = Timestamp.fromMillis(Date.now() + 8 * 24 * HOUR);
+  const t = (id: string, extra: Record<string, unknown>) => db.collection("tournaments").doc(id).set({
+    title: id, date, registrationDeadline: deadline, statusRaw: "scheduled", formatRaw: "openSingles",
+    matchFormatRaw: "roundRobin", randomPairing: false, createdBy: P.org.uid, participantsCount: 0,
+    currency: "USD", location: "Hall", locationAddress: "", createdAt: Timestamp.now(), ...extra,
+  });
+  await t("T-SINGLES", { formatConfigData: JSON.stringify({ maxParticipants: 3 }) });
+  await t("T-DOUBLES", { formatRaw: "openDoubles" });
+  await t("T-MIXED", { formatRaw: "mixedDoubles" });
+  await t("T-CRICKET", { sportType: "cricket", formatRaw: "openSingles" });
+  await t("T-CLOSED", { registrationDeadline: Timestamp.fromMillis(Date.now() - HOUR) });
+  await t("T-DRAWN", { formatRaw: "openDoubles" });
+  await db.collection("registrations").doc("R-DRAWN").set({
+    tournamentId: "T-DRAWN", playerId: up(P.p7.id), createdAt: Timestamp.now(),
+  });
+  await db.collection("matches").doc("M-DRAWN").set({
+    tournamentId: "T-DRAWN", teamAId: "R-DRAWN", teamBId: "R-X", statusRaw: "scheduled", createdAt: Timestamp.now(),
+  });
+}
+
+async function session(db: Firestore, id: string) {
+  return (await db.collection("playSessions").doc(id).get()).data() ?? {};
+}
+async function notified(db: Firestore, uid: string, type: string): Promise<boolean> {
+  const s = await db.collection("notifications").where("recipientId", "==", uid).where("type", "==", type).get();
+  return !s.empty;
+}
+
+async function openPlayChecks(db: Firestore): Promise<void> {
+  console.log("\n── Open Play ──");
+  const { createSession, updateSession, joinSession, leaveSession, cancelSession } = openPlay;
+  const base1 = { venue: "Court A", title: "Morning", gameType: "doubles", sportType: "badminton", timeZone: "America/Chicago" };
+
+  await expectFail("create unauthenticated", createSession, null, { ...base1, date: at(10) }, "UNAUTHENTICATED");
+  await expectFail("create without profile", createSession, "u-none", { ...base1, date: at(10) }, "NO_PROFILE");
+  await expectFail("create cricket", createSession, P.host.uid, { ...base1, sportType: "cricket", date: at(10) }, "SPORT_NOT_ALLOWED");
+  await expectFail("create in the past", createSession, P.host.uid, { ...base1, date: Date.now() - HOUR }, "INVALID_ARGUMENT");
+  await expectFail("create 300 min", createSession, P.host.uid, { ...base1, date: at(10), durationMinutes: 300 }, "INVALID_ARGUMENT");
+
+  const s1 = (await ok<{ sessionId: string }>("create S1 doubles (ISO date, default 90 min)", createSession, P.host.uid,
+    { ...base1, date: new Date(at(10)).toISOString() }))!.sessionId;
+  const d1 = await session(db, s1);
+  check("S1 server fields", d1.maxPlayers === 4 && d1.durationMinutes === 90
+    && (d1.endsAt as Timestamp).toMillis() === at(10) + 90 * 60_000
+    && JSON.stringify(d1.attendeeIds) === JSON.stringify([P.host.id])
+    && JSON.stringify(d1.attendeeUids) === JSON.stringify([P.host.uid])
+    && Array.isArray(d1.waitlistIds) && d1.waitlistIds.length === 0
+    && d1.hostId === P.host.uid && d1.status === "active" && d1.gameType === "doubles", JSON.stringify(d1));
+  check("sessionWindow uses endsAt", svc.sessionWindow(d1).end.getTime() === at(10) + 90 * 60_000);
+  check("capacityFor", svc.capacityFor("singles") === 2 && svc.capacityFor("mixed") === 4 && svc.capacityFor(undefined) === 4);
+
+  await expectFail("host overlapping own session", createSession, P.host.uid, { ...base1, date: at(11) }, "SESSION_CLASH");
+  const s2 = (await ok<{ sessionId: string }>("create S2 (+1 day)", createSession, P.host.uid, { ...base1, date: at(34) }))!.sessionId;
+  await ok("create S3 (+2 days, epoch ms)", createSession, P.host.uid, { ...base1, date: at(58), durationMinutes: 60 });
+  await expectFail("4th upcoming session", createSession, P.host.uid, { ...base1, date: at(82) }, "HOST_LIMIT");
+  await expectFail("mixed host without gender", createSession, P.p6.uid, { ...base1, gameType: "mixed", date: at(100) }, "GENDER_REQUIRED");
+
+  // Join, full → waitlist.
+  const j1 = await ok<{ status: string }>("p1 joins S1 (lower-case player doc)", joinSession, P.p1.uid, { sessionId: s1 });
+  check("p1 joined", j1?.status === "joined");
+  check("attendee id stored upper case", ((await session(db, s1)).attendeeIds as string[]).includes(up(P.p1.id)));
+  await ok("p2 joins S1", joinSession, P.p2.uid, { sessionId: s1 });
+  await ok("p3 joins S1", joinSession, P.p3.uid, { sessionId: s1 });
+  const j4 = await ok<{ status: string }>("p4 joins full S1", joinSession, P.p4.uid, { sessionId: s1 });
+  check("p4 waitlisted", j4?.status === "waitlisted");
+  const j5 = await ok<{ status: string }>("p5 joins full S1", joinSession, P.p5.uid, { sessionId: s1 });
+  check("p5 waitlisted", j5?.status === "waitlisted");
+  const again = await ok<{ status: string }>("p1 joins again (idempotent)", joinSession, P.p1.uid, { sessionId: s1 });
+  check("still joined", again?.status === "joined" && ((await session(db, s1)).attendeeIds as string[]).length === 4);
+  check("attendeeUids tracked", JSON.stringify((await session(db, s1)).attendeeUids) === JSON.stringify(["u-host", "u1", "u2", "u3"]));
+
+  // Update.
+  await expectFail("update locked field after joins", updateSession, P.host.uid, { sessionId: s1, date: at(12) }, "FIELDS_LOCKED");
+  await expectFail("update venue after joins", updateSession, P.host.uid, { sessionId: s1, venue: "Court B" }, "FIELDS_LOCKED");
+  await ok("update notes after joins", updateSession, P.host.uid, { sessionId: s1, notes: "Bring shuttles", venue: "Court A" });
+  check("notes saved", (await session(db, s1)).notes === "Bring shuttles");
+  await expectFail("non-host update", updateSession, P.p1.uid, { sessionId: s1, notes: "x" }, "NOT_HOST");
+  await ok("update S3 date + duration (no joins)", updateSession, P.host.uid,
+    { sessionId: (await db.collection("playSessions").where("date", "==", Timestamp.fromMillis(at(58))).get()).docs[0].id,
+      date: at(59), durationMinutes: 120 });
+
+  // Clash on join / create.
+  await expectFail("p2 hosts overlapping S1", createSession, P.p2.uid, { ...base1, date: at(10.5) }, "SESSION_CLASH");
+  const s6 = (await ok<{ sessionId: string }>("p7 hosts S6 overlapping S1", createSession, P.p7.uid,
+    { ...base1, venue: "Court Z", date: at(10.5) }))!.sessionId;
+  await expectFail("p7 joins S1 (clash with own S6)", joinSession, P.p7.uid, { sessionId: s1 }, "SESSION_CLASH");
+  try {
+    await call(joinSession, P.p7.uid, { sessionId: s1 });
+  } catch (e) {
+    const m = (e as Error).message;
+    check("clash message names venue + time", m.includes("Court Z") && /\d:\d\d/.test(m), m);
+  }
+
+  // Leave + promotion.
+  const l3 = await ok<{ status: string; promotedPlayerId?: string }>("p3 leaves S1", leaveSession, P.p3.uid, { sessionId: s1 });
+  check("p4 promoted", l3?.promotedPlayerId === P.p4.id);
+  const after3 = await session(db, s1);
+  check("S1 after promotion", (after3.attendeeIds as string[]).includes(P.p4.id) && !(after3.attendeeIds as string[]).includes(P.p3.id)
+    && JSON.stringify(after3.waitlistIds) === JSON.stringify([P.p5.id])
+    && (after3.attendeeUids as string[]).includes("u4") && !(after3.attendeeUids as string[]).includes("u3"), JSON.stringify(after3));
+  check("p4 notified of promotion", await notified(db, "u4", "session_waitlist_promoted"));
+
+  await ok("p5 (waitlisted on S1) joins overlapping S6", joinSession, P.p5.uid, { sessionId: s6 });
+  const l2 = await ok<{ promotedPlayerId?: string }>("p2 leaves S1", leaveSession, P.p2.uid, { sessionId: s1 });
+  check("p5 not promoted (clash with S6)", !l2?.promotedPlayerId
+    && JSON.stringify((await session(db, s1)).waitlistIds) === JSON.stringify([P.p5.id]));
+  await ok("p5 leaves S1 waitlist", leaveSession, P.p5.uid, { sessionId: s1 });
+  check("waitlist empty", ((await session(db, s1)).waitlistIds as string[]).length === 0);
+  await expectFail("host leaves", leaveSession, P.host.uid, { sessionId: s1 }, "INVALID_ARGUMENT");
+  await expectFail("non-participant leaves", leaveSession, P.p8.uid, { sessionId: s1 }, "NOT_PARTICIPANT");
+
+  // Mixed.
+  await ok("S2 → mixed (host only so far)", updateSession, P.host.uid, { sessionId: s2, gameTypeRaw: "mixed" });
+  check("S2 mixed, cap 4", (await session(db, s2)).gameType === "mixed" && (await session(db, s2)).maxPlayers === 4);
+  await expectFail("mixed join without gender", joinSession, P.p6.uid, { sessionId: s2 }, "GENDER_REQUIRED");
+  await ok("p1 (male) joins mixed", joinSession, P.p1.uid, { sessionId: s2 });
+  const m4 = await ok<{ status: string }>("p4 (3rd male) joins mixed", joinSession, P.p4.uid, { sessionId: s2 });
+  check("3rd male waitlisted", m4?.status === "waitlisted");
+  await ok("p2 (female) joins mixed", joinSession, P.p2.uid, { sessionId: s2 });
+  const m8 = await ok<{ status: string }>("p8 (female) joins mixed", joinSession, P.p8.uid, { sessionId: s2 });
+  check("2nd female joined", m8?.status === "joined");
+  const m3 = await ok<{ status: string }>("p3 (female) joins full mixed", joinSession, P.p3.uid, { sessionId: s2 });
+  check("3rd female waitlisted", m3?.status === "waitlisted");
+  const lm = await ok<{ promotedPlayerId?: string }>("p8 (female) leaves mixed", leaveSession, P.p8.uid, { sessionId: s2 });
+  check("female slot → p3 promoted, not p4 (male first in line)", lm?.promotedPlayerId === P.p3.id);
+
+  // Cancel.
+  await expectFail("non-host cancel", cancelSession, P.p1.uid, { sessionId: s2 }, "NOT_HOST");
+  await ok("host cancels S2", cancelSession, P.host.uid, { sessionId: s2 });
+  check("S2 cancelled", (await session(db, s2)).status === "cancelled");
+  check("attendees + waitlist notified", await notified(db, "u1", "session_cancelled")
+    && await notified(db, "u3", "session_cancelled") && await notified(db, "u4", "session_cancelled")
+    && !(await notified(db, "u-host", "session_cancelled")));
+  await expectFail("join cancelled session", joinSession, P.p5.uid, { sessionId: s2 }, "SESSION_CLOSED");
+  await ok("cancel again (idempotent)", cancelSession, P.host.uid, { sessionId: s2 });
+
+  // Old-app docs: no maxPlayers / endsAt / durationMinutes.
+  await db.collection("playSessions").doc("LEGACY-STARTED").set({
+    venue: "Old Court", date: Timestamp.fromMillis(Date.now() - HOUR), status: "active", gameType: "doubles",
+    hostId: "u-other", attendeeIds: [], createdAt: Timestamp.now(),
+  });
+  await expectFail("join started session", joinSession, P.p5.uid, { sessionId: "LEGACY-STARTED" }, "SESSION_CLOSED");
+  await db.collection("playSessions").doc("LEGACY-SINGLES").set({
+    venue: "Old Court", date: Timestamp.fromMillis(at(4)), status: "active", gameType: "singles",
+    hostId: "u-other", attendeeIds: [], createdAt: Timestamp.now(),
+  });
+  check("legacy window = 120 min", svc.sessionWindow(await session(db, "LEGACY-SINGLES")).end.getTime() === at(6));
+  await ok("p7 joins legacy singles", joinSession, P.p7.uid, { sessionId: "LEGACY-SINGLES" });
+  await ok("p8 joins legacy singles", joinSession, P.p8.uid, { sessionId: "LEGACY-SINGLES" });
+  const lj = await ok<{ status: string }>("3rd player on legacy singles", joinSession, P.p5.uid, { sessionId: "LEGACY-SINGLES" });
+  check("legacy singles cap 2 → waitlisted", lj?.status === "waitlisted");
+  await expectFail("p7 hosts inside legacy 120-min window", createSession, P.p7.uid, { ...base1, date: at(5.5) }, "SESSION_CLASH");
+  const clashes = await svc.findClashingSessions(db, P.p7.id.toLowerCase(), new Date(at(5)), new Date(at(5.5)), null);
+  check("findClashingSessions matches either id case", clashes.length === 1 && clashes[0].id === "LEGACY-SINGLES");
+}
+
+async function profileChecks(): Promise<void> {
+  console.log("\n── setGender ──");
+  await expectFail("invalid gender", profile.setGender, P.p6.uid, { gender: "other" }, "INVALID_ARGUMENT");
+  await ok("preferNotToSay → female", profile.setGender, P.p6.uid, { gender: "female" });
+  await ok("same value again (no-op)", profile.setGender, P.p6.uid, { gender: "female" });
+  await expectFail("change after set", profile.setGender, P.p6.uid, { gender: "male" }, "GENDER_LOCKED");
+  await expectFail("male → female", profile.setGender, P.p1.uid, { gender: "female" }, "GENDER_LOCKED");
+  await expectFail("no profile", profile.setGender, "u-none", { gender: "male" }, "NO_PROFILE");
+}
+
+async function registrationChecks(db: Firestore): Promise<void> {
+  console.log("\n── Registration ──");
+  const { register, withdraw, joinAsPartner, updateRoster, setRoles } = regs;
+  const reg = async (id: string) => (await db.collection("registrations").doc(id).get()).data();
+
+  // Singles + capacity.
+  const r1 = (await ok<{ registrationId: string }>("p1 registers singles", register, P.p1.uid, { tournamentId: "T-SINGLES" }))!.registrationId;
+  const d1 = await reg(r1);
+  check("singles doc shape", JSON.stringify(Object.keys(d1 ?? {}).sort()) === JSON.stringify(["createdAt", "memberUids", "playerId", "tournamentId"])
+    && d1?.playerId === up(P.p1.id) && d1?.tournamentId === "T-SINGLES" && d1?.createdAt instanceof Timestamp
+    && JSON.stringify(d1?.memberUids) === JSON.stringify(["u1"]), JSON.stringify(d1));
+  await expectFail("register twice", register, P.p1.uid, { tournamentId: "T-SINGLES" }, "ALREADY_REGISTERED");
+  await expectFail("singles with partner", register, P.p2.uid, { tournamentId: "T-SINGLES", partnerId: P.p3.id }, "INVALID_ARGUMENT");
+  await ok("p2 registers singles", register, P.p2.uid, { tournamentId: "T-SINGLES" });
+  await ok("p3 registers singles", register, P.p3.uid, { tournamentId: "T-SINGLES" });
+  await expectFail("4th entry, max 3", register, P.p4.uid, { tournamentId: "T-SINGLES" }, "REG_FULL");
+  await expectFail("past deadline", register, P.p1.uid, { tournamentId: "T-CLOSED" }, "REG_CLOSED");
+  await expectFail("after draw", register, P.p1.uid, { tournamentId: "T-DRAWN" }, "REG_CLOSED");
+  await expectFail("unknown tournament", register, P.p1.uid, { tournamentId: "NOPE" }, "NOT_FOUND");
+  await expectFail("cricket without team", register, P.p1.uid, { tournamentId: "T-CRICKET" }, "SPORT_NOT_ALLOWED");
+  await expectFail("team on badminton", register, P.p4.uid, { tournamentId: "T-DOUBLES", team: { teamName: "X", rosterIds: [] } }, "SPORT_NOT_ALLOWED");
+
+  // Doubles.
+  const rd = (await ok<{ registrationId: string }>("p1 + p2 doubles", register, P.p1.uid, { tournamentId: "T-DOUBLES", partnerId: P.p2.id }))!.registrationId;
+  const dd = await reg(rd);
+  check("doubles doc", dd?.partnerId === P.p2.id && JSON.stringify(dd?.memberUids) === JSON.stringify(["u1", "u2"]), JSON.stringify(dd));
+  await expectFail("partner already registered", register, P.p3.uid, { tournamentId: "T-DOUBLES", partnerId: P.p2.id }, "ALREADY_REGISTERED");
+  const r3 = (await ok<{ registrationId: string }>("p3 solo doubles", register, P.p3.uid, { tournamentId: "T-DOUBLES" }))!.registrationId;
+  await ok("p4 joins p3 as partner", joinAsPartner, P.p4.uid, { registrationId: r3 });
+  check("p3 reg partner = p4", (await reg(r3))?.partnerId === P.p4.id && JSON.stringify((await reg(r3))?.memberUids) === JSON.stringify(["u3", "u4"]));
+  await expectFail("p5 joins taken registration", joinAsPartner, P.p5.uid, { registrationId: r3 }, "REG_FULL");
+  const r5 = (await ok<{ registrationId: string }>("p5 solo doubles", register, P.p5.uid, { tournamentId: "T-DOUBLES" }))!.registrationId;
+  const r6 = (await ok<{ registrationId: string }>("p6 solo doubles", register, P.p6.uid, { tournamentId: "T-DOUBLES" }))!.registrationId;
+  await ok("p6 joins p5 (merges p6's solo entry)", joinAsPartner, P.p6.uid, { registrationId: r5 });
+  check("p6 solo entry removed", !(await reg(r6)) && (await reg(r5))?.partnerId === P.p6.id);
+  await expectFail("p1 (has partner) joins as partner", joinAsPartner, P.p1.uid, { registrationId: r5 }, "REG_FULL");
+
+  // Mixed.
+  await expectFail("mixed: two men", register, P.p1.uid, { tournamentId: "T-MIXED", partnerId: P.p4.id }, "INVALID_ARGUMENT");
+  await ok("mixed: man + woman", register, P.p1.uid, { tournamentId: "T-MIXED", partnerId: P.p2.id });
+
+  // Withdraw.
+  await ok("partner withdraws", withdraw, P.p2.uid, { registrationId: rd });
+  check("partner cleared", (await reg(rd))?.partnerId === undefined && JSON.stringify((await reg(rd))?.memberUids) === JSON.stringify(["u1"]));
+  await ok("registrant withdraws", withdraw, P.p1.uid, { registrationId: rd });
+  check("registration deleted", !(await reg(rd)));
+  await expectFail("stranger withdraws", withdraw, P.p7.uid, { registrationId: r5 }, "NOT_PARTICIPANT");
+  await ok("organizer withdraws an entry", withdraw, P.org.uid, { registrationId: r5 });
+  check("organizer removal deleted", !(await reg(r5)));
+  await expectFail("withdraw after draw", withdraw, P.p7.uid, { registrationId: "R-DRAWN" }, "DRAW_EXISTS");
+
+  // Cricket team entry.
+  const team = {
+    teamId: "TEAM-1", teamName: "Royals", rosterIds: [P.p1.id, P.p2.id], guestNames: ["Guest A", " guest a "],
+    captainId: P.p2.id.toLowerCase(), playerRoles: { [P.p1.id]: "batter" },
+  };
+  await db.collection("teams").doc("TEAM-1").set({ name: "Royals", sportType: "cricket", captainId: up(P.p2.id), playerIds: [], createdBy: P.host.uid });
+  const rc = (await ok<{ registrationId: string }>("host enters team (not playing)", register, P.host.uid, { tournamentId: "T-CRICKET", team }))!.registrationId;
+  const dc = await reg(rc);
+  check("team doc shape", JSON.stringify(Object.keys(dc ?? {}).sort()) === JSON.stringify(
+    ["captainId", "createdAt", "guestNames", "memberUids", "playerId", "playerRoles", "rosterIds", "teamId", "teamName", "tournamentId"])
+    && JSON.stringify(dc?.rosterIds) === JSON.stringify([up(P.p1.id), P.p2.id])
+    && JSON.stringify(dc?.guestNames) === JSON.stringify(["Guest A"])
+    && dc?.captainId === P.p2.id && dc?.playerRoles[up(P.p1.id)] === "batter"
+    && JSON.stringify(dc?.memberUids) === JSON.stringify(["u-host", "u1", "u2"]), JSON.stringify(dc));
+  const lock = await db.collection("teamEntries").doc(`t-cricket_${P.host.id.toLowerCase()}`).get();
+  check("team entry lock written", lock.exists && lock.get("registrationId") === rc && lock.get("playerId") === P.host.id);
+  await expectFail("roster player already on a team", register, P.p3.uid,
+    { tournamentId: "T-CRICKET", team: { teamName: "Kings", rosterIds: [P.p1.id] } }, "ALREADY_ENTERED_TEAM");
+  await expectFail("registrant enters second team", register, P.host.uid,
+    { tournamentId: "T-CRICKET", team: { teamName: "Kings", rosterIds: [P.p3.id] } }, "ALREADY_ENTERED_TEAM");
+  await expectFail("roster player enters own team", register, P.p1.uid,
+    { tournamentId: "T-CRICKET", team: { teamName: "Kings", rosterIds: [P.p3.id] } }, "ALREADY_ENTERED_TEAM");
+  await db.collection("teamEntries").doc(`t-cricket_${P.p4.id.toLowerCase()}`).set({ tournamentId: "T-CRICKET", playerId: P.p4.id, registrationId: "OLD" });
+  await expectFail("existing team lock", register, P.p4.uid,
+    { tournamentId: "T-CRICKET", team: { teamName: "Kings", rosterIds: [P.p3.id] } }, "ALREADY_ENTERED_TEAM");
+  await expectFail("roster over limit", register, P.p5.uid,
+    { tournamentId: "T-CRICKET", team: { teamName: "Big", rosterIds: [], guestNames: Array.from({ length: 16 }, (_, i) => `G${i}`) } }, "INVALID_ARGUMENT");
+  const rk = (await ok<{ registrationId: string }>("p5 enters team, no captain given", register, P.p5.uid,
+    { tournamentId: "T-CRICKET", team: { teamName: "Kings", rosterIds: [P.p5.id, P.p3.id] } }))!.registrationId;
+  check("captain defaults to registrant", (await reg(rk))?.captainId === P.p5.id);
+
+  // Roles.
+  await expectFail("non-captain roster member sets roles", setRoles, P.p1.uid, { registrationId: rc, captainId: P.p1.id }, "NOT_PARTICIPANT");
+  await expectFail("vice = captain", setRoles, P.p2.uid, { registrationId: rc, captainId: P.p1.id, viceCaptainId: P.p1.id }, "INVALID_ARGUMENT");
+  await expectFail("captain off the sheet", setRoles, P.p2.uid, { registrationId: rc, captainId: P.p7.id }, "INVALID_ARGUMENT");
+  await expectFail("bad playing role", setRoles, P.p2.uid, { registrationId: rc, captainId: P.p1.id, playerRoles: { [P.p1.id]: "umpire" } }, "INVALID_ARGUMENT");
+  const roles = await ok<Record<string, unknown>>("captain sets roles", setRoles, P.p2.uid, {
+    registrationId: rc, captainId: P.p1.id, viceCaptainId: P.p2.id, keeperId: "guest:Guest A",
+    playerRoles: { "guest:Guest A": "wicketkeeperBatter" },
+  });
+  const dr = await reg(rc);
+  check("roles stored", dr?.captainId === up(P.p1.id) && dr?.viceCaptainId === P.p2.id && dr?.keeperId === "guest:Guest A"
+    && JSON.stringify(dr?.playerRoles) === JSON.stringify({ "guest:Guest A": "wicketkeeperBatter" })
+    && roles?.captainId === up(P.p1.id), JSON.stringify(dr));
+
+  // Roster.
+  await expectFail("stranger updates roster", updateRoster, P.p7.uid, { registrationId: rc, rosterIds: [P.p1.id], guestNames: [] }, "NOT_PARTICIPANT");
+  await expectFail("roster adds player from another team", updateRoster, P.p1.uid,
+    { registrationId: rc, rosterIds: [P.p1.id, P.p3.id], guestNames: ["Guest A"] }, "ALREADY_ENTERED_TEAM");
+  await ok("new captain drops vice-captain p2", updateRoster, P.p1.uid,
+    { registrationId: rc, rosterIds: [P.p1.id, P.p8.id], guestNames: ["Guest A"], teamName: "Royal XI" });
+  const du = await reg(rc);
+  check("roster + roles normalized", JSON.stringify(du?.rosterIds) === JSON.stringify([up(P.p1.id), P.p8.id])
+    && du?.viceCaptainId === undefined && du?.captainId === up(P.p1.id) && du?.teamName === "Royal XI"
+    && JSON.stringify(du?.memberUids) === JSON.stringify(["u-host", "u1", "u8"]), JSON.stringify(du));
+  await ok("captain p1 withdraws from roster", withdraw, P.p1.uid, { registrationId: rc });
+  const dw = await reg(rc);
+  check("captain passes to first remaining", JSON.stringify(dw?.rosterIds) === JSON.stringify([P.p8.id])
+    && dw?.captainId === P.p8.id && JSON.stringify(dw?.memberUids) === JSON.stringify(["u-host", "u8"]), JSON.stringify(dw));
+  await ok("registrant withdraws team", withdraw, P.host.uid, { registrationId: rc });
+  check("team + lock deleted", !(await reg(rc)) && !(await db.collection("teamEntries").doc(`t-cricket_${P.host.id.toLowerCase()}`).get()).exists);
+  await ok("host can enter again after withdrawing", register, P.host.uid,
+    { tournamentId: "T-CRICKET", team: { teamName: "Royals", rosterIds: [P.p1.id] } });
+}
+
+async function memberUidChecks(db: Firestore): Promise<void> {
+  console.log("\n── memberUids sync ──");
+  await db.collection("registrations").doc("R-OLD-A").set({ tournamentId: "T-X", playerId: up(P.p1.id), createdAt: Timestamp.now() });
+  await db.collection("registrations").doc("R-OLD-B").set({
+    tournamentId: "T-X", playerId: P.p2.id, partnerId: P.p3.id.toLowerCase(), rosterIds: [P.p4.id], createdAt: Timestamp.now(),
+  });
+  check("old registration synced", await member.syncRegistrationMemberUids(db, "R-OLD-A"));
+  check("partner + roster uids (either id case)", await member.syncRegistrationMemberUids(db, "R-OLD-B")
+    && JSON.stringify((await db.collection("registrations").doc("R-OLD-B").get()).get("memberUids")) === JSON.stringify(["u2", "u3", "u4"]));
+  check("second sync is a no-op", !(await member.syncRegistrationMemberUids(db, "R-OLD-B")));
+  await db.collection("matches").doc("M-X").set({ tournamentId: "T-X", teamAId: "R-OLD-A", teamBId: "R-OLD-B", statusRaw: "scheduled" });
+  check("match uids set", await member.syncMatchMemberUids(db, "M-X"));
+  const m = (await db.collection("matches").doc("M-X").get()).data();
+  check("teamAUids / teamBUids", JSON.stringify(m?.teamAUids) === JSON.stringify(["u1"]) && JSON.stringify(m?.teamBUids) === JSON.stringify(["u2", "u3", "u4"]));
+  await db.collection("registrations").doc("R-OLD-A").update({ partnerId: P.p5.id });
+  await member.syncRegistrationMemberUids(db, "R-OLD-A");
+  check("partner change flows to match", (await member.syncMatchesForRegistration(db, "R-OLD-A")) === 1
+    && JSON.stringify((await db.collection("matches").doc("M-X").get()).get("teamAUids")) === JSON.stringify(["u1", "u5"]));
+}
+
+async function main(): Promise<void> {
+  const db = getFirestore();
+  await clear(db);
+  await seed(db);
+  await openPlayChecks(db);
+  await profileChecks();
+  await registrationChecks(db);
+  await memberUidChecks(db);
+  console.log(`\n${passes} passed, ${failures} failed`);
+  process.exit(failures === 0 ? 0 : 1);
+}
+
+main().catch((err) => {
+  console.error("Emulator checks crashed:", err);
+  process.exit(1);
+});

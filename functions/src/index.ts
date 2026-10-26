@@ -49,5 +49,12 @@ export { onMatchFinished } from "./triggers/onMatchFinished";
 export { onPlaySessionCreated } from "./triggers/onPlaySessionCreated";
 export { onSessionJoined } from "./triggers/onSessionJoined";
 
+export { onRegistrationWrittenMemberUids, onMatchWrittenMemberUids } from "./triggers/memberUids";
+
+// ─── Callables (server authority) ───────────────────────
+export { createSession, updateSession, joinSession, leaveSession, cancelSession } from "./callables/openPlay";
+export { setGender } from "./callables/profile";
+export { register, withdraw, joinAsPartner, updateRoster, setRoles } from "./callables/registrations";
+
 // ─── Scheduled Jobs ─────────────────────────────────────
 export { hourlyCleanup, dailyReminders, spamCleanup } from "./triggers/scheduledJobs";
