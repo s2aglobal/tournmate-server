@@ -35,7 +35,7 @@ import { notifyMatchFinished, notifyScoreDisputed, notifyScoreSubmitted, safely 
  * `onMatchFinished` trigger never rates it twice.
  */
 
-const OPTIONS = { region: "us-central1" };
+const OPTIONS = { region: "us-central1", invoker: "public" } as const;
 
 type Side = "A" | "B";
 type Fields = Record<string, unknown>;

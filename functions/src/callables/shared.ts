@@ -4,7 +4,10 @@ import { fail } from "./errors";
 import { playerForUid, PlayerRef } from "../services/identity";
 
 /** Options shared by every callable. */
-export const CALLABLE_OPTS = { region: "us-central1" } as const;
+// invoker "public": Cloud Run lets the request through and the callable
+// itself checks the Firebase sign-in. Set explicitly so every deploy
+// re-applies it, not only the first.
+export const CALLABLE_OPTS = { region: "us-central1", invoker: "public" } as const;
 
 export type Data = Record<string, unknown>;
 

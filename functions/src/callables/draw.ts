@@ -15,7 +15,7 @@ import {
  * `npm run check:draw`. Every call takes `{ tournamentId }`.
  */
 
-const OPTIONS = { region: "us-central1", timeoutSeconds: 120 } as const;
+const OPTIONS = { region: "us-central1", timeoutSeconds: 120, invoker: "public" } as const;
 
 function callerUid(request: CallableRequest): string {
   const uid = request.auth?.uid;
