@@ -20,6 +20,8 @@ import {
   decodeCricketRules,
   formatNetRunRate,
   formatOvers,
+  knockoutIssue,
+  knockoutRules,
   netRunRate,
   parseOvers,
   validateCricketResult,
@@ -279,6 +281,34 @@ check("unrated player starts at 1200", fresh[0].cricket === 1212);
   check("decode player stats", decodePlayerStats(json)?.bowling.length === 3);
   check("decode player stats rejects junk", decodePlayerStats('{"batting":[{"runs":"x"}]}') === null);
   check("decode player stats missing", decodePlayerStats(undefined) === null);
+}
+
+// ─── Knockout matches (same cases as iOS DrawTests "Cricket results") ─────
+{
+  const noSO = { ...T20, superOver: false };
+  const level: CricketResult = { innings: [inn(A, 150, 6, "20"), inn(B, 150, 10, "20")] };
+  const soCard: CricketResult = { ...level, superOverWinnerRegistrationId: B };
+  const ko = knockoutRules(noSO, "singleElimination", undefined);
+  check("league without super over", validateCricketResult(soCard, noSO, A, B).some((i) => i.message === "This tournament doesn't use super overs."));
+  check("knockout forces super over", ko.superOver && validateCricketResult(soCard, ko, A, B).length === 0 &&
+    cricketOutcome(soCard, ko).winnerRegistrationId === B);
+  check("group match keeps rules", !knockoutRules(noSO, "groupKnockout", "A").superOver);
+  check("GK knockout forces super over", knockoutRules(noSO, "groupKnockout", undefined).superOver);
+  check("league tie allowed", knockoutIssue(level, T20, "roundRobin", undefined) === null);
+  check("knockout tie blocked", knockoutIssue(level, ko, "singleElimination", undefined)?.message ===
+    "This is a knockout match, so a tie needs a winner. Enter who won the super over.");
+  const nr: CricketResult = { innings: [], noResult: true };
+  for (const f of ["singleElimination", "doubleElimination"]) {
+    check(`knockout no result blocked ${f}`, knockoutIssue(nr, ko, f, undefined)?.message ===
+      "A knockout match needs a winner. Replay it, or decide it with a super over and enter that result.");
+  }
+  check("GK group no result allowed", knockoutIssue(nr, T20, "groupKnockout", "B") === null);
+  check("GK knockout no result blocked", knockoutIssue(nr, T20, "groupKnockout", undefined) !== null);
+  for (const f of ["roundRobin", "swiss", "manualDraw"]) {
+    check(`no result allowed ${f}`, knockoutIssue(nr, T20, f, undefined) === null);
+  }
+  check("missing format = single elimination", knockoutIssue(nr, T20, undefined, undefined) !== null);
+  check("knockout win fine", knockoutIssue(soCard, ko, "singleElimination", undefined) === null);
 }
 
 console.log(failures === 0 ? "\nAll cricket checks passed." : `\n${failures} cricket check(s) failed.`);

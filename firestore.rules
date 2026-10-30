@@ -108,6 +108,26 @@ service cloud.firestore {
     }
 
     // ─── Players ────────────────────────────────────────
+    // Gender is set once: it may only go from missing / preferNotToSay to
+    // male or female (mixed Open Play counts it). Older apps write the whole
+    // profile back, so an unchanged value always passes, and a missing value
+    // may be written back as preferNotToSay (their decoded default).
+    function genderChangeAllowed() {
+      let before = resource.data.get('genderRaw', '');
+      let after = request.resource.data.get('genderRaw', '');
+      return after == before
+        || (before in ['', 'preferNotToSay']
+            && after in ['male', 'female', 'preferNotToSay']);
+    }
+
+    // The caller's own player doc. Player ids in sessions are UPPERCASE, but
+    // profiles created on the web have lower-case doc ids.
+    function isOwnPlayer(playerId) {
+      let exact = /databases/$(database)/documents/players/$(playerId);
+      let lower = /databases/$(database)/documents/players/$(playerId.lower());
+      return (exists(exact) ? get(exact) : get(lower)).data.firebaseUid == request.auth.uid;
+    }
+
     match /players/{playerId} {
       allow read: if true;
 
@@ -122,6 +142,7 @@ service cloud.firestore {
       allow update: if isAuthenticated()
         && resource.data.firebaseUid == request.auth.uid
         && unchanged('firebaseUid')
+        && genderChangeAllowed()
         && unchanged('email')
         // Optional on older player docs: unchanged() errors (deny) on a missing field.
         && unchangedOptional('elo')
@@ -148,14 +169,17 @@ service cloud.firestore {
         && request.resource.data.date is timestamp
         && hasLiveSportOrNone()
         && teamFormatForTeamSport()
-        // registrationCount is server-maintained (registration triggers).
-        && !('registrationCount' in request.resource.data);
+        // registrationCount is server-maintained (registration triggers);
+        // autoDraw / deadlineReminderFor by the scheduled draw job.
+        && !request.resource.data.keys().hasAny(['registrationCount', 'autoDraw', 'deadlineReminderFor']);
 
       // Only the organizer can update, and they cannot change createdBy
       allow update: if isAuthenticated()
         && resource.data.createdBy == request.auth.uid
         && unchanged('createdBy')
         && unchangedOptional('registrationCount')
+        && unchangedOptional('autoDraw')
+        && unchangedOptional('deadlineReminderFor')
         && sportUnchangedOrLive()
         && teamFormatForTeamSport();
 
@@ -170,6 +194,8 @@ service cloud.firestore {
       allow create: if isAuthenticated()
         && isNonEmptyString(request.resource.data.tournamentId)
         && isNonEmptyString(request.resource.data.playerId)
+        // memberUids is server-maintained (registration triggers).
+        && !('memberUids' in request.resource.data)
         && teamEntryIfTeamEvent(registrationId);
 
       // Doubles: pick a partner. Team sports: who plays for this event
@@ -234,11 +260,24 @@ service cloud.firestore {
     }
 
     // ─── Matches ────────────────────────────────────────
+    // Tournament ids are UPPERCASE from the apps; fall back to lower case for
+    // tournaments created with lower-case doc ids.
+    function isOrganizerOf(tournamentId) {
+      let exact = /databases/$(database)/documents/tournaments/$(tournamentId);
+      let lower = /databases/$(database)/documents/tournaments/$(tournamentId.lower());
+      return (exists(exact) ? get(exact) : get(lower)).data.createdBy == request.auth.uid;
+    }
+
     match /matches/{matchId} {
       allow read: if true;
 
-      // Tournament organizer can create matches (bracket generation)
-      allow create: if isAuthenticated();
+      // Only the tournament organizer creates matches (bracket generation).
+      // eloApplied (Elo is applied once, by the server), teamAUids /
+      // teamBUids (participants' auth uids) and disputeReason are server-only.
+      allow create: if isAuthenticated()
+        && isNonEmptyString(request.resource.data.tournamentId)
+        && !request.resource.data.keys().hasAny(['eloApplied', 'teamAUids', 'teamBUids', 'disputeReason'])
+        && isOrganizerOf(request.resource.data.tournamentId);
 
       // Authenticated users can update scores/status
       allow update: if isAuthenticated()
@@ -249,10 +288,22 @@ service cloud.firestore {
         // manual-draw matches; unchanged() would error and deny every score update.
         && unchangedOptional('round')
         && unchangedOptional('bracketPosition')
-        && unchangedOptional('createdAt');
+        && unchangedOptional('createdAt')
+        && unchangedOptional('eloApplied')
+        && unchangedOptional('teamAUids')
+        && unchangedOptional('teamBUids')
+        && unchangedOptional('disputeReason');
 
-      // Organizer can delete matches (reset bracket)
-      allow delete: if isAuthenticated();
+      // Only the organizer deletes matches (reset bracket)
+      allow delete: if isAuthenticated()
+        && isOrganizerOf(resource.data.tournamentId);
+    }
+
+    // ─── Standings ──────────────────────────────────────
+    // standings/{tournamentId} is rebuilt by the server on every match write.
+    match /standings/{tournamentId} {
+      allow read: if true;
+      allow write: if false;
     }
 
     // ─── Ratings ────────────────────────────────────────
@@ -262,7 +313,9 @@ service cloud.firestore {
       allow create: if isAuthenticated()
         && isNonEmptyString(request.resource.data.playerId)
         && isNonEmptyString(request.resource.data.raterId)
-        && request.resource.data.raterId == request.auth.uid
+        // The apps store the rater's player id (web/older docs: the auth uid).
+        && (request.resource.data.raterId == request.auth.uid
+            || isOwnPlayer(request.resource.data.raterId))
         && request.resource.data.playerId != request.resource.data.raterId
         && request.resource.data.stars is int
         && request.resource.data.stars >= 1
@@ -278,6 +331,81 @@ service cloud.firestore {
     }
 
     // ─── Play Sessions ──────────────────────────────────
+    // Newer apps write sessions only through callables; these rules keep
+    // older apps (iOS 1.7, Android 1.0) to their legitimate writes. Clashes
+    // and mixed-gender overflow are cleaned up by onSessionJoined, host
+    // limits/overlaps by onPlaySessionCreated.
+
+    // Written only by the server.
+    function sessionServerFields() {
+      return ['maxPlayers', 'endsAt', 'waitlistIds', 'attendeeUids',
+              'autoRemoved', 'autoCancelled'];
+    }
+
+    // Locked once anyone besides the host has joined.
+    function sessionKeyFields() {
+      return ['date', 'durationMinutes', 'gameType', 'sportType',
+              'costPerPerson', 'venue', 'venueAddress'];
+    }
+
+    // Stored as `gameType`. Singles 2, everything else (doubles, mixed, any) 4.
+    function sessionCap(gameType) {
+      return gameType == 'singles' ? 2 : 4;
+    }
+
+    function sessionChanged() {
+      return request.resource.data.diff(resource.data).affectedKeys();
+    }
+
+    // The caller added exactly their own player id, while the session is
+    // active, has not started, and has room.
+    function joinedSelf(before, after) {
+      return after.size() == before.size() + 1
+        && before.removeAll(after).size() == 0
+        && after.removeAll(before).size() == 1
+        && resource.data.get('status', 'active') == 'active'
+        && request.time < resource.data.date
+        && after.size() <= sessionCap(request.resource.data.get('gameType', 'any'))
+        && isOwnPlayer(after.removeAll(before)[0]);
+    }
+
+    // The caller removed exactly their own player id.
+    function leftSelf(before, after) {
+      return before.size() == after.size() + 1
+        && after.removeAll(before).size() == 0
+        && before.removeAll(after).size() == 1
+        && isOwnPlayer(before.removeAll(after)[0]);
+    }
+
+    function attendeeChangeAllowed() {
+      let before = resource.data.get('attendeeIds', []);
+      let after = request.resource.data.get('attendeeIds', []);
+      return !('attendeeIds' in sessionChanged())
+        || (after is list && (joinedSelf(before, after) || leftSelf(before, after)));
+    }
+
+    // Host may cancel or finish an active session, never reopen one (a
+    // session the server cancelled stays cancelled).
+    function sessionStatusChangeAllowed() {
+      return !('status' in sessionChanged())
+        || (resource.data.get('status', 'active') == 'active'
+            && request.resource.data.get('status', '') in ['cancelled', 'completed']);
+    }
+
+    // Older apps send the full session on every host edit (iOS merge, Android
+    // update), so unchanged key fields pass; only real changes are locked.
+    function hostEditAllowed() {
+      return sessionStatusChangeAllowed()
+        && (resource.data.get('attendeeIds', []).size() <= 1
+            || !sessionChanged().hasAny(sessionKeyFields()));
+    }
+
+    function sessionAttendeesOnCreate() {
+      let ids = request.resource.data.get('attendeeIds', []);
+      return ids is list
+        && (ids.size() == 0 || (ids.size() == 1 && isOwnPlayer(ids[0])));
+    }
+
     match /playSessions/{sessionId} {
       allow read: if true;
 
@@ -285,10 +413,24 @@ service cloud.firestore {
         && request.resource.data.hostId == request.auth.uid
         && isNonEmptyString(request.resource.data.venue)
         && request.resource.data.date is timestamp
+        && request.resource.data.get('sportType', '') != 'cricket'
+        && request.resource.data.get('status', 'active') == 'active'
+        && !request.resource.data.keys().hasAny(sessionServerFields())
+        && sessionAttendeesOnCreate()
         && hasLiveSportOrNone();
 
+      // Host: edits (key fields locked once others joined), cancel/finish.
+      // Anyone: join or leave themselves, nothing else.
       allow update: if isAuthenticated()
         && unchanged('hostId')
+        && unchangedOptional('createdAt')
+        && !sessionChanged().hasAny(sessionServerFields())
+        && (!('sportType' in sessionChanged())
+            || request.resource.data.get('sportType', '') != 'cricket')
+        && attendeeChangeAllowed()
+        && (resource.data.hostId == request.auth.uid
+            ? hostEditAllowed()
+            : sessionChanged().hasOnly(['attendeeIds']))
         && sportUnchangedOrLive();
 
       allow delete: if isAuthenticated()

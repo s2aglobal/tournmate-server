@@ -300,8 +300,15 @@ export interface MatchDoc {
   /** Cricket: optional batting/bowling figures per player (JSON, see services/cricketPlayerStats.ts). */
   playerStatsData?: string;
   sportType?: string;
-  /** Set by onMatchFinished once Elo has been applied, so retries don't double-count. */
+  /** Group + Knockout: group stage label ("A", "B", …); missing for knockout matches. */
+  groupLabel?: string;
+  /** Auth uids of each side's players (server-maintained; missing on older matches). */
+  teamAUids?: string[];
+  teamBUids?: string[];
+  /** Set once Elo has been applied (score callables or onMatchFinished), so retries don't double-count. */
   eloApplied?: boolean;
+  /** Server-only: the opposing side's reason while the score is disputed. */
+  disputeReason?: string;
   createdAt: Timestamp;
 }
 
