@@ -19,7 +19,7 @@ const OPTIONS = { region: "us-central1", timeoutSeconds: 120, invoker: "public" 
 
 function callerUid(request: CallableRequest): string {
   const uid = request.auth?.uid;
-  if (!uid) fail("unauthenticated", "UNAUTHENTICATED", "Please sign in to continue.");
+  if (!uid) fail("unauthenticated", "UNAUTHENTICATED", "Please sign in first.");
   return uid;
 }
 

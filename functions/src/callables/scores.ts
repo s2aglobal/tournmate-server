@@ -44,7 +44,7 @@ type Fields = Record<string, unknown>;
 
 function requireUid(req: CallableRequest): string {
   const uid = req.auth?.uid;
-  if (!uid) fail("unauthenticated", "UNAUTHENTICATED", "Sign in to continue.");
+  if (!uid) fail("unauthenticated", "UNAUTHENTICATED", "Please sign in first.");
   return uid;
 }
 
