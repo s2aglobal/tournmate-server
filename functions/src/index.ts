@@ -64,3 +64,4 @@ export { submitScore, confirmScore, disputeScore, resolveDispute } from "./calla
 // ─── Scheduled Jobs ─────────────────────────────────────
 export { hourlyCleanup, dailyReminders, spamCleanup } from "./triggers/scheduledJobs";
 export { autoDrawJob } from "./triggers/autoDrawJob";
+export { autoCloseSessions } from "./triggers/autoCloseSessions";
