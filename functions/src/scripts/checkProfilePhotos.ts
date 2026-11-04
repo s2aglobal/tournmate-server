@@ -2,7 +2,7 @@
  * Read-only profile photo report. Writes nothing.
  * Reports:
  *  - players: total, with a photo (photoURL set), without
- *  - files under profilePhotos/ and their total size
+ *  - approved photo files (approvedPhotos/) and their total size
  *  - photos set in the last 7 / 30 days (players.photoUpdatedAt)
  *  - players whose photoPath has no file, and folders with more than one file
  *
@@ -51,7 +51,7 @@ async function main(): Promise<void> {
   const sample = (list: string[]) => (list.length ? `  e.g. ${list.slice(0, examples).join(", ")}` : "");
 
   // ─── Files ────────────────────────────────────────────
-  const [files] = await getStorage().bucket().getFiles({ prefix: "profilePhotos/" });
+  const [files] = await getStorage().bucket().getFiles({ prefix: "approvedPhotos/" });
   const names = new Set<string>();
   const perUid = new Map<string, number>();
   let bytes = 0;
@@ -89,7 +89,7 @@ async function main(): Promise<void> {
   console.log(`  photo set in the last 7 days: ${last7}`);
   console.log(`  photo set in the last 30 days: ${last30}`);
   console.log(`  photoPath with no file: ${missingFile.length}${sample(missingFile)}`);
-  console.log(`\nfiles under profilePhotos/: ${files.length} (${(bytes / 1024 / 1024).toFixed(2)} MB)`);
+  console.log(`\napproved photo files (approvedPhotos/): ${files.length} (${(bytes / 1024 / 1024).toFixed(2)} MB)`);
   console.log(`  folders: ${perUid.size}`);
   console.log(`  folders with more than one file: ${extra.length}${sample(extra)}`);
 }

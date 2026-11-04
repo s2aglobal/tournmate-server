@@ -4,15 +4,21 @@ rules_version = '2';
 // to their own folder; setProfilePhoto (server) moderates the file and writes
 // the player doc. Files are deleted by the server only. Everything else is
 // denied.
+//
+// Create only: overwriting a file that already passed moderation would swap
+// in an unchecked image behind the same download URL. Apps show photos via
+// the server's token URL, so clients never need to read or list here; only
+// the owner may read their own (unchecked) uploads.
 service firebase.storage {
   match /b/{bucket}/o {
     match /profilePhotos/{uid}/{file} {
-      allow read: if request.auth != null;
-      allow create, update: if request.auth != null
+      allow get: if request.auth != null && request.auth.uid == uid;
+      allow list: if false;
+      allow create: if request.auth != null
         && request.auth.uid == uid
         && request.resource.contentType == 'image/jpeg'
         && request.resource.size < 2 * 1024 * 1024;
-      allow delete: if false;
+      allow update, delete: if false;
     }
 
     match /{allPaths=**} {

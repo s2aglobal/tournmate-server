@@ -5,12 +5,21 @@ import type { ImageAnnotatorClient } from "@google-cloud/vision";
 
 /*
  * Profile photos (shared spec: profile-photos-spec.md). Clients upload a
- * 512x512 JPEG to `profilePhotos/{uid}/{photoId}.jpg`; setProfilePhoto checks
- * it with Cloud Vision SafeSearch and writes photoURL / photoPath /
- * photoUpdatedAt on the player doc. Only the server deletes files.
+ * 512x512 JPEG to `profilePhotos/{uid}/{photoId}.jpg`; setProfilePhoto copies
+ * it to `approvedPhotos/{uid}/` (server-only, so nobody can swap the image
+ * after the check), checks the copy with Cloud Vision SafeSearch and writes
+ * photoURL / photoPath / photoUpdatedAt on the player doc. Only the server
+ * deletes files.
  */
 
+/** Client uploads (transient). */
 export const PHOTO_FOLDER = "profilePhotos";
+/** Checked photos the apps show; storage.rules deny all client access. */
+export const APPROVED_FOLDER = "approvedPhotos";
+
+export function approvedFolder(uid: string): string {
+  return `${APPROVED_FOLDER}/${uid}/`;
+}
 export const MAX_PHOTO_BYTES = 2 * 1024 * 1024;
 
 export function photoFolder(uid: string): string {
@@ -78,12 +87,10 @@ type StorageFile = ReturnType<ReturnType<ReturnType<typeof getStorage>["bucket"]
  * upload has none (client SDK uploads always do).
  */
 export async function photoDownloadURL(file: StorageFile): Promise<string> {
-  const [meta] = await file.getMetadata();
-  let token = String(meta.metadata?.firebaseStorageDownloadTokens ?? "").split(",")[0];
-  if (!token) {
-    token = randomUUID();
-    await file.setMetadata({ metadata: { firebaseStorageDownloadTokens: token } });
-  }
+  // Always a fresh token: the copy would otherwise keep the upload's token,
+  // which the uploading device knows.
+  const token = randomUUID();
+  await file.setMetadata({ metadata: { firebaseStorageDownloadTokens: token } });
   const emulator = process.env.STORAGE_EMULATOR_HOST;
   if (!emulator) return getDownloadURL(file);
   // The emulator checks storage.rules on getDownloadURL's metadata read as if
@@ -91,13 +98,24 @@ export async function photoDownloadURL(file: StorageFile): Promise<string> {
   return `${emulator}/v0/b/${file.bucket.name}/o/${encodeURIComponent(file.name)}?alt=media&token=${token}`;
 }
 
-/** Deletes every file under `profilePhotos/{uid}/` except `keepPath`. Returns how many were deleted. */
-export async function deletePhotoFiles(uid: string, keepPath?: string): Promise<number> {
+/** Uploads younger than this may still be on their way to setProfilePhoto. */
+export const STALE_UPLOAD_MS = 10 * 60_000;
+
+/**
+ * Deletes the uid's files (uploads and approved copies) except `keepPath`.
+ * With `olderThanMs`, only files created at least that long ago (so another
+ * device's photo still being checked survives). Returns how many were deleted.
+ */
+export async function deletePhotoFiles(uid: string, keepPath?: string, olderThanMs?: number): Promise<number> {
   const bucket = getStorage().bucket();
-  const [files] = await bucket.getFiles({ prefix: photoFolder(uid) });
+  const files = (await Promise.all([photoFolder(uid), approvedFolder(uid)]
+    .map((prefix) => bucket.getFiles({ prefix })))).flatMap(([f]) => f);
+  const cutoff = olderThanMs === undefined ? Infinity : Date.now() - olderThanMs;
   let deleted = 0;
   for (const f of files) {
     if (f.name === keepPath) continue;
+    const created = Date.parse(String(f.metadata?.timeCreated ?? ""));
+    if (Number.isFinite(cutoff) && !(created <= cutoff)) continue;
     try {
       await f.delete({ ignoreNotFound: true });
       deleted++;

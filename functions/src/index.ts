@@ -65,3 +65,4 @@ export { submitScore, confirmScore, disputeScore, resolveDispute } from "./calla
 export { hourlyCleanup, dailyReminders, spamCleanup } from "./triggers/scheduledJobs";
 export { autoDrawJob } from "./triggers/autoDrawJob";
 export { autoCloseSessions } from "./triggers/autoCloseSessions";
+export { photoUploadSweep } from "./triggers/photoUploadSweep";

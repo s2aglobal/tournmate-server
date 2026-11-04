@@ -186,7 +186,7 @@ export interface PlayerDoc {
   photoURL?: string | null;
   /** Storage path of the photo: `profilePhotos/{uid}/{photoId}.jpg`. */
   photoPath?: string | null;
-  photoUpdatedAt?: Timestamp;
+  photoUpdatedAt?: Timestamp | null;
   createdAt: Timestamp;
 }
 

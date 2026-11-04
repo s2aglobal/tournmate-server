@@ -28,6 +28,7 @@ if (getApps().length === 0) initializeApp({ projectId, storageBucket: `${project
 /* eslint-disable @typescript-eslint/no-var-requires */
 const profile = require("../callables/profile") as typeof import("../callables/profile");
 const photos = require("../services/profilePhotos") as typeof import("../services/profilePhotos");
+const sweep = require("../triggers/photoUploadSweep") as typeof import("../triggers/photoUploadSweep");
 const cleanup = require("../services/accountCleanup") as typeof import("../services/accountCleanup");
 
 let failures = 0;
@@ -87,8 +88,11 @@ async function upload(path: string, opts: { contentType?: string; token?: boolea
 async function exists(path: string): Promise<boolean> {
   return (await bucket().file(path).exists())[0];
 }
+/** Uploads and approved copies of `uid`. */
 async function filesOf(uid: string): Promise<string[]> {
-  return (await bucket().getFiles({ prefix: `profilePhotos/${uid}/` }))[0].map((f) => f.name).sort();
+  const all = await Promise.all([`profilePhotos/${uid}/`, `approvedPhotos/${uid}/`]
+    .map(async (prefix) => (await bucket().getFiles({ prefix }))[0].map((f) => f.name)));
+  return all.flat().sort();
 }
 async function player(db: Firestore, id: string) {
   return (await db.collection("players").doc(id).get()).data() ?? {};
@@ -100,6 +104,7 @@ async function seed(db: Firestore): Promise<void> {
     await Promise.all(snap.docs.map((d) => d.ref.delete()));
   }
   await bucket().deleteFiles({ prefix: "profilePhotos/" });
+  await bucket().deleteFiles({ prefix: "approvedPhotos/" });
   for (const p of [ME, OTHER, GONE]) {
     await db.collection("players").doc(p.id).set({
       name: p.uid, phone: "", email: `${p.uid}@example.test`, genderRaw: "male",
@@ -155,7 +160,7 @@ async function setPhotoChecks(db: Firestore): Promise<void> {
   await upload(bad);
   await expectFail("moderation rejects", setProfilePhoto, ME.uid, { path: bad }, "PHOTO_REJECTED",
     "This photo can't be used. Please choose a different one.");
-  check("rejected: file deleted", !(await exists(bad)));
+  check("rejected: upload and copy deleted", (await filesOf(ME.uid)).length === 0, (await filesOf(ME.uid)).join(","));
   check("rejected: player unchanged", (await player(db, ME.id)).photoURL === undefined);
 
   // Moderation unavailable: fail closed.
@@ -166,7 +171,7 @@ async function setPhotoChecks(db: Firestore): Promise<void> {
   await upload(down);
   await expectFail("moderation error", setProfilePhoto, ME.uid, { path: down }, "PHOTO_CHECK_FAILED",
     "We couldn't check this photo right now. Please try again later.");
-  check("check failed: file deleted", !(await exists(down)));
+  check("check failed: upload and copy deleted", (await filesOf(ME.uid)).length === 0, (await filesOf(ME.uid)).join(","));
   check("check failed: player unchanged", (await player(db, ME.id)).photoURL === undefined);
 
   // Pass.
@@ -177,12 +182,15 @@ async function setPhotoChecks(db: Firestore): Promise<void> {
   seen.length = 0;
   await upload(p1);
   const r1 = await ok<{ photoURL: string }>("set photo", setProfilePhoto, ME.uid, { path: p1 });
-  check("moderator got gs:// path", seen[0] === `gs://${bucket().name}/${p1}`, seen[0]);
+  check("moderator checks the server-only copy", seen[0]?.startsWith(`gs://${bucket().name}/approvedPhotos/${ME.uid}/`), seen[0]);
   const d1 = await player(db, ME.id);
   check("player photoURL = returned URL", !!r1 && d1.photoURL === r1.photoURL);
   check("photoURL has download token", typeof d1.photoURL === "string" && /[?&]token=/.test(d1.photoURL), d1.photoURL);
-  check("photoURL names the path", typeof d1.photoURL === "string" && d1.photoURL.includes(encodeURIComponent(p1)));
-  check("player photoPath set", d1.photoPath === p1);
+  check("photoPath is the approved copy", typeof d1.photoPath === "string" && d1.photoPath.startsWith(`approvedPhotos/${ME.uid}/`), d1.photoPath);
+  check("photoURL names the copy", typeof d1.photoURL === "string" && d1.photoURL.includes(encodeURIComponent(d1.photoPath)));
+  check("upload removed, only the copy left", JSON.stringify(await filesOf(ME.uid)) === JSON.stringify([d1.photoPath]),
+    (await filesOf(ME.uid)).join(","));
+  check("copy has a new token (not the upload's)", typeof d1.photoURL === "string" && !/token=tok-/.test(d1.photoURL));
   check("player photoUpdatedAt set", d1.photoUpdatedAt instanceof Timestamp);
   check("avatarId untouched", d1.avatarId === "a1");
   if (r1) {
@@ -190,7 +198,9 @@ async function setPhotoChecks(db: Firestore): Promise<void> {
     check("download URL serves the file", res.ok && Buffer.from(await res.arrayBuffer()).equals(JPEG), String(res.status));
   }
 
-  // Replace: previous photo and stray uploads go; another user's folder stays.
+  // Replace: the previous photo goes; a recent upload (maybe another device's,
+  // still being checked) and another user's folder stay.
+  const first = d1.photoPath as string;
   const p2 = `profilePhotos/${ME.uid}/22222222-bbbb.jpg`;
   const stray = `profilePhotos/${ME.uid}/stray.jpg`;
   const theirs = `profilePhotos/${OTHER.uid}/theirs.jpg`;
@@ -198,17 +208,24 @@ async function setPhotoChecks(db: Firestore): Promise<void> {
   await upload(stray);
   await upload(theirs);
   await ok("replace photo", setProfilePhoto, ME.uid, { path: p2 });
-  check("only the new file remains", JSON.stringify(await filesOf(ME.uid)) === JSON.stringify([p2]),
+  const d2 = await player(db, ME.id);
+  check("photoPath updated", d2.photoPath !== first && String(d2.photoPath).startsWith(`approvedPhotos/${ME.uid}/`));
+  check("previous photo deleted", !(await exists(first)));
+  check("recent stray upload kept", JSON.stringify(await filesOf(ME.uid)) === JSON.stringify([d2.photoPath, stray].sort()),
     (await filesOf(ME.uid)).join(","));
   check("other user's file kept", await exists(theirs));
-  check("photoPath updated", (await player(db, ME.id)).photoPath === p2);
+
+  // Daily sweep: hour-old files that aren't a current photo go.
+  const swept = await sweep.runPhotoUploadSweep(db, new Date(Date.now() + 2 * 3600_000));
+  check("sweep removes stale uploads", swept === 2 && !(await exists(stray)) && !(await exists(theirs)), String(swept));
+  check("sweep keeps the current photo", await exists(d2.photoPath));
 
   // Upload without a download token (e.g. not from a client SDK): one is added.
   const noTok = `profilePhotos/${OTHER.uid}/notoken.jpg`;
   await upload(noTok, { token: false });
   const r3 = await ok<{ photoURL: string }>("set photo without token", setProfilePhoto, OTHER.uid, { path: noTok });
   check("token added", !!r3 && /[?&]token=/.test(r3.photoURL));
-  check("other user's earlier file replaced", !(await exists(theirs)));
+  check("other user's folder: just their photo", (await filesOf(OTHER.uid)).length === 1);
   photos.setPhotoModerator(null);
 }
 

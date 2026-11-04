@@ -122,7 +122,12 @@ export async function cleanupAccount(db: Firestore, uid: string): Promise<Cleanu
   }
 
   // Profile photo files (by uid, so they go even without a player doc).
-  summary.photosDeleted = await deletePhotoFiles(uid);
+  // Never let Storage trouble (e.g. no bucket yet) block deleting the account.
+  try {
+    summary.photosDeleted = await deletePhotoFiles(uid);
+  } catch (err) {
+    logger.error(`cleanupAccount ${uid}: photo files`, err);
+  }
 
   // Profile last (leaving sessions above reads it). Holds the device token.
   if (me) {
