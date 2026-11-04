@@ -25,13 +25,16 @@
     "qa:cleanup": "npm run build && node lib/scripts/cleanupQaTournaments.js",
     "backfill:member-uids": "npm run build && node lib/scripts/backfillMemberUids.js",
     "check:prod-data": "npm run build && node lib/scripts/checkProdData.js",
-    "test:emulator-core": "npm run build && firebase emulators:exec --only firestore,auth --project demo-tournmate \"node lib/scripts/emulatorCoreChecks.js\""
+    "test:emulator-core": "npm run build && firebase emulators:exec --only firestore,auth,storage --project demo-tournmate \"node lib/scripts/emulatorCoreChecks.js\"",
+    "check:profile-photos": "npm run build && node lib/scripts/checkProfilePhotos.js",
+    "test:emulator-photos": "npm run build && firebase emulators:exec --only firestore,storage,auth --project demo-tournmate \"node lib/scripts/emulatorPhotoChecks.js\""
   },
   "engines": {
     "node": "24"
   },
   "main": "lib/index.js",
   "dependencies": {
+    "@google-cloud/vision": "^6.2.0",
     "cors": "^2.8.5",
     "express": "^4.21.0",
     "firebase-admin": "^14.5.0",

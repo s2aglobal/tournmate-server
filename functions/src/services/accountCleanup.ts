@@ -3,6 +3,7 @@ import { logger } from "firebase-functions/v2";
 import { playerForUid } from "./identity";
 import { sessionWindow } from "./openPlay";
 import { cancelSessionFor, leaveSessionFor } from "../callables/openPlay";
+import { deletePhotoFiles } from "./profilePhotos";
 
 /*
  * Removes what a deleted account leaves behind (deleteAccount callable and
@@ -13,6 +14,7 @@ import { cancelSessionFor, leaveSessionFor } from "../callables/openPlay";
  *  - tournaments not started and not drawn: solo registrations (and any
  *    team-entry lock) are deleted; as someone's partner they are taken off
  *  - inbox notifications
+ *  - profile photo files (`profilePhotos/{uid}/`)
  *  - the player doc (which holds the device token)
  * Past sessions, drawn tournaments, matches and ratings stay as history.
  */
@@ -24,6 +26,7 @@ export interface CleanupSummary {
   registrationsDeleted: number;
   partnerCleared: number;
   notificationsDeleted: number;
+  photosDeleted: number;
 }
 
 function idVariants(id: string): string[] {
@@ -53,7 +56,7 @@ function isTeamEntry(reg: DocumentData): boolean {
 export async function cleanupAccount(db: Firestore, uid: string): Promise<CleanupSummary> {
   const summary: CleanupSummary = {
     playerDeleted: false, sessionsLeft: 0, sessionsCancelled: 0,
-    registrationsDeleted: 0, partnerCleared: 0, notificationsDeleted: 0,
+    registrationsDeleted: 0, partnerCleared: 0, notificationsDeleted: 0, photosDeleted: 0,
   };
   const me = await playerForUid(db, uid);
 
@@ -116,6 +119,14 @@ export async function cleanupAccount(db: Firestore, uid: string): Promise<Cleanu
     snap.docs.forEach((d) => batch.delete(d.ref));
     await batch.commit();
     summary.notificationsDeleted += snap.size;
+  }
+
+  // Profile photo files (by uid, so they go even without a player doc).
+  // Never let Storage trouble (e.g. no bucket yet) block deleting the account.
+  try {
+    summary.photosDeleted = await deletePhotoFiles(uid);
+  } catch (err) {
+    logger.error(`cleanupAccount ${uid}: photo files`, err);
   }
 
   // Profile last (leaving sessions above reads it). Holds the device token.

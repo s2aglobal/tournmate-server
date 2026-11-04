@@ -54,7 +54,7 @@ export { onRegistrationWrittenMemberUids, onMatchWrittenMemberUids } from "./tri
 
 // ─── Callables (server authority) ───────────────────────
 export { createSession, updateSession, joinSession, leaveSession, cancelSession, finishSession, deleteSession } from "./callables/openPlay";
-export { setGender } from "./callables/profile";
+export { setGender, setProfilePhoto, removeProfilePhoto } from "./callables/profile";
 export { deleteAccount } from "./callables/account";
 export { orphanAccountSweep } from "./triggers/orphanAccountSweep";
 export { register, withdraw, joinAsPartner, changePartner, updateRoster, setRoles } from "./callables/registrations";
@@ -65,3 +65,4 @@ export { submitScore, confirmScore, disputeScore, resolveDispute } from "./calla
 export { hourlyCleanup, dailyReminders, spamCleanup } from "./triggers/scheduledJobs";
 export { autoDrawJob } from "./triggers/autoDrawJob";
 export { autoCloseSessions } from "./triggers/autoCloseSessions";
+export { photoUploadSweep } from "./triggers/photoUploadSweep";
