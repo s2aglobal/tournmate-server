@@ -3,6 +3,7 @@ import { logger } from "firebase-functions/v2";
 import { getFirestore, FieldValue, Firestore, Timestamp, DocumentData, DocumentSnapshot } from "firebase-admin/firestore";
 import { PlayerDoc, parseSportType, sportEmoji } from "../types";
 import { sendToPlayer } from "../services/notifications";
+import { playerById } from "../services/identity";
 import {
   ClashingSession,
   MIXED_SLOTS_PER_GENDER,
@@ -47,16 +48,16 @@ export const onSessionJoined = onDocumentUpdated(
 
     if (beforeStatus !== "completed" && afterStatus === "completed") {
       const attendeeIds: string[] = after.attendeeIds ?? [];
-      logger.info(`Session ${sessionId} finished by host, notifying ${attendeeIds.length} attendees`);
+      // Closed by autoCloseSessions: the host didn't tap Finish, so remind them too.
+      const autoClosed = after.autoClosed === "ended";
+      logger.info(`Session ${sessionId} finished${autoClosed ? " (auto)" : " by host"}, notifying ${attendeeIds.length} attendees`);
 
       for (const attendeeId of attendeeIds) {
-        // Don't notify the host
-        if (attendeeId === hostId) continue;
-
-        const playerSnap = await db.collection("players").doc(attendeeId).get();
-        if (!playerSnap.exists) continue;
-        const playerData = playerSnap.data() as PlayerDoc;
+        const playerData = (await playerById(db, attendeeId))?.data;
+        if (!playerData) continue;
         const playerUid = playerData.firebaseUid;
+        // Don't notify the host who finished it
+        if (!autoClosed && playerUid === hostId) continue;
 
         // Write inbox notification
         if (playerUid) {

@@ -29,6 +29,7 @@ const regs = require("../callables/registrations") as typeof import("../callable
 const member = require("../services/memberUids") as typeof import("../services/memberUids");
 const svc = require("../services/openPlay") as typeof import("../services/openPlay");
 const account = require("../callables/account") as typeof import("../callables/account");
+const autoClose = require("../triggers/autoCloseSessions") as typeof import("../triggers/autoCloseSessions");
 
 let failures = 0;
 let passes = 0;
@@ -522,6 +523,35 @@ async function accountChecks(db: Firestore): Promise<void> {
   await ok("deleteAccount again is a no-op", account.deleteAccount, PD.uid, {});
 }
 
+async function autoCloseChecks(db: Firestore): Promise<void> {
+  console.log("\n── Auto-close ended sessions ──");
+  const now = Date.now();
+  const mk = (id: string, startMsAgo: number, extra: Record<string, unknown>) =>
+    db.collection("playSessions").doc(id).set({
+      title: id, venue: "Court Z", hostId: P.host.uid, attendeeIds: [P.host.id],
+      date: Timestamp.fromMillis(now - startMsAgo), durationMinutes: 60, status: "active", ...extra,
+    });
+  await mk("AC-PLAYED", 2 * HOUR, { attendeeIds: [P.host.id, P.p2.id] });
+  await mk("AC-ALONE", 2 * HOUR, {});
+  await mk("AC-RUNNING", 30 * 60_000, { attendeeIds: [P.host.id, P.p2.id] });
+  await mk("AC-LEGACY", 2.5 * HOUR, { attendeeIds: [P.host.id, P.p2.id], durationMinutes: null, status: null });
+  await mk("AC-LEGACY-RUNNING", 1.5 * HOUR, { attendeeIds: [P.host.id, P.p2.id], durationMinutes: null });
+  await mk("AC-DONE", 2 * HOUR, { status: "cancelled" });
+
+  await autoClose.runAutoCloseSessions(db, new Date(now));
+  const st = async (id: string) => (await session(db, id)).status;
+  check("ended with players -> completed", await st("AC-PLAYED") === "completed"
+    && (await session(db, "AC-PLAYED")).autoClosed === "ended");
+  check("ended, host only -> cancelled", await st("AC-ALONE") === "cancelled"
+    && (await session(db, "AC-ALONE")).autoClosed === "noPlayers");
+  check("host told nobody joined", await notified(db, P.host.uid, "session_cancelled"));
+  check("still running untouched", await st("AC-RUNNING") === "active");
+  check("legacy (no duration, 120 min) ended -> completed", await st("AC-LEGACY") === "completed");
+  check("legacy still inside 120 min untouched", await st("AC-LEGACY-RUNNING") === "active");
+  check("already cancelled untouched", await st("AC-DONE") === "cancelled"
+    && (await session(db, "AC-DONE")).autoClosed === undefined);
+}
+
 async function main(): Promise<void> {
   const db = getFirestore();
   await clear(db);
@@ -531,6 +561,7 @@ async function main(): Promise<void> {
   await registrationChecks(db);
   await memberUidChecks(db);
   await accountChecks(db);
+  await autoCloseChecks(db);
   console.log(`\n${passes} passed, ${failures} failed`);
   process.exit(failures === 0 ? 0 : 1);
 }
