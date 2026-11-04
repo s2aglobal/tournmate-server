@@ -54,7 +54,7 @@ export { onRegistrationWrittenMemberUids, onMatchWrittenMemberUids } from "./tri
 
 // ─── Callables (server authority) ───────────────────────
 export { createSession, updateSession, joinSession, leaveSession, cancelSession, finishSession, deleteSession } from "./callables/openPlay";
-export { setGender } from "./callables/profile";
+export { setGender, setProfilePhoto, removeProfilePhoto } from "./callables/profile";
 export { deleteAccount } from "./callables/account";
 export { orphanAccountSweep } from "./triggers/orphanAccountSweep";
 export { register, withdraw, joinAsPartner, changePartner, updateRoster, setRoles } from "./callables/registrations";

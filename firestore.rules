@@ -136,9 +136,12 @@ service cloud.firestore {
         && isNonEmptyString(request.resource.data.name)
         && isNonEmptyString(request.resource.data.email)
         && request.resource.data.elo == 1200
-        && request.resource.data.streak == 0;
+        && request.resource.data.streak == 0
+        // Profile photo fields are written by setProfilePhoto / removeProfilePhoto only.
+        && !request.resource.data.keys().hasAny(['photoURL', 'photoPath', 'photoUpdatedAt']);
 
-      // Users can only update safe profile fields — not elo, streak, firebaseUid, email
+      // Users can only update safe profile fields — not elo, streak, firebaseUid, email.
+      // photoURL / photoPath / photoUpdatedAt are server-only (not in the list).
       allow update: if isAuthenticated()
         && resource.data.firebaseUid == request.auth.uid
         && unchanged('firebaseUid')

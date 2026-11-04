@@ -5,7 +5,7 @@
  *
  * Usage (from tournmate-server/functions):
  *   npm run test:emulator-core
- * which runs, under `firebase emulators:exec --only firestore,auth --project demo-tournmate`:
+ * which runs, under `firebase emulators:exec --only firestore,auth,storage --project demo-tournmate`:
  *   node lib/scripts/emulatorCoreChecks.js
  *
  * Exits non-zero if any case fails.
@@ -15,11 +15,12 @@ import { initializeApp, getApps } from "firebase-admin/app";
 import { getFirestore, Timestamp, Firestore } from "firebase-admin/firestore";
 
 const projectId = process.env.GCLOUD_PROJECT || process.env.GOOGLE_CLOUD_PROJECT || "";
-if (!process.env.FIRESTORE_EMULATOR_HOST || !projectId.startsWith("demo-")) {
-  console.error("Refusing to run: needs FIRESTORE_EMULATOR_HOST and a demo-* project (use npm run test:emulator-core).");
+// Storage too: deleteAccount deletes the caller's profile photos.
+if (!process.env.FIRESTORE_EMULATOR_HOST || !process.env.FIREBASE_STORAGE_EMULATOR_HOST || !projectId.startsWith("demo-")) {
+  console.error("Refusing to run: needs the Firestore + Storage emulators and a demo-* project (use npm run test:emulator-core).");
   process.exit(1);
 }
-if (getApps().length === 0) initializeApp({ projectId });
+if (getApps().length === 0) initializeApp({ projectId, storageBucket: `${projectId}.appspot.com` });
 
 // Imported after initializeApp so getFirestore() in the handlers hits the emulator.
 /* eslint-disable @typescript-eslint/no-var-requires */

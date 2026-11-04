@@ -182,6 +182,11 @@ export interface PlayerDoc {
   fcmToken?: string;
   weightKg?: number;
   dateOfBirth?: Timestamp;
+  /** Profile photo (server-written only: setProfilePhoto / removeProfilePhoto). Firebase download URL with token. */
+  photoURL?: string | null;
+  /** Storage path of the photo: `profilePhotos/{uid}/{photoId}.jpg`. */
+  photoPath?: string | null;
+  photoUpdatedAt?: Timestamp;
   createdAt: Timestamp;
 }
 
