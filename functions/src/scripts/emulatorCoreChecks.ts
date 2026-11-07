@@ -60,13 +60,14 @@ async function ok<T = Record<string, unknown>>(name: string, fn: Fn, uid: string
     return null;
   }
 }
-async function expectFail(name: string, fn: Fn, uid: string | null, data: unknown, reason: string): Promise<void> {
+async function expectFail(name: string, fn: Fn, uid: string | null, data: unknown, reason: string, message?: string): Promise<void> {
   try {
     const r = await call(fn, uid, data);
     check(name, false, `expected ${reason}, got ${JSON.stringify(r)}`);
   } catch (e) {
     const err = e as { message?: string; details?: { reason?: string } };
-    check(name, err.details?.reason === reason, `${err.details?.reason}: ${err.message}`);
+    check(name, err.details?.reason === reason && (message === undefined || err.message === message),
+      `${err.details?.reason}: ${err.message}`);
   }
 }
 
@@ -85,6 +86,12 @@ const P = {
   p7: { id: "AAAAAAAA-0000-0000-0000-000000000008", uid: "u7", g: "female" },
   org: { id: "AAAAAAAA-0000-0000-0000-000000000009", uid: "u-org", g: "male" },
   p8: { id: "AAAAAAAA-0000-0000-0000-00000000000A", uid: "u8", g: "female" },
+  q1: { id: "AAAAAAAA-0000-0000-0000-0000000000B1", uid: "uq1", g: "male" },
+  q2: { id: "AAAAAAAA-0000-0000-0000-0000000000B2", uid: "uq2", g: "female" },
+  q3: { id: "AAAAAAAA-0000-0000-0000-0000000000B3", uid: "uq3", g: "male" },
+  q4: { id: "AAAAAAAA-0000-0000-0000-0000000000B4", uid: "uq4", g: "female" },
+  q5: { id: "AAAAAAAA-0000-0000-0000-0000000000B5", uid: "uq5", g: "male" },
+  q6: { id: "AAAAAAAA-0000-0000-0000-0000000000B6", uid: "uq6", g: "female" },
 };
 const up = (id: string) => id.toUpperCase();
 
@@ -145,14 +152,14 @@ async function openPlayChecks(db: Firestore): Promise<void> {
   const s1 = (await ok<{ sessionId: string }>("create S1 doubles (ISO date, default 90 min)", createSession, P.host.uid,
     { ...base1, date: new Date(at(10)).toISOString() }))!.sessionId;
   const d1 = await session(db, s1);
-  check("S1 server fields", d1.maxPlayers === 4 && d1.durationMinutes === 90
+  check("S1 server fields (1 court + bench)", d1.maxPlayers === 6 && d1.courts === 1 && d1.durationMinutes === 90
     && (d1.endsAt as Timestamp).toMillis() === at(10) + 90 * 60_000
     && JSON.stringify(d1.attendeeIds) === JSON.stringify([P.host.id])
     && JSON.stringify(d1.attendeeUids) === JSON.stringify([P.host.uid])
     && Array.isArray(d1.waitlistIds) && d1.waitlistIds.length === 0
     && d1.hostId === P.host.uid && d1.status === "active" && d1.gameType === "doubles", JSON.stringify(d1));
   check("sessionWindow uses endsAt", svc.sessionWindow(d1).end.getTime() === at(10) + 90 * 60_000);
-  check("capacityFor", svc.capacityFor("singles") === 2 && svc.capacityFor("mixed") === 4 && svc.capacityFor(undefined) === 4);
+  check("capacityFor legacy (no courts)", svc.capacityFor("singles") === 2 && svc.capacityFor("mixed") === 4 && svc.capacityFor(undefined) === 4);
 
   await expectFail("host overlapping own session", createSession, P.host.uid, { ...base1, date: at(11) }, "SESSION_CLASH");
   const s2 = (await ok<{ sessionId: string }>("create S2 (+1 day)", createSession, P.host.uid, { ...base1, date: at(34) }))!.sessionId;
@@ -166,13 +173,15 @@ async function openPlayChecks(db: Firestore): Promise<void> {
   check("attendee id stored upper case", ((await session(db, s1)).attendeeIds as string[]).includes(up(P.p1.id)));
   await ok("p2 joins S1", joinSession, P.p2.uid, { sessionId: s1 });
   await ok("p3 joins S1", joinSession, P.p3.uid, { sessionId: s1 });
+  await ok("q1 joins S1 (5th, court full)", joinSession, P.q1.uid, { sessionId: s1 });
+  await ok("q2 joins S1 (6th, bench)", joinSession, P.q2.uid, { sessionId: s1 });
   const j4 = await ok<{ status: string }>("p4 joins full S1", joinSession, P.p4.uid, { sessionId: s1 });
   check("p4 waitlisted", j4?.status === "waitlisted");
   const j5 = await ok<{ status: string }>("p5 joins full S1", joinSession, P.p5.uid, { sessionId: s1 });
   check("p5 waitlisted", j5?.status === "waitlisted");
   const again = await ok<{ status: string }>("p1 joins again (idempotent)", joinSession, P.p1.uid, { sessionId: s1 });
-  check("still joined", again?.status === "joined" && ((await session(db, s1)).attendeeIds as string[]).length === 4);
-  check("attendeeUids tracked", JSON.stringify((await session(db, s1)).attendeeUids) === JSON.stringify(["u-host", "u1", "u2", "u3"]));
+  check("still joined", again?.status === "joined" && ((await session(db, s1)).attendeeIds as string[]).length === 6);
+  check("attendeeUids tracked", JSON.stringify((await session(db, s1)).attendeeUids) === JSON.stringify(["u-host", "u1", "u2", "u3", "uq1", "uq2"]));
 
   // Update.
   await expectFail("update locked field after joins", updateSession, P.host.uid, { sessionId: s1, date: at(12) }, "FIELDS_LOCKED");
@@ -216,16 +225,19 @@ async function openPlayChecks(db: Firestore): Promise<void> {
 
   // Mixed.
   await ok("S2 → mixed (host only so far)", updateSession, P.host.uid, { sessionId: s2, gameTypeRaw: "mixed" });
-  check("S2 mixed, cap 4", (await session(db, s2)).gameType === "mixed" && (await session(db, s2)).maxPlayers === 4);
+  check("S2 mixed, cap 6 (3 men, 3 women)", (await session(db, s2)).gameType === "mixed" && (await session(db, s2)).maxPlayers === 6);
   await expectFail("mixed join without gender", joinSession, P.p6.uid, { sessionId: s2 }, "GENDER_REQUIRED");
   await ok("p1 (male) joins mixed", joinSession, P.p1.uid, { sessionId: s2 });
-  const m4 = await ok<{ status: string }>("p4 (3rd male) joins mixed", joinSession, P.p4.uid, { sessionId: s2 });
-  check("3rd male waitlisted", m4?.status === "waitlisted");
+  const mq1 = await ok<{ status: string }>("q1 (3rd male, bench) joins mixed", joinSession, P.q1.uid, { sessionId: s2 });
+  check("3rd male joined", mq1?.status === "joined");
+  const m4 = await ok<{ status: string }>("p4 (4th male) joins mixed", joinSession, P.p4.uid, { sessionId: s2 });
+  check("4th male waitlisted (men full, room left)", m4?.status === "waitlisted");
   await ok("p2 (female) joins mixed", joinSession, P.p2.uid, { sessionId: s2 });
   const m8 = await ok<{ status: string }>("p8 (female) joins mixed", joinSession, P.p8.uid, { sessionId: s2 });
   check("2nd female joined", m8?.status === "joined");
+  await ok("q2 (3rd female) joins mixed", joinSession, P.q2.uid, { sessionId: s2 });
   const m3 = await ok<{ status: string }>("p3 (female) joins full mixed", joinSession, P.p3.uid, { sessionId: s2 });
-  check("3rd female waitlisted", m3?.status === "waitlisted");
+  check("4th female waitlisted", m3?.status === "waitlisted");
   const lm = await ok<{ promotedPlayerId?: string }>("p8 (female) leaves mixed", leaveSession, P.p8.uid, { sessionId: s2 });
   check("female slot → p3 promoted, not p4 (male first in line)", lm?.promotedPlayerId === P.p3.id);
 
@@ -281,6 +293,110 @@ async function openPlayChecks(db: Firestore): Promise<void> {
   await expectFail("p7 hosts inside legacy 120-min window", createSession, P.p7.uid, { ...base1, date: at(5.5) }, "SESSION_CLASH");
   const clashes = await svc.findClashingSessions(db, P.p7.id.toLowerCase(), new Date(at(5)), new Date(at(5.5)), null);
   check("findClashingSessions matches either id case", clashes.length === 1 && clashes[0].id === "LEGACY-SINGLES");
+}
+
+async function courtsChecks(db: Firestore): Promise<void> {
+  console.log("\n── Open Play courts ──");
+  const { createSession, updateSession, joinSession, leaveSession } = openPlay;
+  const base = { venue: "Court C", title: "Courts", gameType: "doubles", sportType: "badminton" };
+
+  check("capacityFor doubles 1/3/4 courts = 6/14/18", svc.capacityFor("doubles", 1) === 6
+    && svc.capacityFor("doubles", 3) === 14 && svc.capacityFor("doubles", 4) === 18);
+  check("capacityFor singles 1/4 courts = 4/10", svc.capacityFor("singles", 1) === 4 && svc.capacityFor("singles", 4) === 10);
+  check("capacityFor mixed/any 2 courts = 10", svc.capacityFor("mixed", 2) === 10 && svc.capacityFor("any", 2) === 10);
+  check("mixedSlotsPerGender 1/3 courts = 3/7, legacy 2", svc.mixedSlotsPerGender(1) === 3
+    && svc.mixedSlotsPerGender(3) === 7 && svc.mixedSlotsPerGender(undefined) === 2);
+  check("sessionCapacity / sessionMixedCap legacy", svc.sessionCapacity({ gameType: "singles" }) === 2
+    && svc.sessionCapacity({ gameType: "doubles", maxPlayers: 4 }) === 4 && svc.sessionMixedCap({ gameType: "mixed" }) === 2);
+
+  const COURTS_MSG = "Pick between 1 and 4 courts.";
+  for (const bad of [0, 5, 2.5, "2", -1]) {
+    await expectFail(`create courts ${JSON.stringify(bad)}`, createSession, P.q3.uid, { ...base, date: at(200), courts: bad }, "INVALID_ARGUMENT");
+  }
+  try {
+    await call(createSession, P.q3.uid, { ...base, date: at(200), courts: 5 });
+  } catch (e) {
+    check("courts error message", (e as Error).message === COURTS_MSG, (e as Error).message);
+  }
+  const mk = async (name: string, uid: string, data: Record<string, unknown>) =>
+    (await ok<{ sessionId: string }>(name, createSession, uid, { ...base, ...data }))!.sessionId;
+  const d3 = await session(db, await mk("doubles 3 courts", P.q4.uid, { date: at(210), courts: 3 }));
+  check("doubles 3 courts → 14", d3.courts === 3 && d3.maxPlayers === 14, JSON.stringify({ c: d3.courts, m: d3.maxPlayers }));
+  const d4 = await session(db, await mk("doubles 4 courts", P.q4.uid, { date: at(214), courts: 4 }));
+  check("doubles 4 courts → 18", d4.courts === 4 && d4.maxPlayers === 18);
+  const s4 = await session(db, await mk("singles 4 courts", P.q6.uid, { gameType: "singles", date: at(220), courts: 4 }));
+  check("singles 4 courts → 10", s4.courts === 4 && s4.maxPlayers === 10);
+  const s1c = await session(db, await mk("singles default courts", P.q6.uid, { gameType: "singles", date: at(224) }));
+  check("singles default 1 court → 4", s1c.courts === 1 && s1c.maxPlayers === 4);
+
+  // Increase promotes the waitlist (up to the new room); decrease guarded.
+  const k = await mk("K doubles 1 court", P.q3.uid, { date: at(300) });
+  for (const p of [P.p1, P.p2, P.p3, P.p4, P.p5]) await call(joinSession, p.uid, { sessionId: k });
+  for (const p of [P.p7, P.p8, P.org, P.q1, P.q2]) await call(joinSession, p.uid, { sessionId: k });
+  let kd = await session(db, k);
+  check("K full at 6, 5 waitlisted", (kd.attendeeIds as string[]).length === 6 && (kd.waitlistIds as string[]).length === 5);
+  await expectFail("courts 5 on update", updateSession, P.q3.uid, { sessionId: k, courts: 5 }, "INVALID_ARGUMENT");
+  await expectFail("non-host courts change", updateSession, P.p1.uid, { sessionId: k, courts: 2 }, "NOT_HOST");
+  const echo = await ok<{ promotedPlayerIds?: string[] }>("echo courts 1 (no change)", updateSession, P.q3.uid, { sessionId: k, courts: 1, notes: "hi" });
+  check("echo: no promotion", !echo?.promotedPlayerIds && (await session(db, k)).maxPlayers === 6);
+  const inc = await ok<{ promotedPlayerIds?: string[] }>("K → 2 courts", updateSession, P.q3.uid, { sessionId: k, courts: 2 });
+  kd = await session(db, k);
+  check("K courts 2, maxPlayers 10", kd.courts === 2 && kd.maxPlayers === 10);
+  check("4 promoted in waitlist order", JSON.stringify(inc?.promotedPlayerIds) === JSON.stringify([P.p7.id, P.p8.id, P.org.id, P.q1.id]),
+    JSON.stringify(inc?.promotedPlayerIds));
+  check("K 10 attendees, q2 still waitlisted", (kd.attendeeIds as string[]).length === 10
+    && JSON.stringify(kd.waitlistIds) === JSON.stringify([P.q2.id])
+    && (kd.attendeeUids as string[]).includes("uq1") && (kd.attendeeUids as string[]).includes("u-org"));
+  check("promoted players notified", await notified(db, "u7", "session_waitlist_promoted") && await notified(db, "uq1", "session_waitlist_promoted"));
+  await expectFail("K → 1 court with 10 joined", updateSession, P.q3.uid, { sessionId: k, courts: 1 }, "FIELDS_LOCKED",
+    "That's fewer spots than players already joined.");
+  check("K unchanged after refused decrease", (await session(db, k)).maxPlayers === 10);
+  const lk = await ok<{ promotedPlayerId?: string }>("p1 leaves K", leaveSession, P.p1.uid, { sessionId: k });
+  check("q2 promoted on leave (cap from maxPlayers 10)", lk?.promotedPlayerId === P.q2.id);
+  for (const p of [P.p2, P.p3, P.p4, P.p5]) await call(leaveSession, p.uid, { sessionId: k });
+  await ok("K → 1 court with 6 joined", updateSession, P.q3.uid, { sessionId: k, courts: 1 });
+  check("K back to 6", (await session(db, k)).maxPlayers === 6 && (await session(db, k)).courts === 1);
+
+  // Mixed: per-gender cap courts × 2 + 1.
+  const m = await mk("M mixed 1 court", P.q5.uid, { gameType: "mixed", date: at(400) });
+  for (const p of [P.p4, P.p5, P.p2]) await call(joinSession, p.uid, { sessionId: m });
+  const mj = await ok<{ status: string }>("p1 (4th male) joins M", joinSession, P.p1.uid, { sessionId: m });
+  check("4th male waitlisted (3 per gender)", mj?.status === "waitlisted");
+  const mi = await ok<{ promotedPlayerIds?: string[] }>("M → 2 courts", updateSession, P.q5.uid, { sessionId: m, courts: 2 });
+  check("p1 promoted (5 per gender)", JSON.stringify(mi?.promotedPlayerIds) === JSON.stringify([up(P.p1.id)]));
+  await expectFail("M → 1 court with 4 men", updateSession, P.q5.uid, { sessionId: m, courts: 1 }, "FIELDS_LOCKED",
+    "That's fewer spots than players already joined.");
+
+  // Started session: courts can't change.
+  await db.collection("playSessions").doc("COURTS-STARTED").set({
+    venue: "Old", date: Timestamp.fromMillis(Date.now() - HOUR), durationMinutes: 120, status: "active",
+    gameType: "doubles", courts: 1, maxPlayers: 6, hostId: P.q6.uid, attendeeIds: [up(P.q6.id)], createdAt: Timestamp.now(),
+  });
+  await expectFail("courts change after start", updateSession, P.q6.uid, { sessionId: "COURTS-STARTED", courts: 2 }, "SESSION_CLOSED");
+
+  // Legacy docs (no courts): 1 court, no bench, untouched by an echoed courts: 1.
+  await db.collection("playSessions").doc("LEGACY-DOUBLES").set({
+    venue: "Old", date: Timestamp.fromMillis(at(500)), status: "active", gameType: "doubles",
+    hostId: P.q6.uid, attendeeIds: [up(P.q6.id)], createdAt: Timestamp.now(),
+  });
+  for (const p of [P.p1, P.p2, P.p3]) await call(joinSession, p.uid, { sessionId: "LEGACY-DOUBLES" });
+  const lj = await ok<{ status: string }>("5th on legacy doubles", joinSession, P.p4.uid, { sessionId: "LEGACY-DOUBLES" });
+  check("legacy doubles cap 4 → waitlisted", lj?.status === "waitlisted");
+  await ok("legacy: notes + echoed courts 1", updateSession, P.q6.uid, { sessionId: "LEGACY-DOUBLES", courts: 1, notes: "x" });
+  const ld = await session(db, "LEGACY-DOUBLES");
+  check("legacy doc not rewritten (no courts / maxPlayers)", ld.courts === undefined && ld.maxPlayers === undefined && ld.notes === "x");
+  await db.collection("playSessions").doc("LEGACY-MIXED").set({
+    venue: "Old", date: Timestamp.fromMillis(at(510)), status: "active", gameType: "mixed", maxPlayers: 4,
+    hostId: P.q5.uid, attendeeIds: [up(P.q5.id)], createdAt: Timestamp.now(),
+  });
+  await call(joinSession, P.p5.uid, { sessionId: "LEGACY-MIXED" });
+  const lm = await ok<{ status: string }>("3rd male on legacy mixed", joinSession, P.q1.uid, { sessionId: "LEGACY-MIXED" });
+  check("legacy mixed 2 per gender → waitlisted", lm?.status === "waitlisted");
+  const lup = await ok<{ promotedPlayerIds?: string[] }>("legacy mixed → 2 courts", updateSession, P.q5.uid,
+    { sessionId: "LEGACY-MIXED", courts: 2 });
+  const lmd = await session(db, "LEGACY-MIXED");
+  check("legacy mixed → 2 courts: courts/maxPlayers set, q1 promoted", lmd.courts === 2 && lmd.maxPlayers === 10
+    && JSON.stringify(lup?.promotedPlayerIds) === JSON.stringify([P.q1.id]));
 }
 
 async function profileChecks(): Promise<void> {
@@ -558,6 +674,7 @@ async function main(): Promise<void> {
   await clear(db);
   await seed(db);
   await openPlayChecks(db);
+  await courtsChecks(db);
   await profileChecks();
   await registrationChecks(db);
   await memberUidChecks(db);
