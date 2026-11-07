@@ -9,7 +9,8 @@ import { DocumentData, Firestore, QueryDocumentSnapshot, Timestamp, Transaction 
  * by older apps), `endsAt` (server-set by newer code), `gameType` (stored
  * raw game type: singles / doubles / mixed / any), `status`
  * (active / cancelled / completed / flagged), `attendeeIds` (UPPERCASE
- * player ids), `hostId` (host auth uid).
+ * player ids), `hostId` (host auth uid), `courts` (1–4, newer sessions
+ * only) and `maxPlayers` (server-set).
  */
 
 /** Duration assumed for sessions without one (older apps allowed open-ended). */
@@ -20,8 +21,13 @@ export const LEGACY_SESSION_MINUTES = LEGACY_DURATION_MINUTES;
 /** Most upcoming active sessions one host may have at a time. */
 export const MAX_UPCOMING_HOSTED_SESSIONS = 3;
 
-/** Mixed sessions: at most this many men and this many women. */
+/** Legacy mixed sessions (no `courts`): at most this many men and this many women. */
 export const MIXED_SLOTS_PER_GENDER = 2;
+
+/** Courts a host may book for one session. */
+export const MAX_COURTS = 4;
+/** Extra spots on top of the courts in every courts-based session (split one man, one woman in mixed). */
+export const BENCH_SPOTS = 2;
 
 /**
  * How far before a window we look for sessions that could still be running
@@ -93,9 +99,42 @@ export function sessionGameType(session: SessionLike): string {
   return session.gameType || session.gameTypeRaw || "any";
 }
 
-/** Player cap by game type: singles 2, everything else (doubles, mixed, any) 4. */
-export function capacityFor(gameTypeRaw: unknown): number {
+/** Players on one court: singles 2, everything else (doubles, mixed, any) 4. */
+export function playersPerCourt(gameTypeRaw: unknown): number {
   return gameTypeRaw === "singles" ? 2 : 4;
+}
+
+/**
+ * Player cap: `courts × playersPerCourt + bench`. Without `courts` (legacy
+ * sessions) one court and no bench: singles 2, everything else 4.
+ */
+export function capacityFor(gameTypeRaw: unknown, courts?: number | null, bench: number = BENCH_SPOTS): number {
+  if (typeof courts !== "number") return playersPerCourt(gameTypeRaw);
+  return courts * playersPerCourt(gameTypeRaw) + bench;
+}
+
+/** Mixed per-gender cap: `courts × 2 + bench / 2`; legacy sessions (no `courts`) 2. */
+export function mixedSlotsPerGender(courts?: number | null, bench: number = BENCH_SPOTS): number {
+  if (typeof courts !== "number") return MIXED_SLOTS_PER_GENDER;
+  return courts * 2 + Math.floor(bench / 2);
+}
+
+/** The session's courts, or null for legacy docs without them. */
+export function sessionCourts(session: DocumentData): number | null {
+  const c = session.courts;
+  return typeof c === "number" && Number.isInteger(c) && c >= 1 ? c : null;
+}
+
+/** The session's player cap: stored `maxPlayers`, else computed from game type and courts. */
+export function sessionCapacity(session: DocumentData): number {
+  const max = session.maxPlayers;
+  if (typeof max === "number" && max > 0) return max;
+  return capacityFor(sessionGameType(session), sessionCourts(session));
+}
+
+/** The session's mixed per-gender cap (from `courts`; legacy 2). */
+export function sessionMixedCap(session: DocumentData): number {
+  return mixedSlotsPerGender(sessionCourts(session));
 }
 
 /** Missing status counts as active (older docs). */
@@ -111,12 +150,14 @@ export function mixedGender(genderRaw: string | null | undefined): "male" | "fem
 /**
  * Mixed sessions: which of `newIds` overflow their gender's slots. Attendees
  * already in the session keep their places; new ones are taken in attendee
- * order and overflow once their gender has MIXED_SLOTS_PER_GENDER players.
- * Players without a known gender never overflow here.
+ * order and overflow once their gender has `perGender` players (default
+ * the legacy MIXED_SLOTS_PER_GENDER; see sessionMixedCap). Players without
+ * a known gender never overflow here.
  */
 export function mixedOverflowIds(
   attendees: Array<{ id: string; gender: string | null | undefined }>,
   newIds: string[],
+  perGender: number = MIXED_SLOTS_PER_GENDER,
 ): string[] {
   const isNew = new Set(newIds);
   const counts = { male: 0, female: 0 };
@@ -129,7 +170,7 @@ export function mixedOverflowIds(
     if (!isNew.has(a.id)) continue;
     const g = mixedGender(a.gender);
     if (!g) continue;
-    if (counts[g] >= MIXED_SLOTS_PER_GENDER) {
+    if (counts[g] >= perGender) {
       overflow.push(a.id);
     } else {
       counts[g] += 1;

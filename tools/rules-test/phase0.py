@@ -196,6 +196,27 @@ set_doc("playSessions/SL", "owner", ios_session(["HOSTP", "A", "B", "C", "D"]))
 expect(array_op("playSessions/SL", "j1", "attendeeIds", "union", ["J1"]), 403, "join legacy over-full session rejected")
 expect(array_op("playSessions/SL", "j1", "attendeeIds", "remove", ["J1"]), 200, "arrayRemove of an absent id is a no-op")
 
+# courts: the cap comes from the server-set maxPlayers (courts x per court + 2 bench)
+print("# playSessions courts")
+set_doc("playSessions/SK", "owner", ios_session(["HOSTP", "A", "B", "C", "D"], courts=1, maxPlayers=6))
+expect(array_op("playSessions/SK", "j1", "attendeeIds", "union", ["J1"]), 200, "1-court doubles: 6th (bench) joins")
+expect(array_op("playSessions/SK", "j2", "attendeeIds", "union", ["J2"]), 403, "1-court doubles: 7th rejected (cap 6)")
+set_doc("playSessions/SK3", "owner", ios_session(["HOSTP"] + [f"K{i}" for i in range(12)], courts=3, maxPlayers=14))
+expect(array_op("playSessions/SK3", "j1", "attendeeIds", "union", ["J1"]), 200, "3-court doubles: 14th joins")
+expect(array_op("playSessions/SK3", "j2", "attendeeIds", "union", ["J2"]), 403, "3-court doubles: 15th rejected")
+set_doc("playSessions/SKS", "owner", ios_session(["HOSTP", "A", "B"], game="singles", courts=1, maxPlayers=4))
+expect(array_op("playSessions/SKS", "j1", "attendeeIds", "union", ["J1"]), 200, "1-court singles: 4th joins")
+expect(array_op("playSessions/SKS", "j2", "attendeeIds", "union", ["J2"]), 403, "1-court singles: 5th rejected")
+set_doc("playSessions/SKM", "owner", ios_session(["HOSTP", "A", "B"], maxPlayers=4))
+expect(array_op("playSessions/SKM", "j1", "attendeeIds", "union", ["J1"]), 200, "legacy maxPlayers 4: 4th joins")
+expect(array_op("playSessions/SKM", "j2", "attendeeIds", "union", ["J2"]), 403, "legacy maxPlayers 4: 5th rejected")
+expect(merge("playSessions/SK", "host", {"courts": 4}), 403, "host write of courts rejected (callable only)")
+expect(merge("playSessions/SK", "j3", {"courts": 4}), 403, "player write of courts rejected")
+expect(set_doc("playSessions/SX8", "host", ios_session(["HOSTP"], courts=2)), 403, "create with courts rejected")
+SK = ["HOSTP", "A", "B", "C", "D", "J1"]
+expect(merge("playSessions/SK", "host", ios_session(SK, courts=1, maxPlayers=6, title="Renamed")), 200,
+       "host full-doc merge echoing unchanged courts/maxPlayers passes")
+
 # host edits (S1 now has HOSTP, J1, ABCD-WEB)
 now = ["HOSTP", "J1", "ABCD-WEB"]
 expect(merge(S1, "host", ios_session(now, title="New title", notes="Bring shuttles", skillLevel="beginner",

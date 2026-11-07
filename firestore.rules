@@ -342,7 +342,7 @@ service cloud.firestore {
     // Written only by the server.
     function sessionServerFields() {
       return ['maxPlayers', 'endsAt', 'waitlistIds', 'attendeeUids',
-              'autoRemoved', 'autoCancelled'];
+              'autoRemoved', 'autoCancelled', 'courts'];
     }
 
     // Locked once anyone besides the host has joined.
@@ -351,9 +351,18 @@ service cloud.firestore {
               'costPerPerson', 'venue', 'venueAddress'];
     }
 
-    // Stored as `gameType`. Singles 2, everything else (doubles, mixed, any) 4.
+    // Legacy cap by `gameType`: singles 2, everything else (doubles, mixed, any) 4.
     function sessionCap(gameType) {
       return gameType == 'singles' ? 2 : 4;
+    }
+
+    // The session's cap: server-set `maxPlayers` (courts × per court + 2
+    // bench), else the legacy cap for docs written without it.
+    function sessionMaxPlayers() {
+      let max = resource.data.get('maxPlayers', 0);
+      return max is int && max > 0
+        ? max
+        : sessionCap(request.resource.data.get('gameType', 'any'));
     }
 
     function sessionChanged() {
@@ -368,7 +377,7 @@ service cloud.firestore {
         && after.removeAll(before).size() == 1
         && resource.data.get('status', 'active') == 'active'
         && request.time < resource.data.date
-        && after.size() <= sessionCap(request.resource.data.get('gameType', 'any'))
+        && after.size() <= sessionMaxPlayers()
         && isOwnPlayer(after.removeAll(before)[0]);
     }
 

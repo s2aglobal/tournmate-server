@@ -6,13 +6,13 @@ import { sendToPlayer } from "../services/notifications";
 import { playerById } from "../services/identity";
 import {
   ClashingSession,
-  MIXED_SLOTS_PER_GENDER,
   findClashingSessions,
   formatSessionTime,
   isActiveSession,
   mixedGender,
   mixedOverflowIds,
   sessionGameType,
+  sessionMixedCap,
   sessionWindow,
   toClashingSession,
   windowsOverlap,
@@ -22,7 +22,8 @@ import {
  * Fires when a play session is updated.
  * - If attendeeIds grew (someone joined), enforce the Open Play rules that
  *   older apps (iOS 1.7, Android 1.0) don't check: a joiner whose other
- *   session clashes, or who overflows a mixed session's 2 men / 2 women, is
+ *   session clashes, or who overflows a mixed session's men / women slots
+ *   (2 each on legacy sessions, courts × 2 + 1 with courts), is
  *   removed again and told why. Then notify the host about the rest.
  * - If attendeeIds shrunk (someone left), notify the host (not for the
  *   server's own removals, marked by `autoRemoved`).
@@ -357,6 +358,7 @@ async function removeInvalidJoiners(
       const overflow = mixedOverflowIds(
         stillIn.map((id) => ({ id, gender: genders.get(id) })),
         present.filter((id) => !found.has(id)),
+        sessionMixedCap(current.data() ?? session),
       );
       for (const id of overflow) {
         found.set(id, { kind: "mixed", gender: mixedGender(genders.get(id)) ?? "male" });
@@ -386,7 +388,7 @@ async function removeInvalidJoiners(
     const body = reason.kind === "clash"
       ? `You were removed from "${title}": it clashes with your session at ${reason.other.venue || "another venue"} ` +
         `on ${formatSessionTime(reason.other.start, reason.other.timeZone)}.`
-      : `You were removed from "${title}": this mixed session already has ${MIXED_SLOTS_PER_GENDER} ` +
+      : `You were removed from "${title}": this mixed session already has ${sessionMixedCap(session)} ` +
         `${reason.gender === "male" ? "men" : "women"}.`;
     logger.info(`Session ${sessionId}: removed ${playerId} (${reason.kind})`);
     await notifyPlayer(db, playerId, "Couldn't join Open Play", body, sessionId);

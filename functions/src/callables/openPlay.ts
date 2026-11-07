@@ -6,7 +6,10 @@ import {
   CALLABLE_OPTS, Data, dataOf, formatWhen, optionalNumber, optionalString, parseDate,
   requirePlayer, requireString, requireUid,
 } from "./shared";
-import { capacityFor, findClashingSessions, sessionWindow } from "../services/openPlay";
+import {
+  MAX_COURTS, capacityFor, findClashingSessions, mixedSlotsPerGender, sessionCapacity, sessionCourts,
+  sessionMixedCap, sessionWindow,
+} from "../services/openPlay";
 import { PlayerRef, playerById, playerForUid, resolveDocId, sameId } from "../services/identity";
 import { notifyPlayer } from "../services/notifyPlayer";
 import { PlayerDoc, isSportType, parseSportType, sportEmoji } from "../types";
@@ -20,8 +23,9 @@ import { PlayerDoc, isSportType, parseSportType, sportEmoji } from "../types";
  * title, venue, venueAddress, venueLatitude, venueLongitude, countryCode,
  * postalCode, date, durationMinutes, skillLevel, gameType, costPerPerson,
  * currency, notes, preferredAgeGroup, status, hostId, attendeeIds,
- * createdAt, timeZone, sportType. Server-only: maxPlayers, endsAt,
- * waitlistIds, attendeeUids.
+ * createdAt, timeZone, sportType, courts (1–4; set through these
+ * callables). Server-only: maxPlayers (courts × per court + 2 bench),
+ * endsAt, waitlistIds, attendeeUids.
  */
 
 export const DEFAULT_DURATION_MINUTES = 90;
@@ -29,8 +33,9 @@ export const MAX_DURATION_MINUTES = 240;
 export const MIN_DURATION_MINUTES = 15;
 /** Upcoming active sessions one host may have at a time. */
 export const HOST_SESSION_LIMIT = 3;
-/** Mixed sessions: at most this many men and this many women. */
-export const MIXED_PER_GENDER = 2;
+export const DEFAULT_COURTS = 1;
+
+export const FEWER_SPOTS_MESSAGE = "That's fewer spots than players already joined.";
 
 const GAME_TYPES = ["any", "singles", "doubles", "mixed"];
 
@@ -101,6 +106,16 @@ function validateSessionValues(f: SessionInput): void {
   }
 }
 
+/** `courts` from the request: undefined when absent, else an integer 1–MAX_COURTS. */
+function readCourts(d: Data): number | undefined {
+  const v = d.courts;
+  if (v === undefined || v === null) return undefined;
+  if (typeof v !== "number" || !Number.isInteger(v) || v < 1 || v > MAX_COURTS) {
+    fail("invalid-argument", "INVALID_ARGUMENT", `Pick between 1 and ${MAX_COURTS} courts.`);
+  }
+  return v;
+}
+
 function genderOf(p: PlayerDoc | null | undefined): "male" | "female" | null {
   const g = p?.genderRaw;
   return g === "male" || g === "female" ? g : null;
@@ -110,10 +125,47 @@ function isMixed(session: DocumentData): boolean {
   return (session.gameType ?? session.gameTypeRaw) === "mixed";
 }
 
-function capacityOf(session: DocumentData): number {
-  return typeof session.maxPlayers === "number" && session.maxPlayers > 0
-    ? session.maxPlayers
-    : capacityFor(session.gameType ?? session.gameTypeRaw);
+/**
+ * Waitlisted players to move into a session, in waitlist order: each must
+ * fit the cap and, for mixed, their gender's slots, and have no clash.
+ * Reads only (call before the transaction's writes).
+ */
+async function pickPromotions(
+  db: Firestore, tx: Transaction, sessionId: string, session: DocumentData,
+  attendees: string[], waitlist: string[],
+): Promise<PlayerRef[]> {
+  const { start, end } = sessionWindow(session);
+  const open = (session.status ?? "active") === "active" && start.getTime() > Date.now();
+  let room = sessionCapacity(session) - attendees.length;
+  if (!open || room <= 0 || waitlist.length === 0) return [];
+  const mixed = isMixed(session);
+  const perGender = sessionMixedCap(session);
+  const genders = mixed ? await attendeeGenders(db, tx, attendees) : [];
+  const out: PlayerRef[] = [];
+  for (const candidateId of waitlist) {
+    if (room <= 0) break;
+    const candidate = await playerById(db, candidateId, tx);
+    if (!candidate) continue;
+    const g = genderOf(candidate.data);
+    if (mixed && (!g || genders.filter((x) => x === g).length >= perGender)) continue;
+    const clashes = await findClashingSessions(db, candidateId, start, end, sessionId, tx);
+    if (clashes.length > 0) continue;
+    out.push({ ...candidate, id: candidateId });
+    if (mixed) genders.push(g);
+    room--;
+  }
+  return out;
+}
+
+async function notifyPromoted(db: Firestore, sessionId: string, s: DocumentData, promoted: PlayerRef[]): Promise<void> {
+  for (const p of promoted) {
+    await notifyPlayer(db, p.data, {
+      type: "session_waitlist_promoted",
+      title: `You're in! ${sportEmoji(parseSportType(s.sportType))}`,
+      body: `A spot opened up: you're now playing in ${sessionLabel(s)}.`,
+      data: { sessionId },
+    });
+  }
 }
 
 function idsOf(v: unknown): string[] {
@@ -149,7 +201,7 @@ function sessionLabel(s: DocumentData): string {
  * createSession({ title?, venue, venueAddress?, venueLatitude?, venueLongitude?,
  *   countryCode?, postalCode?, date, durationMinutes?, skillLevel?, gameType?,
  *   costPerPerson?, currency?, notes?, preferredAgeGroup?, timeZone?, sportType?,
- *   sessionId? }) -> { sessionId }
+ *   courts? (1–4, default 1), sessionId? }) -> { sessionId }
  */
 export const createSession = onCall(CALLABLE_OPTS, async (req) => {
   const uid = requireUid(req);
@@ -162,6 +214,7 @@ export const createSession = onCall(CALLABLE_OPTS, async (req) => {
   f.gameType ??= "any";
   f.sportType ??= "badminton";
   validateSessionValues(f);
+  const courts = readCourts(d) ?? DEFAULT_COURTS;
 
   let sessionId = randomUUID().toUpperCase();
   if (d.sessionId !== undefined) {
@@ -214,7 +267,8 @@ export const createSession = onCall(CALLABLE_OPTS, async (req) => {
       attendeeIds: [me.id],
       attendeeUids: [uid],
       waitlistIds: [],
-      maxPlayers: capacityFor(f.gameType),
+      courts,
+      maxPlayers: capacityFor(f.gameType, courts),
       createdAt: Timestamp.now(),
     };
     for (const key of ["venueLatitude", "venueLongitude", "countryCode", "postalCode", "costPerPerson", "notes", "timeZone"]) {
@@ -227,15 +281,21 @@ export const createSession = onCall(CALLABLE_OPTS, async (req) => {
 
 // ─── updateSession ──────────────────────────────────────
 
-/** updateSession({ sessionId, ...fields }) -> { sessionId }. Host only. */
+/**
+ * updateSession({ sessionId, ...fields, courts? }) -> { sessionId, promotedPlayerIds? }. Host only.
+ * `courts` may go up while the session is active and not started (waitlisted
+ * players who fit are promoted and told), and down only while the new cap
+ * still holds everyone who joined. maxPlayers follows courts and game type.
+ */
 export const updateSession = onCall(CALLABLE_OPTS, async (req) => {
   const uid = requireUid(req);
   const d = dataOf(req);
   const db = getFirestore();
   const sessionId = await resolveDocId(db, "playSessions", requireString(d, "sessionId", 64));
   const f = readSessionFields(d);
+  const courtsIn = readCourts(d);
 
-  await db.runTransaction(async (tx) => {
+  const result = await db.runTransaction(async (tx) => {
     const ref = db.collection("playSessions").doc(sessionId);
     const snap = await tx.get(ref);
     if (!snap.exists) fail("not-found", "NOT_FOUND", "This session no longer exists.");
@@ -252,7 +312,9 @@ export const updateSession = onCall(CALLABLE_OPTS, async (req) => {
         : value === null ? current === undefined || current === null : current === value;
       if (!same) changes[key] = value;
     }
-    if (Object.keys(changes).length === 0) return;
+    // Legacy docs (no courts) count as 1 court, so an app echoing 1 changes nothing.
+    const courtsChanged = courtsIn !== undefined && courtsIn !== (sessionCourts(s) ?? DEFAULT_COURTS);
+    if (Object.keys(changes).length === 0 && !courtsChanged) return { promoted: [] as PlayerRef[], session: s };
     validateSessionValues(changes);
 
     const attendees = idsOf(s.attendeeIds);
@@ -269,8 +331,29 @@ export const updateSession = onCall(CALLABLE_OPTS, async (req) => {
       update[key] = value === null ? FieldValue.delete()
         : value instanceof Date ? Timestamp.fromDate(value) : value;
     }
+    let promoted: PlayerRef[] = [];
+    if (courtsChanged || changes.gameType !== undefined) {
+      if (courtsChanged && sessionWindow(s).start.getTime() <= Date.now()) {
+        fail("failed-precondition", "SESSION_CLOSED", "This session has already started, so the courts can't change.");
+      }
+      const courts = courtsChanged ? courtsIn : sessionCourts(s);
+      const gameType = (changes.gameType as string | undefined) ?? (s.gameType ?? s.gameTypeRaw);
+      const maxPlayers = capacityFor(gameType, courts);
+      if (maxPlayers < attendees.length) fail("failed-precondition", "FIELDS_LOCKED", FEWER_SPOTS_MESSAGE);
+      if (gameType === "mixed" && attendees.length > 1) {
+        const perGender = mixedSlotsPerGender(courts);
+        const genders = await attendeeGenders(db, tx, attendees);
+        if (genders.filter((g) => g === "male").length > perGender
+            || genders.filter((g) => g === "female").length > perGender) {
+          fail("failed-precondition", "FIELDS_LOCKED", FEWER_SPOTS_MESSAGE);
+        }
+      }
+      if (courtsChanged) update.courts = courts;
+      update.maxPlayers = maxPlayers;
+      const next = { ...s, gameType, courts, maxPlayers };
+      promoted = await pickPromotions(db, tx, sessionId, next, attendees, idsOf(s.waitlistIds));
+    }
     if (changes.gameType !== undefined) {
-      update.maxPlayers = capacityFor(changes.gameType);
       if (changes.gameType === "mixed") {
         const me = await requirePlayer(db, uid, tx);
         if (!genderOf(me.data)) fail("failed-precondition", "GENDER_REQUIRED", "Set your gender to host a mixed session.");
@@ -286,10 +369,22 @@ export const updateSession = onCall(CALLABLE_OPTS, async (req) => {
       const me = await requirePlayer(db, uid, tx);
       await failOnClash(db, tx, me.id, start, end, sessionId);
     }
+    if (promoted.length > 0) {
+      const ids = new Set(promoted.map((p) => p.id));
+      update.attendeeIds = [...attendees, ...promoted.map((p) => p.id)];
+      const uids = idsOf(s.attendeeUids);
+      for (const p of promoted) if (p.data.firebaseUid && !uids.includes(p.data.firebaseUid)) uids.push(p.data.firebaseUid);
+      update.attendeeUids = uids;
+      update.waitlistIds = idsOf(s.waitlistIds).filter((id) => !ids.has(id));
+    }
     update.updatedAt = FieldValue.serverTimestamp();
     tx.update(ref, update);
+    return { promoted, session: { ...s, ...update } };
   });
-  return { sessionId };
+  await notifyPromoted(db, sessionId, result.session, result.promoted);
+  return result.promoted.length > 0
+    ? { sessionId, promotedPlayerIds: result.promoted.map((p) => p.id) }
+    : { sessionId };
 });
 
 // ─── joinSession ────────────────────────────────────────
@@ -325,10 +420,10 @@ export const joinSession = onCall(CALLABLE_OPTS, async (req) => {
     }
     await failOnClash(db, tx, me.id, start, end, sessionId);
 
-    let full = attendees.length >= capacityOf(s);
+    let full = attendees.length >= sessionCapacity(s);
     if (!full && mixed) {
       const genders = await attendeeGenders(db, tx, attendees);
-      full = genders.filter((g) => g === myGender).length >= MIXED_PER_GENDER;
+      full = genders.filter((g) => g === myGender).length >= sessionMixedCap(s);
     }
     if (full) {
       tx.update(ref, { waitlistIds: FieldValue.arrayUnion(me.id) });
@@ -388,26 +483,8 @@ export async function leaveSessionFor(
 
     const remaining = attendees.filter((id) => !sameId(id, me.id));
     const remainingWaitlist = waitlist.filter((id) => !sameId(id, me.id));
-    const { start, end } = sessionWindow(s);
-    let promoted: PlayerRef | null = null;
-    const canPromote = (s.status ?? "active") === "active" && start.getTime() > Date.now()
-      && remaining.length < capacityOf(s);
-    if (canPromote && remainingWaitlist.length > 0) {
-      const mixed = isMixed(s);
-      const genders = mixed ? await attendeeGenders(db, tx, remaining) : [];
-      for (const candidateId of remainingWaitlist) {
-        const candidate = await playerById(db, candidateId, tx);
-        if (!candidate) continue;
-        if (mixed) {
-          const g = genderOf(candidate.data);
-          if (!g || genders.filter((x) => x === g).length >= MIXED_PER_GENDER) continue;
-        }
-        const clashes = await findClashingSessions(db, candidateId, start, end, sessionId, tx);
-        if (clashes.length > 0) continue;
-        promoted = { ...candidate, id: candidateId };
-        break;
-      }
-    }
+    // One spot opened, so at most one promotion.
+    const promoted: PlayerRef | null = (await pickPromotions(db, tx, sessionId, s, remaining, remainingWaitlist))[0] ?? null;
 
     const uids = idsOf(s.attendeeUids).filter((u) => u !== uid);
     if (promoted?.data.firebaseUid && !uids.includes(promoted.data.firebaseUid)) uids.push(promoted.data.firebaseUid);
@@ -424,15 +501,7 @@ export async function leaveSessionFor(
     return { status: "left" as const, session: s, promoted };
   });
 
-  if (result.promoted) {
-    const s = result.session;
-    await notifyPlayer(db, result.promoted.data, {
-      type: "session_waitlist_promoted",
-      title: `You're in! ${sportEmoji(parseSportType(s.sportType))}`,
-      body: `A spot opened up: you're now playing in ${sessionLabel(s)}.`,
-      data: { sessionId },
-    });
-  }
+  if (result.promoted) await notifyPromoted(db, sessionId, result.session, [result.promoted]);
   return result.promoted
     ? { status: result.status, promotedPlayerId: result.promoted.id }
     : { status: result.status };

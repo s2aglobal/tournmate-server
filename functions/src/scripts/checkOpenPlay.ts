@@ -9,14 +9,19 @@
 
 import { Timestamp } from "firebase-admin/firestore";
 import {
+  BENCH_SPOTS,
   LEGACY_DURATION_MINUTES,
+  MAX_COURTS,
   capacityFor,
   createdBefore,
   formatSessionTime,
   isActiveSession,
   mixedGender,
   mixedOverflowIds,
+  mixedSlotsPerGender,
+  sessionCapacity,
   sessionGameType,
+  sessionMixedCap,
   sessionWindow,
   windowsOverlap,
 } from "../services/openPlay";
@@ -38,6 +43,20 @@ check("mixed cap 4", capacityFor("mixed") === 4);
 check("any cap 4", capacityFor("any") === 4);
 check("missing game type cap 4", capacityFor(undefined) === 4 && capacityFor(null) === 4);
 check("unknown game type cap 4", capacityFor("triples") === 4);
+check("constants: 4 courts, 2 bench", MAX_COURTS === 4 && BENCH_SPOTS === 2);
+check("doubles 1 / 3 / 4 courts = 6 / 14 / 18",
+  capacityFor("doubles", 1) === 6 && capacityFor("doubles", 3) === 14 && capacityFor("doubles", 4) === 18);
+check("singles 1 / 4 courts = 4 / 10", capacityFor("singles", 1) === 4 && capacityFor("singles", 4) === 10);
+check("mixed / any 2 courts = 10", capacityFor("mixed", 2) === 10 && capacityFor("any", 2) === 10);
+check("explicit bench 0", capacityFor("doubles", 2, 0) === 8);
+check("mixed per gender: 1 / 3 courts = 3 / 7, legacy 2",
+  mixedSlotsPerGender(1) === 3 && mixedSlotsPerGender(3) === 7 && mixedSlotsPerGender(null) === 2);
+check("sessionCapacity: maxPlayers wins", sessionCapacity({ gameType: "doubles", courts: 3, maxPlayers: 14 }) === 14
+  && sessionCapacity({ gameType: "doubles", maxPlayers: 4 }) === 4);
+check("sessionCapacity: legacy without maxPlayers", sessionCapacity({ gameType: "singles" }) === 2
+  && sessionCapacity({}) === 4);
+check("sessionCapacity: courts without maxPlayers", sessionCapacity({ gameType: "singles", courts: 2 }) === 6);
+check("sessionMixedCap", sessionMixedCap({ courts: 2 }) === 5 && sessionMixedCap({ maxPlayers: 4 }) === 2);
 
 // ─── sessionWindow ───────────────────────────────────────
 const start = at("2030-06-01T18:00:00Z");
@@ -87,6 +106,8 @@ check("mixed: existing players keep their places (new one listed first still ove
   JSON.stringify(mixedOverflowIds(mm([["N", "female"], ["A", "female"], ["B", "female"]]), ["N"])) === '["N"]');
 check("mixed: two new women, one slot -> later one overflows",
   JSON.stringify(mixedOverflowIds(mm([["H", "female"], ["X", "female"], ["Y", "female"]]), ["X", "Y"])) === '["Y"]');
+check("mixed 1 court: 3rd man fits, 4th overflows",
+  JSON.stringify(mixedOverflowIds(mm([["H", "male"], ["A", "male"], ["B", "male"], ["C", "male"]]), ["B", "C"], 3)) === '["C"]');
 check("mixed: unknown gender never overflows",
   mixedOverflowIds(mm([["H", "male"], ["A", "male"], ["U", undefined], ["P", "preferNotToSay"]]), ["U", "P"]).length === 0);
 

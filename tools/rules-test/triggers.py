@@ -95,7 +95,7 @@ def session(host, attendees, date, game="doubles", created="2026-10-01T10:00:00Z
 
 for pid, uid, g in [("HA", "ha", "male"), ("HB", "hb", "female"), ("HC", "hc", "male"), ("HD", "hd", "male"),
                     ("PA", "pa", "male"), ("PB", "pb", "male"), ("PC", "pc", "male"), ("PF", "pf", "female"),
-                    ("PG", "pg", "female")]:
+                    ("PG", "pg", "female"), ("PD", "pd", "male")]:
     player(pid, uid, g)
 
 # ── onSessionJoined: clash removal ──
@@ -133,6 +133,21 @@ expect(n and "2 men" in n[0]["body"], "overflow player notified", n[0]["body"] i
 merge("playSessions/MIX", "owner", {"attendeeIds": ["HD", "PB", "PF"]})
 time.sleep(4)
 expect(doc("playSessions/MIX").get("attendeeIds") == ["HD", "PB", "PF"], "woman joins mixed session")
+
+# ── onSessionJoined: mixed overflow with courts (courts x 2 + 1 per gender) ──
+set_doc("playSessions/MIXC", "owner", session("hd", ["HD", "PB"], "2030-09-01T18:00:00Z", game="mixed",
+                                              courts=1, maxPlayers=6))
+time.sleep(2)
+merge("playSessions/MIXC", "owner", {"attendeeIds": ["HD", "PB", "PC"]})
+ok = wait_for(lambda: [x for x in notifications("hd") if x.get("type") == "session_joined"
+                       and x.get("sessionId") == "MIXC"])
+expect(doc("playSessions/MIXC").get("attendeeIds") == ["HD", "PB", "PC"], "1 court mixed: 3rd man (bench) kept",
+       doc("playSessions/MIXC").get("attendeeIds"))
+merge("playSessions/MIXC", "owner", {"attendeeIds": ["HD", "PB", "PC", "PD"]})
+ok = wait_for(lambda: doc("playSessions/MIXC").get("attendeeIds") == ["HD", "PB", "PC"])
+expect(ok, "1 court mixed: 4th man removed", doc("playSessions/MIXC").get("attendeeIds"))
+n = wait_for(lambda: [x for x in notifications("pd") if x.get("type") == "session_removed"])
+expect(n and "3 men" in n[0]["body"], "courts overflow player notified with the courts cap", n[0]["body"] if n else "none")
 
 # ── attendeeUids mirrored for direct joins/leaves on callable-created sessions ──
 set_doc("playSessions/UIDS", "owner", session("hb", ["HB"], "2030-08-05T18:00:00Z", attendeeUids=["hb"],
