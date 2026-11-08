@@ -31,6 +31,8 @@ const member = require("../services/memberUids") as typeof import("../services/m
 const svc = require("../services/openPlay") as typeof import("../services/openPlay");
 const account = require("../callables/account") as typeof import("../callables/account");
 const autoClose = require("../triggers/autoCloseSessions") as typeof import("../triggers/autoCloseSessions");
+const awardsFn = require("../callables/awards") as typeof import("../callables/awards");
+const awardsSvc = require("../services/tournamentAwards") as typeof import("../services/tournamentAwards");
 
 let failures = 0;
 let passes = 0;
@@ -122,6 +124,7 @@ async function seed(db: Firestore): Promise<void> {
   await t("T-CRICKET", { sportType: "cricket", formatRaw: "openSingles" });
   await t("T-CLOSED", { registrationDeadline: Timestamp.fromMillis(Date.now() - HOUR) });
   await t("T-DRAWN", { formatRaw: "openDoubles" });
+  await t("T-CC", { sportType: "cricket", formatRaw: "team", title: "Cricket Cup" });
   await db.collection("registrations").doc("R-DRAWN").set({
     tournamentId: "T-DRAWN", playerId: up(P.p7.id), createdAt: Timestamp.now(),
   });
@@ -426,7 +429,10 @@ async function registrationChecks(db: Firestore): Promise<void> {
   await ok("p3 registers singles", register, P.p3.uid, { tournamentId: "T-SINGLES" });
   await expectFail("4th entry, max 3", register, P.p4.uid, { tournamentId: "T-SINGLES" }, "REG_FULL");
   await expectFail("past deadline", register, P.p1.uid, { tournamentId: "T-CLOSED" }, "REG_CLOSED");
-  await expectFail("after draw", register, P.p1.uid, { tournamentId: "T-DRAWN" }, "REG_CLOSED");
+  await expectFail("after draw", register, P.p1.uid, { tournamentId: "T-DRAWN" }, "REG_CLOSED",
+    "Registration closed: the draw has already been made.");
+  await expectFail("join as partner after draw", joinAsPartner, P.p8.uid, { registrationId: "R-DRAWN" }, "DRAW_EXISTS",
+    "Registration closed: the draw has already been made.");
   await expectFail("unknown tournament", register, P.p1.uid, { tournamentId: "NOPE" }, "NOT_FOUND");
   await expectFail("cricket without team", register, P.p1.uid, { tournamentId: "T-CRICKET" }, "SPORT_NOT_ALLOWED");
   await expectFail("team on badminton", register, P.p4.uid, { tournamentId: "T-DOUBLES", team: { teamName: "X", rosterIds: [] } }, "SPORT_NOT_ALLOWED");
@@ -556,6 +562,108 @@ async function registrationChecks(db: Firestore): Promise<void> {
     { tournamentId: "T-CRICKET", team: { teamName: "Royals", rosterIds: [P.p1.id] } });
 }
 
+async function cricketCompleteChecks(db: Firestore): Promise<void> {
+  console.log("\n── Cricket: roster locks, roles, awards ──");
+  const { register, withdraw, updateRoster, setRoles } = regs;
+  const { setTournamentAwards } = awardsFn;
+  const reg = async (id: string) => (await db.collection("registrations").doc(id).get()).data();
+  const lock = async (pid: string) => (await db.collection("teamEntries").doc(`t-cc_${pid.toLowerCase()}`).get()).data();
+  const T = "T-CC";
+
+  const ra = (await ok<{ registrationId: string }>("q1 enters Kings (q1, q2)", register, P.q1.uid,
+    { tournamentId: T, team: { teamName: "Kings", rosterIds: [P.q1.id, P.q2.id] } }))!.registrationId;
+  check("locks for registrant + roster", (await lock(P.q1.id))?.registrationId === ra && (await lock(P.q2.id))?.registrationId === ra);
+  const rb = (await ok<{ registrationId: string }>("q3 enters Royals (q3, q4, guest)", register, P.q3.uid,
+    { tournamentId: T, team: { teamName: "Royals", rosterIds: [P.q3.id, P.q4.id], guestNames: ["Gus"] } }))!.registrationId;
+  const rc = (await ok<{ registrationId: string }>("q6 enters Spare (q6, q5)", register, P.q6.uid,
+    { tournamentId: T, team: { teamName: "Spare", rosterIds: [P.q6.id, P.q5.id] } }))!.registrationId;
+  await ok("Spare withdraws", withdraw, P.q6.uid, { registrationId: rc });
+  check("withdraw frees every lock", !(await lock(P.q6.id)) && !(await lock(P.q5.id)));
+
+  await ok("registrant sets captain q1, vice q2", setRoles, P.q1.uid, { registrationId: ra, captainId: P.q1.id, viceCaptainId: P.q2.id });
+  await ok("vice-captain adds q5", updateRoster, P.q2.uid, { registrationId: ra, rosterIds: [P.q1.id, P.q2.id, P.q5.id], guestNames: [] });
+  check("added player's lock", (await lock(P.q5.id))?.registrationId === ra);
+  await expectFail("remove captain without a new one", updateRoster, P.q2.uid,
+    { registrationId: ra, rosterIds: [P.q2.id, P.q5.id], guestNames: [] }, "INVALID_ARGUMENT", "Pick a new captain before removing the captain.");
+  await expectFail("new captain off the sheet", updateRoster, P.q2.uid,
+    { registrationId: ra, rosterIds: [P.q2.id, P.q5.id], guestNames: [], captainId: P.q1.id }, "INVALID_ARGUMENT");
+  await ok("remove captain q1 with new captain q2", updateRoster, P.q2.uid,
+    { registrationId: ra, rosterIds: [P.q2.id, P.q5.id], guestNames: [], captainId: P.q2.id.toLowerCase() });
+  const da = await reg(ra);
+  check("new captain, vice cleared", da?.captainId === P.q2.id && da?.viceCaptainId === undefined, JSON.stringify(da));
+  check("registrant keeps lock when off the roster", (await lock(P.q1.id))?.registrationId === ra);
+  await ok("drop q5, add q1 back", updateRoster, P.q1.uid, { registrationId: ra, rosterIds: [P.q2.id, P.q1.id], guestNames: [] });
+  check("removed player's lock freed", !(await lock(P.q5.id)));
+
+  await expectFail("awards before finish", setTournamentAwards, P.org.uid, { tournamentId: T, bestBatter: { key: P.q1.id } },
+    "NOT_FINISHED", "Awards can be set once the tournament is finished.");
+
+  // Draw made: one round-robin match.
+  await db.collection("matches").doc("M-CC").set({
+    tournamentId: T, teamAId: ra, teamBId: rb, round: 1, statusRaw: "scheduled", createdAt: Timestamp.now(), sportType: "cricket",
+  });
+  await expectFail("roster locked after draw", updateRoster, P.q2.uid, { registrationId: ra, rosterIds: [P.q2.id], guestNames: [] }, "DRAW_EXISTS");
+  await expectFail("rename locked after draw", updateRoster, P.org.uid,
+    { registrationId: ra, rosterIds: [P.q2.id, P.q1.id], guestNames: [], teamName: "New" }, "DRAW_EXISTS");
+  await ok("roles still change after draw", setRoles, P.q2.uid, { registrationId: ra, captainId: P.q2.id, keeperId: P.q1.id });
+  await expectFail("register after draw", register, P.q5.uid, { tournamentId: T, team: { teamName: "Late", rosterIds: [P.q5.id, P.q6.id] } },
+    "REG_CLOSED", "Registration closed: the draw has already been made.");
+
+  // Finished, with player stats.
+  const stats = {
+    batting: [
+      { teamRegistrationId: ra, key: P.q1.id, name: "Q1", runs: 64, balls: 40, out: true },
+      { teamRegistrationId: rb, key: "guest:Gus", name: "Gus", runs: 20, balls: 20, out: false },
+    ],
+    bowling: [{ teamRegistrationId: rb, key: P.q3.id, name: "Q3", balls: 24, runs: 22, wickets: 2 }],
+  };
+  await db.collection("matches").doc("M-CC").update({
+    statusRaw: "finished", resultType: "win", winnerRegistrationId: ra, playerStatsData: JSON.stringify(stats),
+    playerOfMatchKey: P.q3.id, playerOfMatchName: "Q3", playerOfMatchTeamId: rb,
+  });
+  await expectFail("roles locked once finished", setRoles, P.q2.uid, { registrationId: ra, captainId: P.q2.id }, "FIELDS_LOCKED");
+  await awardsSvc.refreshAutoAwards(db, T);
+  let td = (await db.collection("tournaments").doc(T).get()).data()!;
+  check("auto awards", td.awards?.bestBatter?.key === P.q1.id && td.awards?.bestBatter?.runs === 64 &&
+    td.awards?.bestBowler?.key === P.q3.id && td.awards?.playerOfSeries?.key === P.q3.id &&
+    td.awards?.source?.bestBatter === "auto", JSON.stringify(td.awards));
+  check("POTS = potm 25 + wickets 40 beats 64 runs", td.awards?.playerOfSeries?.teamId === rb);
+  check("auto awardPlayerIds", JSON.stringify(td.awardPlayerIds) === JSON.stringify([P.q3.id, P.q1.id]), JSON.stringify(td.awardPlayerIds));
+  check("winners notified", await notified(db, "uq1", "award_won") && await notified(db, "uq3", "award_won"));
+  const n3 = await db.collection("notifications").where("recipientId", "==", "uq3").where("type", "==", "award_won").get();
+  check("one notification per winner, listing awards", n3.size === 1 &&
+    n3.docs[0].get("body") === "Player of the Series and Best Bowler in \"Cricket Cup\"" &&
+    n3.docs[0].get("title") === "You won an award" && n3.docs[0].get("tournamentId") === T, n3.docs[0]?.get("body"));
+  const updatedAt = td.awards?.updatedAt;
+  await awardsSvc.refreshAutoAwards(db, T);
+  td = (await db.collection("tournaments").doc(T).get()).data()!;
+  check("refresh without changes writes nothing", td.awards?.updatedAt?.isEqual(updatedAt));
+
+  await expectFail("awards: not organizer", setTournamentAwards, P.q1.uid, { tournamentId: T, bestBatter: { key: P.q1.id } }, "NOT_ORGANIZER");
+  await expectFail("awards: not cricket", setTournamentAwards, P.org.uid, { tournamentId: "T-DOUBLES", bestBatter: { key: P.q1.id } }, "SPORT_NOT_ALLOWED");
+  await expectFail("awards: player not on a roster", setTournamentAwards, P.org.uid, { tournamentId: T, bestBatter: { key: P.p1.id } }, "INVALID_ARGUMENT");
+  await expectFail("awards: bad value", setTournamentAwards, P.org.uid, { tournamentId: T, bestBatter: "x" }, "INVALID_ARGUMENT");
+  const set = await ok<{ awards: Record<string, Record<string, unknown>> }>("organizer: guest best batter, clear bowler, q4 POTS",
+    setTournamentAwards, P.org.uid,
+    { tournamentId: T.toLowerCase(), bestBatter: { key: "guest:Gus" }, bestBowler: null, playerOfSeries: { key: P.q4.id.toLowerCase() } });
+  const a = set?.awards;
+  check("override stored + returned", a?.bestBatter?.key === "guest:Gus" && a?.bestBatter?.name === "Gus" && a?.bestBatter?.runs === 20 &&
+    a?.bestBatter?.teamId === rb && a?.bestBowler === undefined && a?.playerOfSeries?.key === P.q4.id &&
+    a?.playerOfSeries?.name === "Q4" && JSON.stringify(a?.source) === JSON.stringify({ playerOfSeries: "organizer", bestBatter: "organizer", bestBowler: "organizer" }) &&
+    typeof a?.updatedAt === "number", JSON.stringify(a));
+  td = (await db.collection("tournaments").doc(T).get()).data()!;
+  check("override awardPlayerIds (no guests)", JSON.stringify(td.awardPlayerIds) === JSON.stringify([P.q4.id]), JSON.stringify(td.awardPlayerIds));
+  check("new organizer pick notified", await notified(db, "uq4", "award_won"));
+  await awardsSvc.refreshAutoAwards(db, T);
+  td = (await db.collection("tournaments").doc(T).get()).data()!;
+  check("auto never overwrites organizer awards", td.awards?.bestBatter?.key === "guest:Gus" && td.awards?.bestBowler === undefined &&
+    td.awards?.playerOfSeries?.key === P.q4.id);
+  const zero = await ok<{ awards: Record<string, Record<string, unknown>> }>("organizer: bowler without figures", setTournamentAwards, P.org.uid,
+    { tournamentId: T, bestBowler: { key: P.q2.id } });
+  check("stats zero when none", zero?.awards?.bestBowler?.wickets === 0 && zero?.awards?.bestBowler?.balls === 0 &&
+    zero?.awards?.bestBatter?.key === "guest:Gus");
+}
+
 async function memberUidChecks(db: Firestore): Promise<void> {
   console.log("\n── memberUids sync ──");
   await db.collection("registrations").doc("R-OLD-A").set({ tournamentId: "T-X", playerId: up(P.p1.id), createdAt: Timestamp.now() });
@@ -677,6 +785,7 @@ async function main(): Promise<void> {
   await courtsChecks(db);
   await profileChecks();
   await registrationChecks(db);
+  await cricketCompleteChecks(db);
   await memberUidChecks(db);
   await accountChecks(db);
   await autoCloseChecks(db);

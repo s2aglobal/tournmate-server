@@ -35,6 +35,7 @@ export interface FormatConfig {
   pointsPerLoss: number;
   tieBreaker: TieBreaker;
   doubleRoundRobin: boolean;
+  /** The organizer's group count; 0 = not set (the automatic count is used). */
   groupCount: number;
   advancingPerGroup: number;
   groupTieBreaker: TieBreaker;
@@ -49,7 +50,7 @@ const TIE_BREAKERS: readonly TieBreaker[] = ["headToHead", "pointDiff", "gamesWo
 function defaultConfig(): FormatConfig {
   return {
     seedingMode: "eloRanked", pointsPerWin: 2, pointsPerDraw: 1, pointsPerLoss: 0,
-    tieBreaker: "headToHead", doubleRoundRobin: false, groupCount: 2, advancingPerGroup: 2,
+    tieBreaker: "headToHead", doubleRoundRobin: false, groupCount: 0, advancingPerGroup: 2,
     groupTieBreaker: "headToHead", tieBreakRulesVersion: 0, swissRounds: 5,
   };
 }

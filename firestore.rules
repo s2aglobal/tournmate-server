@@ -101,6 +101,27 @@ service cloud.firestore {
         .data.registrationId == registrationId;
     }
 
+    // Server-only tournament fields: registrationCount (registration
+    // triggers), autoDraw / deadlineReminderFor (scheduled draw job),
+    // drawMade (draw callables + match trigger), awards / awardPlayerIds
+    // (cricket awards: match trigger + setTournamentAwards).
+    function tournamentServerFields() {
+      return ['registrationCount', 'autoDraw', 'deadlineReminderFor', 'drawMade', 'awards', 'awardPlayerIds'];
+    }
+
+    // Cricket rules (event type, rules JSON, format and points) lock once the
+    // draw is made. Apps resend unchanged values, which pass.
+    function cricketRulesUnchangedAfterDraw() {
+      return resource.data.get('sportType', '') != 'cricket'
+        || resource.data.get('drawMade', false) != true
+        || (unchangedOptional('sportType')
+            && unchangedOptional('eventTypeId')
+            && unchangedOptional('rulesData')
+            && unchangedOptional('formatConfigData')
+            && unchangedOptional('matchFormatRaw')
+            && unchangedOptional('formatRaw'));
+    }
+
     // Cricket tournaments must use the team format.
     function teamFormatForTeamSport() {
       return request.resource.data.get('sportType', '') != 'cricket'
@@ -172,9 +193,7 @@ service cloud.firestore {
         && request.resource.data.date is timestamp
         && hasLiveSportOrNone()
         && teamFormatForTeamSport()
-        // registrationCount is server-maintained (registration triggers);
-        // autoDraw / deadlineReminderFor by the scheduled draw job.
-        && !request.resource.data.keys().hasAny(['registrationCount', 'autoDraw', 'deadlineReminderFor']);
+        && !request.resource.data.keys().hasAny(tournamentServerFields());
 
       // Only the organizer can update, and they cannot change createdBy
       allow update: if isAuthenticated()
@@ -183,6 +202,10 @@ service cloud.firestore {
         && unchangedOptional('registrationCount')
         && unchangedOptional('autoDraw')
         && unchangedOptional('deadlineReminderFor')
+        && unchangedOptional('drawMade')
+        && unchangedOptional('awards')
+        && unchangedOptional('awardPlayerIds')
+        && cricketRulesUnchangedAfterDraw()
         && sportUnchangedOrLive()
         && teamFormatForTeamSport();
 
@@ -201,11 +224,11 @@ service cloud.firestore {
         && !('memberUids' in request.resource.data)
         && teamEntryIfTeamEvent(registrationId);
 
-      // Doubles: pick a partner. Team sports: who plays for this event
-      // (roster, guests), their roles, or the shown team name.
+      // Older apps: pick a doubles partner. Team rosters, roles and names
+      // change only through updateRoster / setRoles (who may edit, and the
+      // draw / finished locks, are checked there).
       allow update: if isAuthenticated()
-        && onlyUpdates(['partnerId', 'rosterIds', 'guestNames', 'teamName',
-                        'captainId', 'viceCaptainId', 'keeperId', 'playerRoles']);
+        && onlyUpdates(['partnerId']);
 
       // Only the registrant can delete their own registration
       allow delete: if isAuthenticated();

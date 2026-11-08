@@ -12,7 +12,12 @@ tools/rules-test/run.sh
 - a gated sport (`liveMinAppVersion`) counts as live for creates;
 - badminton singles and doubles are unaffected;
 - one team entry per person per tournament: a team registration needs its `teamEntries/{tournamentId}_{playerId}` lock (lower case) in the same batch, a second entry (in any id case) is rejected, the lock is freed with the entry, and older entries without a lock can still be withdrawn;
-- roles (`captainId`, `viceCaptainId`, `keeperId`, `playerRoles`) can be changed after entry; the registrant can't.
+- rosters, team names and roles (`captainId`, `viceCaptainId`, `keeperId`, `playerRoles`) are never written directly (only through `updateRoster` / `setRoles`); the registrant can't be changed.
+
+`cricket_complete.py` covers the cricket-complete rules:
+- server-only tournament fields `awards`, `awardPlayerIds`, `drawMade`: never set on create or changed on update (edits that leave them alone still pass);
+- cricket rules (`eventTypeId`, `rulesData`, `formatConfigData`, `matchFormatRaw`, `formatRaw`, `sportType`) lock once `drawMade` is true; resending unchanged values passes; other sports unaffected;
+- registrations: direct roster / name / role edits rejected; older apps' doubles `partnerId` update still allowed.
 
 `phase0.py` (stdlib Python, one PASS/FAIL line per case) covers the Phase 0 server-authority rules, using the write shapes of the older apps (iOS 1.7, Android 1.0) so their legitimate flows are proven to pass:
 - `players.genderRaw` only goes from missing/`preferNotToSay` to `male`/`female`; full-profile writes with an unchanged gender (and the old apps writing back `preferNotToSay` for a missing value) still pass; web profile create/update unaffected;

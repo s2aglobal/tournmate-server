@@ -15,6 +15,8 @@ import {
   PlayingRole,
 } from "../services/teamRoles";
 import { resolveCricketRules } from "../services/cricket";
+import { loadDrawState } from "../services/draw/tournament";
+import { isTournamentFinished } from "../services/tournamentProgress";
 import {
   AGE_GROUP_RULES, AgeGroup, TournamentDoc, TournamentFormat, isAgeEligible, isSinglesFormat, parseSportType,
 } from "../types";
@@ -67,6 +69,22 @@ async function registrationsFor({ db, tx }: Ctx, tournamentId: string): Promise<
 async function drawExists({ db, tx }: Ctx, tournamentId: string): Promise<boolean> {
   return !(await tx.get(db.collection("matches").where("tournamentId", "==", tournamentId).limit(1))).empty;
 }
+
+/** Whether the tournament has finished (services/tournamentProgress.ts). */
+async function tournamentFinished({ db, tx }: Ctx, tournamentId: string): Promise<boolean> {
+  const state = await loadDrawState(db, tournamentId, tx);
+  if (!state) return false;
+  const t = state.tournament;
+  return isTournamentFinished({
+    matchFormat: t.matchFormat,
+    swissRounds: t.config.swissRounds,
+    advancingPerGroup: t.config.advancingPerGroup,
+    formedTeamCount: state.formedTeams.length,
+    matches: state.matches.map((m) => m.doc),
+  });
+}
+
+const DRAW_MADE_REG_CLOSED = "Registration closed: the draw has already been made.";
 
 /** Everyone a registration speaks for (player, partner, roster). */
 function membersOf(reg: DocumentData): string[] {
@@ -234,11 +252,26 @@ function teamEntryLock(db: Firestore, tournamentId: string, playerId: string): D
   return db.collection("teamEntries").doc(`${tournamentId.toLowerCase()}_${playerId.toLowerCase()}`);
 }
 
-/** Captain (by role), whoever entered the team, or the organizer. */
+/** Captain or vice-captain (by role), whoever entered the team, or the organizer. */
 function canManageTeam(reg: DocumentData, t: TournamentDoc, me: PlayerRef, uid: string): boolean {
   if (sameId(reg.playerId, me.id) || isOrganizer(t, uid)) return true;
   const roles = rolesFromFirestore(reg);
-  return roles.captain !== undefined && roles.captain === roleKey(me.id);
+  const mine = roleKey(me.id);
+  return roles.captain === mine || roles.viceCaptain === mine;
+}
+
+/**
+ * One-entry-per-person locks (`teamEntries/{tid}_{pid}`, lower case) are
+ * held by whoever entered the team and by every named roster player, all
+ * pointing at the registration. Locks of other (live) entries never get
+ * here: the roster checks refuse those players first.
+ */
+function lockPlayers(reg: { playerId: string; rosterIds?: string[] }): string[] {
+  const out: string[] = [];
+  for (const id of [reg.playerId, ...(reg.rosterIds ?? [])]) {
+    if (typeof id === "string" && id && !out.some((x) => sameId(x, id))) out.push(id);
+  }
+  return out;
 }
 
 function isTeamEntry(reg: DocumentData): boolean {
@@ -294,8 +327,8 @@ export const register = onCall(CALLABLE_OPTS, async (req) => {
     }
 
     // Checks.
+    if (t.data.statusRaw !== "cancelled" && hasDraw) fail("failed-precondition", "REG_CLOSED", DRAW_MADE_REG_CLOSED);
     requireOpen(t.data);
-    if (hasDraw) fail("failed-precondition", "REG_CLOSED", "Registration is closed: the draw has been made.");
     checkAge(t.data, me);
     if (isCricket(t.data) && !team) {
       fail("failed-precondition", "SPORT_NOT_ALLOWED", "Cricket tournaments take team entries. Register a team.");
@@ -340,6 +373,10 @@ export const register = onCall(CALLABLE_OPTS, async (req) => {
       Object.assign(doc, rolesToFirestore(roles));
       doc.memberUids = uidsOf([me, ...roster]);
       tx.set(lockRef!, { tournamentId: t.id, playerId: me.id, registrationId });
+      for (const p of roster) {
+        if (sameId(p.id, me.id)) continue;
+        tx.set(teamEntryLock(db, t.id, p.id), { tournamentId: t.id, playerId: p.id, registrationId });
+      }
     } else {
       const format = t.data.formatRaw as TournamentFormat;
       if (partner) {
@@ -391,8 +428,14 @@ export const withdraw = onCall(CALLABLE_OPTS, async (req) => {
     const t = await getTournament(ctx, reg.tournamentId);
     const me = await requirePlayer(db, uid, tx);
     const hasDraw = await drawExists(ctx, t.id);
-    const lockRef = isTeamEntry(reg) ? teamEntryLock(db, reg.tournamentId, reg.playerId) : undefined;
-    const lock = lockRef ? await tx.get(lockRef) : undefined;
+    // Team locks (whoever entered + roster), read before any write.
+    const locks = isTeamEntry(reg)
+      ? await Promise.all(lockPlayers(reg as { playerId: string; rosterIds?: string[] }).map(async (id) => {
+        const ref = teamEntryLock(db, reg.tournamentId, id);
+        return { id, ref, snap: await tx.get(ref) };
+      }))
+      : [];
+    const ownsLock = (l: (typeof locks)[number]) => l.snap.exists && sameId(l.snap.get("registrationId"), regSnap.id);
     // Uids of whoever stays, for memberUids (read before writes).
     const stay = async (ids: string[]) => {
       const out: PlayerRef[] = [];
@@ -415,7 +458,7 @@ export const withdraw = onCall(CALLABLE_OPTS, async (req) => {
 
     if (isRegistrant || organizer) {
       tx.delete(regSnap.ref);
-      if (lockRef && lock?.exists && sameId(lock.get("registrationId"), regSnap.id)) tx.delete(lockRef);
+      for (const l of locks) if (ownsLock(l)) tx.delete(l.ref);
       return "deleted" as const;
     }
     if (isPartner) {
@@ -432,6 +475,7 @@ export const withdraw = onCall(CALLABLE_OPTS, async (req) => {
       memberUids: uids,
       ...roleUpdate(roles),
     });
+    for (const l of locks) if (sameId(l.id, me.id) && ownsLock(l)) tx.delete(l.ref);
     return "leftRoster" as const;
   });
   return { result };
@@ -464,8 +508,8 @@ export const joinAsPartner = onCall(CALLABLE_OPTS, async (req) => {
     if (isCricket(t.data) || isTeamEntry(reg) || isSinglesFormat(format)) {
       fail("failed-precondition", "INVALID_ARGUMENT", "This entry doesn't take a partner.");
     }
+    if (t.data.statusRaw !== "cancelled" && hasDraw) fail("failed-precondition", "DRAW_EXISTS", DRAW_MADE_REG_CLOSED);
     requireOpen(t.data);
-    if (hasDraw) fail("failed-precondition", "DRAW_EXISTS", "Partners can't change once the draw has been made.");
     if (sameId(reg.playerId, me.id)) fail("invalid-argument", "INVALID_ARGUMENT", "You can't partner yourself.");
     if (sameId(reg.partnerId, me.id)) return;
     if (typeof reg.partnerId === "string" && reg.partnerId.length > 0) {
@@ -587,8 +631,11 @@ export const changePartner = onCall(CALLABLE_OPTS, async (req) => {
 // ─── updateRoster ───────────────────────────────────────
 
 /**
- * updateRoster({ registrationId, rosterIds, guestNames, teamName? }) -> { registrationId }
- * Registrant, captain or organizer. Roles are re-normalized to the new side.
+ * updateRoster({ registrationId, rosterIds, guestNames, teamName?, captainId? }) -> { registrationId }
+ * Registrant, captain, vice-captain or organizer, until the draw is made
+ * (then DRAW_EXISTS: only roles can change). Removed players lose their
+ * roles; removing the captain needs `captainId` (the new captain, on the new
+ * side). Team entry locks follow the roster.
  */
 export const updateRoster = onCall(CALLABLE_OPTS, async (req) => {
   const uid = requireUid(req);
@@ -598,6 +645,7 @@ export const updateRoster = onCall(CALLABLE_OPTS, async (req) => {
   if (!rosterInput) fail("invalid-argument", "INVALID_ARGUMENT", "Missing rosterIds.");
   const guestNames = cleanGuestNames(optionalStringArray(d, "guestNames", 60));
   const teamName = cleanTeamName(optionalString(d, "teamName", 200));
+  const newCaptainRaw = optionalString(d, "captainId", 100)?.trim() || undefined;
   const db = getFirestore();
 
   await db.runTransaction(async (tx) => {
@@ -607,18 +655,42 @@ export const updateRoster = onCall(CALLABLE_OPTS, async (req) => {
     const t = await getTournament(ctx, reg.tournamentId);
     const me = await requirePlayer(db, uid, tx);
     const regs = await registrationsFor(ctx, t.id);
+    const hasDraw = await drawExists(ctx, t.id);
     const roster = await readRoster(ctx, rosterInput);
     const registrant = await playerById(db, reg.playerId, tx);
+    // Locks of players leaving the roster (read before any write).
+    const oldRoster: string[] = Array.isArray(reg.rosterIds) ? reg.rosterIds : [];
+    const leaving = oldRoster.filter((id) => !sameId(id, reg.playerId) && !roster.some((p) => sameId(p.id, id)));
+    const leavingLocks = await Promise.all(leaving.map(async (id) => {
+      const ref = teamEntryLock(db, reg.tournamentId, id);
+      return { ref, snap: await tx.get(ref) };
+    }));
 
     if (!isTeamEntry(reg)) fail("failed-precondition", "INVALID_ARGUMENT", "Only team entries have a roster.");
     if (!canManageTeam(reg, t.data, me, uid)) {
-      fail("permission-denied", "NOT_PARTICIPANT", "Only the captain, whoever entered the team, or the organizer can change the roster.");
+      fail("permission-denied", "NOT_PARTICIPANT",
+        "Only the captain, vice-captain, whoever entered the team, or the organizer can change the roster.");
+    }
+    if (hasDraw) {
+      fail("failed-precondition", "DRAW_EXISTS", "The team sheet locks once the draw is made. You can still change roles.");
     }
     checkRosterSize(t.data, roster.length + guestNames.length);
     checkRosterFree(regs, roster, regSnap.id);
 
     const rosterIds = roster.map((p) => p.id);
-    const roles = normalizeRoles(rolesFromFirestore(reg), rosterKeys(rosterIds, guestNames), reg.playerId);
+    const keys = rosterKeys(rosterIds, guestNames);
+    const current = rolesFromFirestore(reg);
+    const newCaptain = newCaptainRaw ? roleKey(newCaptainRaw) : undefined;
+    if (newCaptain && !keys.includes(newCaptain)) {
+      fail("invalid-argument", "INVALID_ARGUMENT", "The new captain must be on the team sheet.");
+    }
+    if (keys.length > 0 && current.captain && !keys.includes(current.captain) && !newCaptain) {
+      fail("invalid-argument", "INVALID_ARGUMENT", "Pick a new captain before removing the captain.");
+    }
+    const wanted: TeamRoles = newCaptain
+      ? { ...current, captain: newCaptain, viceCaptain: current.viceCaptain === newCaptain ? undefined : current.viceCaptain }
+      : current;
+    const roles = normalizeRoles(wanted, keys, reg.playerId);
     const update: DocumentData = {
       rosterIds: rosterIds.length > 0 ? rosterIds : FieldValue.delete(),
       guestNames: guestNames.length > 0 ? guestNames : FieldValue.delete(),
@@ -627,6 +699,13 @@ export const updateRoster = onCall(CALLABLE_OPTS, async (req) => {
     };
     if (teamName) update.teamName = teamName;
     tx.update(regSnap.ref, update);
+    for (const l of leavingLocks) {
+      if (l.snap.exists && sameId(l.snap.get("registrationId"), regSnap.id)) tx.delete(l.ref);
+    }
+    for (const p of roster) {
+      if (sameId(p.id, reg.playerId) || oldRoster.some((id) => sameId(id, p.id))) continue;
+      tx.set(teamEntryLock(db, t.id, p.id), { tournamentId: t.id, playerId: p.id, registrationId: regSnap.id });
+    }
   });
   return { registrationId };
 });
@@ -638,6 +717,8 @@ export const updateRoster = onCall(CALLABLE_OPTS, async (req) => {
  *   -> { captainId?, viceCaptainId?, keeperId?, playerRoles? } (as stored)
  * Keys are player ids or `guest:<name>` and must be on the side. The captain
  * can't also be vice-captain; there is always a captain while anyone plays.
+ * Registrant, captain, vice-captain or organizer; also after the draw, until
+ * the tournament has finished (FIELDS_LOCKED).
  */
 export const setRoles = onCall(CALLABLE_OPTS, async (req) => {
   const uid = requireUid(req);
@@ -652,11 +733,14 @@ export const setRoles = onCall(CALLABLE_OPTS, async (req) => {
     const reg = regSnap.data();
     const t = await getTournament(ctx, reg.tournamentId);
     const me = await requirePlayer(db, uid, tx);
+    const finished = await tournamentFinished(ctx, t.id);
 
     if (!isTeamEntry(reg)) fail("failed-precondition", "INVALID_ARGUMENT", "Only team entries have roles.");
     if (!canManageTeam(reg, t.data, me, uid)) {
-      fail("permission-denied", "NOT_PARTICIPANT", "Only the captain, whoever entered the team, or the organizer can set roles.");
+      fail("permission-denied", "NOT_PARTICIPANT",
+        "Only the captain, vice-captain, whoever entered the team, or the organizer can set roles.");
     }
+    if (finished) fail("failed-precondition", "FIELDS_LOCKED", "Roles lock once the tournament is finished.");
     const keys = rosterKeys(
       Array.isArray(reg.rosterIds) ? reg.rosterIds : [],
       Array.isArray(reg.guestNames) ? reg.guestNames : [],

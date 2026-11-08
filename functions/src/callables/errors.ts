@@ -30,6 +30,7 @@ export type FailReason =
   | "DRAW_EXISTS"
   | "DRAW_LOCKED"
   | "TOO_FEW_ENTRIES"
+  | "NOT_FINISHED"
   | "PHOTO_REJECTED"
   | "PHOTO_CHECK_FAILED"
   | "INVALID_ARGUMENT";

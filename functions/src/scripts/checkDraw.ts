@@ -6,15 +6,18 @@
  * `Tools/DrawTests/parity-fixture.txt`; Android's DrawParityTest uses the
  * same file). Covers round robin, knockout brackets and advancement, Group +
  * Knockout groups / cricket tables / qualification, Swiss rounds, random
- * seeding, cricket outcomes and player-stat rates.
+ * seeding, cricket outcomes and player-stat rates, plus the organizer's
+ * group count (GC lines) and tournament awards (AWARDS lines).
  *
  * Usage (from tournmate-server/functions):
  *   npm run check:draw   # exits non-zero on any difference
  *
- * After an intended draw change on iOS, copy the new iOS fixture here.
+ * After an intended draw change on iOS, copy the new iOS fixture here
+ * (or `UPDATE_PARITY=1 node lib/scripts/checkDraw.js` to rewrite it from the
+ * server, then copy it to iOS and Android).
  */
 
-import { readFileSync } from "fs";
+import { readFileSync, writeFileSync } from "fs";
 import { join } from "path";
 import {
   CRICKET_EVENT_TYPES,
@@ -55,6 +58,8 @@ import {
   seededByRating,
 } from "../services/draw/pairing";
 import { StandingsEntry, StandingsResult, entryNetRunRate, newEntry, ranked, tally } from "../services/draw/standings";
+import { PotmAward, playerOfSeriesRanking, seriesAwards } from "../services/cricketAwards";
+import { effectiveGroupCount } from "../services/draw/pairing";
 
 // ─── Deterministic RNG (same constants/ops as iOS/Android Lcg) ───
 
@@ -319,6 +324,57 @@ for (let n = 2; n <= 12; n++) {
     .join(" | "));
 }
 
+{
+  // Organizer's group count: used when 2…26 and every group is bigger than
+  // the advancing count, else the automatic count.
+  for (const n of [4, 5, 7, 8, 9, 12, 16, 17, 24, 33]) {
+    for (const adv of [1, 2, 3]) {
+      dump.push(`GC n=${n} adv=${adv}: ` + [0, 1, 2, 3, 4, 5, 8, 27].map((g) => `${g}>${effectiveGroupCount(n, g, adv)}`).join(" "));
+    }
+  }
+}
+
+{
+  // Tournament awards (services/cricketAwards.ts): Player of the Series =
+  // potm × 25 + runs + wickets × 20; ties: potm, runs, name, team, key.
+  const A = "regA";
+  const B = "regB";
+  const bat = (t: string, k: string, r: number, b: number, out = true) =>
+    ({ teamRegistrationId: t, key: k, name: k, runs: r, balls: b, out });
+  const bowl = (t: string, k: string, b: number, r: number, w: number) =>
+    ({ teamRegistrationId: t, key: k, name: k, balls: b, runs: r, wickets: w });
+  const potm = (t: string, k: string): PotmAward => ({ teamId: t, key: k, name: k });
+  const cases: Array<[string, PlayerStats[], PotmAward[]]> = [
+    ["empty", [], []],
+    ["potm only", [], [potm(A, "P1"), potm(B, "Q1"), potm(B, "Q1")]],
+    ["formula", [
+      { batting: [bat(A, "P1", 90, 60), bat(B, "Q1", 40, 30)], bowling: [bowl(B, "Q1", 24, 30, 2), bowl(A, "P2", 24, 20, 4)] },
+      { batting: [bat(A, "P1", 10, 12), bat(B, "q1", 25, 20, false)], bowling: [bowl(A, "P2", 18, 25, 1)] },
+    ], [potm(A, "P1"), potm(A, "P2")]],
+    ["tie potm", [
+      { batting: [bat(A, "P1", 45, 30), bat(B, "Q1", 20, 30)], bowling: [bowl(B, "Q1", 24, 30, 0)] },
+    ], [potm(B, "Q1")]],
+    ["tie runs", [
+      { batting: [bat(A, "P1", 60, 40), bat(B, "Q1", 40, 20)], bowling: [bowl(B, "Q1", 24, 30, 1)] },
+    ], []],
+    ["tie name", [
+      { batting: [bat(B, "Zed", 50, 40), bat(A, "Amy", 50, 40), bat(B, "guest:Amy", 50, 40)], bowling: [] },
+    ], []],
+    ["guests", [
+      { batting: [bat(A, "guest:Ravi", 77, 50, false)], bowling: [bowl(B, "guest:Sam", 24, 18, 3), bowl(B, "Q2", 24, 18, 3)] },
+    ], [potm(A, "guest:Ravi")]],
+  ];
+  for (const [name, stats, picks] of cases) {
+    const a = seriesAwards(stats, picks);
+    const ranking = playerOfSeriesRanking(stats, picks).slice(0, 3)
+      .map((e) => `${e.key}@${e.teamId}=${e.score}(${e.potm}/${e.runs}/${e.wickets})`).join(" ");
+    dump.push(`AWARDS ${name}: pots=${a.playerOfSeries ? `${a.playerOfSeries.key}@${a.playerOfSeries.teamId}` : "-"} ` +
+      `batter=${a.bestBatter ? `${a.bestBatter.key}@${a.bestBatter.teamRegistrationId} ${a.bestBatter.runs}` : "-"} ` +
+      `bowler=${a.bestBowler ? `${a.bestBowler.key}@${a.bestBowler.teamRegistrationId} ${a.bestBowler.wickets}` : "-"} ` +
+      `ranking=[${ranking}]`);
+  }
+}
+
 // ─── Compare ───
 
 let failures = 0;
@@ -329,6 +385,11 @@ if (fnv1a64("a") !== 0xaf63dc4c8601ec8cn) fail("fnv1a64 'a'");
 const fixturePath = join(__dirname, "..", "..", "test-fixtures", "draw-parity-fixture.txt");
 const expected = readFileSync(fixturePath, "utf8");
 const actual = dump.map((l) => l + "\n").join("");
+if (process.env.UPDATE_PARITY === "1") {
+  writeFileSync(join(__dirname, "..", "..", "test-fixtures", "draw-parity-fixture.txt"), actual);
+  console.log("Wrote draw-parity-fixture.txt");
+  process.exit(0);
+}
 if (actual !== expected) {
   const e = expected.split("\n");
   const a = actual.split("\n");

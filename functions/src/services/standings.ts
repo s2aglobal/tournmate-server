@@ -349,6 +349,35 @@ export function tally(
   }
 }
 
+/**
+ * Swiss byes: in every round that has been drawn, each team in the table
+ * that has no match in that round sat out and is credited a win (played +1,
+ * won +1, a win's points; no score, sets or run rate). Not a result, so
+ * head-to-head ignores it. Same on iOS and Android.
+ */
+export function addSwissByes(
+  entries: Map<string, StandingsEntry>,
+  matches: Array<Pick<MatchDoc, "teamAId" | "teamBId" | "round">>,
+  points: StandingsPoints,
+): void {
+  const playing = new Map<number, Set<string>>();
+  for (const m of matches) {
+    if (typeof m.round !== "number") continue;
+    const set = playing.get(m.round) ?? new Set<string>();
+    set.add(String(m.teamAId).toUpperCase());
+    set.add(String(m.teamBId).toUpperCase());
+    playing.set(m.round, set);
+  }
+  for (const set of playing.values()) {
+    for (const [id, e] of entries) {
+      if (set.has(id.toUpperCase())) continue;
+      e.played += 1;
+      e.wins += 1;
+      e.points += points.win;
+    }
+  }
+}
+
 /** Swift `localizedCaseInsensitiveCompare`. */
 function compareNames(a: string, b: string): number {
   return a.localeCompare(b, undefined, { sensitivity: "accent" });
@@ -557,6 +586,7 @@ export function computeStandings(
     const entries = new Map(formed.map((r) => [r.id, newEntry(r.id, registrationDisplayName(r))]));
     const results = finished.map(standingsResult);
     tally(results, entries, points, cricketRules);
+    if (format === "swiss") addSwissByes(entries, matches, points);
     const tieBreaker = format === "roundRobin" ? effectiveTieBreaker(config) : LEGACY_TIE_BREAKER;
     groups.push({ name: "", rows: toRows(ranked([...entries.values()], results, sport, tieBreaker, points), team) });
   }

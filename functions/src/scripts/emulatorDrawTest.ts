@@ -88,6 +88,19 @@ async function matchesOf(dbx: Firestore, tid: string) {
   return snap.docs.map((d) => ({ id: d.id, ...d.data() } as Record<string, unknown> & { id: string }));
 }
 
+/** Polls until `fn` is truthy (triggers run asynchronously), up to `ms`. */
+async function waitFor<T>(fn: () => Promise<T>, ms = 15_000): Promise<T> {
+  const end = Date.now() + ms;
+  let v = await fn();
+  while (!v && Date.now() < end) {
+    await new Promise((r) => setTimeout(r, 300));
+    v = await fn();
+  }
+  return v;
+}
+
+const tournamentDoc = async (tid: string) => (await db.collection("tournaments").doc(tid).get()).data() ?? {};
+
 async function main(): Promise<void> {
   // ── Singles knockout, 6 players: 2 byes, 2 first-round matches ──
   const players: string[] = [];
@@ -114,6 +127,7 @@ async function main(): Promise<void> {
   // Seeds by rating: P5 P4 have byes; P3 v P0, P2 v P1.
   check("seeding", m0.teamAId === regs[3] && m0.teamBId === regs[0], `${m0.teamAId} v ${m0.teamBId}`);
   check("second generate refused", (await call("generateDraw", ORGANIZER, { tournamentId: ko })).error?.details?.reason === "DRAW_EXISTS");
+  check("drawMade set by generateDraw", (await tournamentDoc(ko)).drawMade === true);
   check("advance before results refused", (await call("advanceRound", ORGANIZER, { tournamentId: ko })).error?.status === "FAILED_PRECONDITION");
 
   // Finish round 1 (team A wins), then advance: byes first → P5 v P2-winner, P4 v P3.
@@ -137,6 +151,7 @@ async function main(): Promise<void> {
   check("advance RR refused", (await call("advanceRound", ORGANIZER, { tournamentId: rr })).error?.details?.reason === "INVALID_ARGUMENT");
   const reset = await call("resetDraw", ORGANIZER, { tournamentId: rr });
   check("resetDraw ok", reset.result?.status === "reset" && (await matchesOf(db, rr)).length === 0, JSON.stringify(reset));
+  check("drawMade cleared by resetDraw", (await waitFor(async () => (await tournamentDoc(rr)).drawMade === false)) === true);
 
   // ── Group + Knockout: groups, then the knockout ──
   const gk = await seedTournament({ matchFormatRaw: "groupKnockout", formatConfigData: JSON.stringify({ advancingPerGroup: 1 }) });
@@ -153,6 +168,16 @@ async function main(): Promise<void> {
   ms = (await matchesOf(db, gk)).filter((m) => m.groupLabel === undefined);
   check("GK knockout final", gkAdv.result?.status === "advanced" && ms.length === 1 && ms[0].round === 1 && ms[0].bracketPosition === 0, JSON.stringify(gkAdv));
 
+  // ── Group + Knockout: the organizer's group count (9 teams, 1 advancing) ──
+  for (let i = players.length; i < 9; i++) players.push(await seedPlayer(`P${i}`, "male", 1000 + i * 50));
+  for (const [groupCount, expected] of [[3, 3], [4, 4], [5, 2]] as const) {
+    const g = await seedTournament({ matchFormatRaw: "groupKnockout", formatConfigData: JSON.stringify({ advancingPerGroup: 1, groupCount }) });
+    for (let i = 0; i < 9; i++) await register(g, players[i], 9_000_000 + i);
+    const r = await call("generateDraw", ORGANIZER, { tournamentId: g });
+    const labels = new Set((await matchesOf(db, g)).map((m) => m.groupLabel));
+    check(`GK groupCount ${groupCount} → ${expected} groups`, labels.size === expected, `${JSON.stringify(r.result)} ${[...labels]}`);
+  }
+
   // ── Swiss: round 1 then round 2 ──
   const sw = await seedTournament({ matchFormatRaw: "swiss", formatConfigData: JSON.stringify({ swissRounds: 2 }) });
   for (let i = 0; i < 5; i++) await register(sw, players[i], 4_000_000 + i);
@@ -165,6 +190,48 @@ async function main(): Promise<void> {
     await db.collection("matches").doc(m.id).update({ statusRaw: "finished", scoreA: 1, scoreB: 0 });
   }
   check("Swiss max rounds", (await call("advanceRound", ORGANIZER, { tournamentId: sw })).error?.message === "All 2 Swiss rounds have been completed.");
+  // 5 teams, 2 rounds: every team either played or had the bye in each round (a bye is a win).
+  const swRows = await waitFor(async () => {
+    const rows = (await db.collection("standings").doc(sw).get()).data()?.groups?.[0]?.rows as Array<Record<string, number>> | undefined;
+    return rows && rows.length === 5 && rows.every((r) => r.played === 2) ? rows : null;
+  });
+  check("Swiss standings: byes counted as wins", !!swRows && swRows.reduce((n, r) => n + r.won, 0) === 4 + 2,
+    JSON.stringify(swRows?.map((r) => `${r.played}/${r.won}/${r.points}`)));
+
+  // ── Cricket awards (match trigger once the tournament finishes) ──
+  const ct = await seedTournament({ sportType: "cricket", formatRaw: "team", matchFormatRaw: "roundRobin", title: "Award Cup" });
+  const teamReg = async (name: string, roster: string[], at: number) => {
+    const rid = id();
+    await db.collection("registrations").doc(rid).set({ tournamentId: ct, playerId: roster[0], teamName: name, rosterIds: roster, createdAt: Timestamp.fromMillis(at) });
+    return rid;
+  };
+  const ta = await teamReg("Kings", [players[0], players[1]], 10_000_000);
+  const tb = await teamReg("Royals", [players[2], players[3]], 10_000_001);
+  const cg = await call("generateDraw", ORGANIZER, { tournamentId: ct });
+  check("cricket RR drawn", cg.result?.matchesCreated === 1, JSON.stringify(cg));
+  const cm = (await matchesOf(db, ct))[0];
+  const stats = {
+    batting: [
+      { teamRegistrationId: ta, key: players[0], name: "P0", runs: 70, balls: 40, out: false },
+      { teamRegistrationId: tb, key: players[2], name: "P2", runs: 30, balls: 25, out: true },
+    ],
+    bowling: [{ teamRegistrationId: tb, key: players[3], name: "P3", balls: 24, runs: 20, wickets: 3 }],
+  };
+  await db.collection("matches").doc(cm.id).update({
+    statusRaw: "finished", resultType: "win", winnerRegistrationId: cm.teamAId,
+    playerOfMatchKey: players[3], playerOfMatchName: "P3", playerOfMatchTeamId: tb,
+    playerStatsData: JSON.stringify(stats),
+  });
+  const ad = await waitFor(async () => { const t = await tournamentDoc(ct); return t.awards ? t : null; });
+  const aw = ad?.awards;
+  check("awards: auto computed", aw?.bestBatter?.key === players[0] && aw?.bestBatter?.runs === 70 &&
+    aw?.bestBowler?.key === players[3] && aw?.bestBowler?.wickets === 3 &&
+    aw?.playerOfSeries?.key === players[3] && aw?.source?.playerOfSeries === "auto" && aw?.computedAt instanceof Timestamp,
+    JSON.stringify(aw));
+  check("awards: awardPlayerIds", JSON.stringify([...(ad?.awardPlayerIds ?? [])].sort()) === JSON.stringify([players[3], players[0]].sort()),
+    JSON.stringify(ad?.awardPlayerIds));
+  const won = await waitFor(async () => !(await db.collection("notifications").where("type", "==", "award_won").get()).empty);
+  check("awards: winners notified", won === true);
 
   // ── Random pairing (mixed doubles): 3 men + 2 women → 2 pairs, 1 left ──
   const mx = await seedTournament({ formatRaw: "mixedDoubles", randomPairing: true });
