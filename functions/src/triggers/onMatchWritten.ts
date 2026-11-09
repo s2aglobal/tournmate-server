@@ -22,6 +22,9 @@ import { tournamentIdVariants } from "../services/draw/tournament";
 export const onMatchWritten = onDocumentWritten("matches/{matchId}", async (event) => {
   const before = event.data?.before.data() as MatchDoc | undefined;
   const after = event.data?.after.data() as MatchDoc | undefined;
+  // Cricket live scoring writes `live` on every ball (and `lineups`); those
+  // don't change standings, the draw or awards.
+  if (before && after && onlyLiveChanged(before, after)) return;
   const ids = new Set([before?.tournamentId, after?.tournamentId].filter((id): id is string => !!id));
   const db = getFirestore();
   for (const tournamentId of ids) {
@@ -43,6 +46,16 @@ export const onMatchWritten = onDocumentWritten("matches/{matchId}", async (even
     }
   }
 });
+
+/** True when nothing but the live-scoring fields (`live`, `lineups`) differs. */
+export function onlyLiveChanged(before: MatchDoc, after: MatchDoc): boolean {
+  const strip = (m: MatchDoc) => {
+    const { live: _l, lineups: _u, ...rest } = m;
+    void _l; void _u;
+    return JSON.stringify(Object.keys(rest).sort().map((k) => [k, (rest as Record<string, unknown>)[k]]));
+  };
+  return strip(before) === strip(after);
+}
 
 /** Player names by id; ids are tried as stored, then upper and lower case. */
 async function playerNames(db: Firestore, ids: string[]): Promise<Map<string, string>> {

@@ -417,6 +417,17 @@ check("code: retired hurt", ballCode({ runs: 0, wicket: { type: "retiredHurt", b
   check("ceil(10/5)=2 overs per bowler", msg === "That bowler has no overs left.", msg);
 }
 
+{
+  // Per-ball writes of `live` skip the standings rebuild (triggers/onMatchWritten.ts).
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { onlyLiveChanged } = require("../triggers/onMatchWritten") as typeof import("../triggers/onMatchWritten");
+  const base = { tournamentId: "T", teamAId: "A", teamBId: "B", statusRaw: "scheduled" } as never;
+  check("trigger: live-only write skipped", onlyLiveChanged({ ...(base as object), live: { seq: 1 } } as never,
+    { ...(base as object), live: { seq: 2 }, lineups: {} } as never));
+  check("trigger: score write rebuilds", !onlyLiveChanged({ ...(base as object), live: { seq: 1 } } as never,
+    { ...(base as object), statusRaw: "finished", live: { seq: 1 } } as never));
+}
+
 // ─── Fixture ────────────────────────────────────────────
 
 const fixturePath = join(__dirname, "..", "..", "test-fixtures", "cricket-live-fixture.txt");

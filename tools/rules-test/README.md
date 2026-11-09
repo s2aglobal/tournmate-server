@@ -19,6 +19,8 @@ tools/rules-test/run.sh
 - cricket rules (`eventTypeId`, `rulesData`, `formatConfigData`, `matchFormatRaw`, `formatRaw`, `sportType`) lock once `drawMade` is true; resending unchanged values passes; other sports unaffected;
 - registrations: direct roster / name / role edits rejected; older apps' doubles `partnerId` update allowed until the draw is made; direct registration creates (all sports) rejected once `drawMade` is true.
 
+`cricket_live.py` covers cricket live scoring: `matches.live` / `matches.lineups` are never client-written (create or update); `matches/{id}/balls/*` and `matches/{id}/cricketLive/*` are readable by anyone and never client-written; while `live.status` isn't `finished` no client may update the match (older apps can't enter a score mid-live), after it they confirm as usual. The callables are checked by `npm run test:emulator-cricket-live` and the reducer by `npm run check:cricket-live` in `functions/`.
+
 `phase0.py` (stdlib Python, one PASS/FAIL line per case) covers the Phase 0 server-authority rules, using the write shapes of the older apps (iOS 1.7, Android 1.0) so their legitimate flows are proven to pass:
 - `players.genderRaw` only goes from missing/`preferNotToSay` to `male`/`female`; full-profile writes with an unchanged gender (and the old apps writing back `preferNotToSay` for a missing value) still pass; web profile create/update unaffected;
 - matches: only the organizer creates (incl. 40-match batches) and deletes; participants still submit/confirm scores; `eloApplied` is never client-written;

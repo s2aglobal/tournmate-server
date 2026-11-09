@@ -314,9 +314,10 @@ service cloud.firestore {
       // Only the tournament organizer creates matches (bracket generation).
       // eloApplied (Elo is applied once, by the server), teamAUids /
       // teamBUids (participants' auth uids) and disputeReason are server-only.
+      // live / lineups (cricket live scoring) are server-only too.
       allow create: if isAuthenticated()
         && isNonEmptyString(request.resource.data.tournamentId)
-        && !request.resource.data.keys().hasAny(['eloApplied', 'teamAUids', 'teamBUids', 'disputeReason'])
+        && !request.resource.data.keys().hasAny(['eloApplied', 'teamAUids', 'teamBUids', 'disputeReason', 'live', 'lineups'])
         && isOrganizerOf(request.resource.data.tournamentId);
 
       // Authenticated users can update scores/status
@@ -332,11 +333,31 @@ service cloud.firestore {
         && unchangedOptional('eloApplied')
         && unchangedOptional('teamAUids')
         && unchangedOptional('teamBUids')
-        && unchangedOptional('disputeReason');
+        && unchangedOptional('disputeReason')
+        && unchangedOptional('live')
+        && unchangedOptional('lineups')
+        // While a match is scored live only the server writes it (older apps
+        // can't enter or change a score until the live scorer finishes).
+        && !isScoredLive();
 
       // Only the organizer deletes matches (reset bracket)
       allow delete: if isAuthenticated()
         && isOrganizerOf(resource.data.tournamentId);
+
+      // Cricket live scoring: ball history and the event log, server-written only.
+      match /balls/{ballId} {
+        allow read: if true;
+        allow write: if false;
+      }
+      match /cricketLive/{docId} {
+        allow read: if true;
+        allow write: if false;
+      }
+    }
+
+    function isScoredLive() {
+      return resource.data.get('live', null) != null
+        && resource.data.live.get('status', 'finished') != 'finished';
     }
 
     // ─── Standings ──────────────────────────────────────
