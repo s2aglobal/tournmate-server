@@ -170,12 +170,20 @@ async function main(): Promise<void> {
 
   // ── Group + Knockout: the organizer's group count (9 teams, 1 advancing) ──
   for (let i = players.length; i < 9; i++) players.push(await seedPlayer(`P${i}`, "male", 1000 + i * 50));
-  for (const [groupCount, expected] of [[3, 3], [4, 4], [5, 2]] as const) {
-    const g = await seedTournament({ matchFormatRaw: "groupKnockout", formatConfigData: JSON.stringify({ advancingPerGroup: 1, groupCount }) });
+  // Honoured only with groupCountChosen == true (else the automatic count, 2 here).
+  const gcCases: Array<[number, number, boolean | undefined, number]> = [
+    [3, 1, true, 3], [4, 1, true, 4], [5, 1, true, 2], [3, 1, false, 2], [4, 1, undefined, 2], [3, 0, true, 2],
+  ];
+  for (const [groupCount, advancingPerGroup, chosen, expected] of gcCases) {
+    const g = await seedTournament({
+      matchFormatRaw: "groupKnockout", formatConfigData: JSON.stringify({ advancingPerGroup, groupCount }),
+      ...(chosen === undefined ? {} : { groupCountChosen: chosen }),
+    });
     for (let i = 0; i < 9; i++) await register(g, players[i], 9_000_000 + i);
     const r = await call("generateDraw", ORGANIZER, { tournamentId: g });
     const labels = new Set((await matchesOf(db, g)).map((m) => m.groupLabel));
-    check(`GK groupCount ${groupCount} → ${expected} groups`, labels.size === expected, `${JSON.stringify(r.result)} ${[...labels]}`);
+    check(`GK groupCount ${groupCount} adv ${advancingPerGroup} chosen=${chosen} → ${expected} groups`, labels.size === expected,
+      `${JSON.stringify(r.result)} ${[...labels]}`);
   }
 
   // ── Swiss: round 1 then round 2 ──

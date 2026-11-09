@@ -16,7 +16,7 @@ import {
 } from "../services/teamRoles";
 import { resolveCricketRules } from "../services/cricket";
 import { loadDrawState } from "../services/draw/tournament";
-import { isTournamentFinished } from "../services/tournamentProgress";
+import { finishIsFinal, isTournamentFinished } from "../services/tournamentProgress";
 import {
   AGE_GROUP_RULES, AgeGroup, TournamentDoc, TournamentFormat, isAgeEligible, isSinglesFormat, parseSportType,
 } from "../types";
@@ -70,11 +70,15 @@ async function drawExists({ db, tx }: Ctx, tournamentId: string): Promise<boolea
   return !(await tx.get(db.collection("matches").where("tournamentId", "==", tournamentId).limit(1))).empty;
 }
 
-/** Whether the tournament has finished (services/tournamentProgress.ts). */
+/**
+ * Whether the tournament has finished for good (services/tournamentProgress.ts).
+ * A Manual Draw never is: the organizer can add matches at any time.
+ */
 async function tournamentFinished({ db, tx }: Ctx, tournamentId: string): Promise<boolean> {
   const state = await loadDrawState(db, tournamentId, tx);
   if (!state) return false;
   const t = state.tournament;
+  if (!finishIsFinal(t.matchFormat)) return false;
   return isTournamentFinished({
     matchFormat: t.matchFormat,
     swissRounds: t.config.swissRounds,
@@ -229,6 +233,19 @@ function rolesFromInput(d: Data): TeamRoles {
   return { captain: key("captainId"), viceCaptain: key("viceCaptainId"), keeper: key("keeperId"), playing };
 }
 
+/** setRoles / updateRoster role checks against the side's keys (`rosterKeys`). */
+function checkRolesInput(input: TeamRoles, keys: string[]): void {
+  const inSide = new Set(keys);
+  const notOnSide = (k?: string) => k !== undefined && !inSide.has(k);
+  if (keys.length > 0 && !input.captain) fail("invalid-argument", "INVALID_ARGUMENT", "Pick a captain.");
+  if ([input.captain, input.viceCaptain, input.keeper, ...Object.keys(input.playing)].some(notOnSide)) {
+    fail("invalid-argument", "INVALID_ARGUMENT", "Roles can only go to players on the team sheet.");
+  }
+  if (input.viceCaptain && input.viceCaptain === input.captain) {
+    fail("invalid-argument", "INVALID_ARGUMENT", "The captain can't also be vice-captain.");
+  }
+}
+
 /** Role fields to write; roles that were set before and are now empty are deleted. */
 function roleUpdate(roles: TeamRoles): DocumentData {
   const fields = rolesToFirestore(roles);
@@ -320,7 +337,11 @@ export const register = onCall(CALLABLE_OPTS, async (req) => {
         teamDoc = ts.data();
       }
       lockRef = teamEntryLock(db, t.id, me.id);
-      lockTaken = (await tx.get(lockRef)).exists;
+      // A lock left behind by a deleted registration doesn't count.
+      const lock = await tx.get(lockRef);
+      const heldBy = lock.exists ? lock.get("registrationId") : undefined;
+      lockTaken = lock.exists && (typeof heldBy !== "string" || !heldBy ||
+        (await tx.get(db.collection("registrations").doc(heldBy))).exists);
     } else if (partnerIdRaw) {
       partner = await playerById(db, partnerIdRaw, tx);
       if (!partner) fail("not-found", "NOT_FOUND", "That partner no longer exists.");
@@ -631,11 +652,17 @@ export const changePartner = onCall(CALLABLE_OPTS, async (req) => {
 // ─── updateRoster ───────────────────────────────────────
 
 /**
- * updateRoster({ registrationId, rosterIds, guestNames, teamName?, captainId? }) -> { registrationId }
- * Registrant, captain, vice-captain or organizer, until the draw is made
- * (then DRAW_EXISTS: only roles can change). Removed players lose their
- * roles; removing the captain needs `captainId` (the new captain, on the new
- * side). Team entry locks follow the roster.
+ * updateRoster({ registrationId, rosterIds, guestNames, teamName?, captainId?, viceCaptainId?,
+ *   keeperId?, playerRoles? }) -> { registrationId }
+ * Registrant, captain, vice-captain or organizer (by the roles stored before
+ * the call), until the draw is made (then DRAW_EXISTS: only roles can change,
+ * through setRoles). Roster, name and roles are saved together:
+ * - with any role field, the roles are exactly the ones given, validated
+ *   like setRoles against the new side (a captain while anyone plays, every
+ *   role holder on the side, captain ≠ vice-captain);
+ * - without role fields (older apps), the stored roles follow the new side:
+ *   removed players lose their roles, and removing the captain is refused.
+ * Team entry locks follow the roster.
  */
 export const updateRoster = onCall(CALLABLE_OPTS, async (req) => {
   const uid = requireUid(req);
@@ -645,7 +672,8 @@ export const updateRoster = onCall(CALLABLE_OPTS, async (req) => {
   if (!rosterInput) fail("invalid-argument", "INVALID_ARGUMENT", "Missing rosterIds.");
   const guestNames = cleanGuestNames(optionalStringArray(d, "guestNames", 60));
   const teamName = cleanTeamName(optionalString(d, "teamName", 200));
-  const newCaptainRaw = optionalString(d, "captainId", 100)?.trim() || undefined;
+  const withRoles = ["captainId", "viceCaptainId", "keeperId", "playerRoles"].some((k) => d[k] !== undefined);
+  const input = withRoles ? rolesFromInput(d) : undefined;
   const db = getFirestore();
 
   await db.runTransaction(async (tx) => {
@@ -679,17 +707,16 @@ export const updateRoster = onCall(CALLABLE_OPTS, async (req) => {
 
     const rosterIds = roster.map((p) => p.id);
     const keys = rosterKeys(rosterIds, guestNames);
-    const current = rolesFromFirestore(reg);
-    const newCaptain = newCaptainRaw ? roleKey(newCaptainRaw) : undefined;
-    if (newCaptain && !keys.includes(newCaptain)) {
-      fail("invalid-argument", "INVALID_ARGUMENT", "The new captain must be on the team sheet.");
+    let wanted: TeamRoles;
+    if (input) {
+      checkRolesInput(input, keys);
+      wanted = input;
+    } else {
+      wanted = rolesFromFirestore(reg);
+      if (keys.length > 0 && wanted.captain && !keys.includes(wanted.captain)) {
+        fail("invalid-argument", "INVALID_ARGUMENT", "Pick a new captain before removing the captain.");
+      }
     }
-    if (keys.length > 0 && current.captain && !keys.includes(current.captain) && !newCaptain) {
-      fail("invalid-argument", "INVALID_ARGUMENT", "Pick a new captain before removing the captain.");
-    }
-    const wanted: TeamRoles = newCaptain
-      ? { ...current, captain: newCaptain, viceCaptain: current.viceCaptain === newCaptain ? undefined : current.viceCaptain }
-      : current;
     const roles = normalizeRoles(wanted, keys, reg.playerId);
     const update: DocumentData = {
       rosterIds: rosterIds.length > 0 ? rosterIds : FieldValue.delete(),
@@ -745,15 +772,7 @@ export const setRoles = onCall(CALLABLE_OPTS, async (req) => {
       Array.isArray(reg.rosterIds) ? reg.rosterIds : [],
       Array.isArray(reg.guestNames) ? reg.guestNames : [],
     );
-    const inSide = new Set(keys);
-    const notOnSide = (k?: string) => k !== undefined && !inSide.has(k);
-    if (keys.length > 0 && !input.captain) fail("invalid-argument", "INVALID_ARGUMENT", "Pick a captain.");
-    if ([input.captain, input.viceCaptain, input.keeper, ...Object.keys(input.playing)].some(notOnSide)) {
-      fail("invalid-argument", "INVALID_ARGUMENT", "Roles can only go to players on the team sheet.");
-    }
-    if (input.viceCaptain && input.viceCaptain === input.captain) {
-      fail("invalid-argument", "INVALID_ARGUMENT", "The captain can't also be vice-captain.");
-    }
+    checkRolesInput(input, keys);
     const roles = normalizeRoles(input, keys, reg.playerId);
     tx.update(regSnap.ref, roleUpdate(roles));
     return rolesToFirestore(roles);

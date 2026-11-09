@@ -325,11 +325,15 @@ for (let n = 2; n <= 12; n++) {
 }
 
 {
-  // Organizer's group count: used when 2…26 and every group is bigger than
-  // the advancing count, else the automatic count.
-  for (const n of [4, 5, 7, 8, 9, 12, 16, 17, 24, 33]) {
-    for (const adv of [1, 2, 3]) {
-      dump.push(`GC n=${n} adv=${adv}: ` + [0, 1, 2, 3, 4, 5, 8, 27].map((g) => `${g}>${effectiveGroupCount(n, g, adv)}`).join(" "));
+  // Organizer's group count: used only when explicitly chosen
+  // (groupCountChosen), 2…26, advancing ≥ 1 and every group bigger than the
+  // advancing count; else the automatic count.
+  for (const chosen of [true, false]) {
+    for (const n of [4, 5, 7, 8, 9, 12, 16, 17, 24, 33]) {
+      for (const adv of [0, 1, 2, 3]) {
+        dump.push(`GC chosen=${chosen} n=${n} adv=${adv}: ` +
+          [0, 1, 2, 3, 4, 5, 8, 27].map((g) => `${g}>${effectiveGroupCount(n, g, adv, chosen)}`).join(" "));
+      }
     }
   }
 }

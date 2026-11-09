@@ -4,7 +4,8 @@
  * decode anything else), so like the apps (iOS
  * `TournamentDetailViewModel.isTournamentActuallyComplete`) it is derived
  * from the matches:
- * - Round Robin, Manual Draw: every match finished;
+ * - Round Robin, Manual Draw: every match finished (for a Manual Draw only
+ *   provisional: the organizer may still add matches, see `finishIsFinal`);
  * - Single / Double Elimination: the last bracket round
  *   (⌈log2(formed teams)⌉) is finished;
  * - Group + Knockout: knockout matches exist and their last round
@@ -38,6 +39,16 @@ function lastRoundDone(matches: MatchDoc[], needRounds: number): boolean {
   if (last < needRounds) return false;
   const inLast = matches.filter((m) => (typeof m.round === "number" ? m.round : 0) === last);
   return inLast.length > 0 && inLast.every(finished);
+}
+
+/**
+ * Whether "finished" is final for this format. A Manual Draw counts as
+ * finished whenever every match created so far is, but the organizer can add
+ * more at any time, so nothing irreversible hangs on it: no roles lock and no
+ * automatic award notifications (awards are still computed for display).
+ */
+export function finishIsFinal(matchFormat: string): boolean {
+  return matchFormat !== "manualDraw";
 }
 
 export function isTournamentFinished(p: ProgressInput): boolean {

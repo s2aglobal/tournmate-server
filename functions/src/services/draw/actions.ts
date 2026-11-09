@@ -175,7 +175,8 @@ export async function generateDrawAction(db: Firestore, actor: Actor, tournament
       break;
     }
     case "groupKnockout": {
-      const schedule = generateGroupStageSchedule(teams, t.config.groupCount, Math.max(1, t.config.advancingPerGroup));
+      const schedule = generateGroupStageSchedule(teams, t.config.groupCount, Math.max(1, t.config.advancingPerGroup),
+        t.groupCountChosen && t.config.advancingPerGroup >= 1); // a stored advancing < 1 never honours the pick
       for (const e of schedule) list.push({ a: e.teamA, b: e.teamB, f: { round: e.round, groupLabel: e.group } });
       message = `Generated ${schedule.length} group-stage matches across ${new Set(schedule.map((e) => e.group)).size} groups!`;
       break;

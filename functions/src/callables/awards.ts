@@ -3,6 +3,7 @@ import { DocumentData, getFirestore, Timestamp } from "firebase-admin/firestore"
 import { fail } from "./errors";
 import { CALLABLE_OPTS, Data, dataOf, requireString, requireUid } from "./shared";
 import { resolveDocId } from "../services/identity";
+import { finishIsFinal } from "../services/tournamentProgress";
 import {
   AWARD_SLOTS, AwardSlot, AwardsDoc, loadAwardContext, notifyWinners, organizerValue, rosterMember, writeAwards,
 } from "../services/tournamentAwards";
@@ -14,8 +15,8 @@ import {
  * is `{ key }` (a player id or `guest:<name>` on a team roster in this
  * tournament) or `null` to clear it; omitted awards keep their value. Set or
  * cleared awards become source "organizer" and are never auto-updated again.
- * The server fills name, teamId and (batter/bowler) the stats. A newly
- * awarded registered player is notified (`award_won`).
+ * The server fills name, teamId and (batter/bowler) the stats. A registered
+ * player is notified (`award_won`) the first time they hold each award.
  */
 export const setTournamentAwards = onCall(CALLABLE_OPTS, async (req) => {
   const uid = requireUid(req);
@@ -66,12 +67,15 @@ export const setTournamentAwards = onCall(CALLABLE_OPTS, async (req) => {
       }
       overrides[slot] = organizerValue(slot, member, ctx);
     }
-    const w = writeAwards(tx, ctx, overrides);
+    // Manual Draw: only the organizer's picks are announced (auto awards are for display).
+    const notify = finishIsFinal(ctx.state.tournament.matchFormat)
+      ? AWARD_SLOTS : AWARD_SLOTS.filter((s) => overrides[s]);
+    const w = writeAwards(tx, ctx, overrides, notify);
     const current = w.awards ?? ((t as unknown as DocumentData).awards as AwardsDoc);
     return { w, current, title: t.title, id: ctx.state.tournament.id };
   });
 
-  if (result.w.awards) await notifyWinners(db, result.id, result.title, result.w.awards, result.w.newWinners);
+  await notifyWinners(db, result.id, result.title, result.w.notices);
   return { awards: plain(result.current) };
 });
 

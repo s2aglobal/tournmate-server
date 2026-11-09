@@ -35,7 +35,7 @@ export interface FormatConfig {
   pointsPerLoss: number;
   tieBreaker: TieBreaker;
   doubleRoundRobin: boolean;
-  /** The organizer's group count; 0 = not set (the automatic count is used). */
+  /** Stored group count; honoured only with `TournamentInfo.groupCountChosen` (pairing.ts `effectiveGroupCount`). */
   groupCount: number;
   advancingPerGroup: number;
   groupTieBreaker: TieBreaker;
@@ -50,7 +50,7 @@ const TIE_BREAKERS: readonly TieBreaker[] = ["headToHead", "pointDiff", "gamesWo
 function defaultConfig(): FormatConfig {
   return {
     seedingMode: "eloRanked", pointsPerWin: 2, pointsPerDraw: 1, pointsPerLoss: 0,
-    tieBreaker: "headToHead", doubleRoundRobin: false, groupCount: 0, advancingPerGroup: 2,
+    tieBreaker: "headToHead", doubleRoundRobin: false, groupCount: 2, advancingPerGroup: 2,
     groupTieBreaker: "headToHead", tieBreakRulesVersion: 0, swissRounds: 5,
   };
 }
@@ -128,6 +128,8 @@ export interface TournamentInfo {
   isSingles: boolean;
   isDoubles: boolean;
   cricketRules: CricketRules | null;
+  /** The organizer explicitly picked `config.groupCount` (tournament `groupCountChosen == true`). */
+  groupCountChosen: boolean;
 }
 
 const SINGLES = ["mensSingles", "womensSingles", "openSingles"];
@@ -153,6 +155,7 @@ export function tournamentInfo(id: string, doc: TournamentDoc): TournamentInfo {
     isSingles: SINGLES.includes(formatRaw),
     isDoubles: DOUBLES.includes(formatRaw),
     cricketRules: isTeamEvent ? resolveCricketRules(doc.rulesData) : null,
+    groupCountChosen: doc.groupCountChosen === true,
   };
 }
 

@@ -79,14 +79,16 @@ service cloud.firestore {
     // and would otherwise register individuals (e.g. from a shared link).
     // One get() of the tournament per registration create, plus one
     // getAfter() of the entry lock for team events.
-    function teamEntryIfTeamEvent(registrationId) {
+    // Also: no new entries once the draw is made (drawMade), all sports.
+    function entryAllowed(registrationId) {
       let t = get(/databases/$(database)/documents/tournaments/$(request.resource.data.tournamentId));
-      return t.data.get('formatRaw', '') != 'team'
-        || (isNonEmptyString(request.resource.data.get('teamId', ''))
-            && isNonEmptyString(request.resource.data.get('teamName', ''))
-            && request.resource.data.get('rosterIds', null) is list
-            && !('partnerId' in request.resource.data)
-            && holdsTeamEntryLock(registrationId));
+      return t.data.get('drawMade', false) != true
+        && (t.data.get('formatRaw', '') != 'team'
+          || (isNonEmptyString(request.resource.data.get('teamId', ''))
+              && isNonEmptyString(request.resource.data.get('teamName', ''))
+              && request.resource.data.get('rosterIds', null) is list
+              && !('partnerId' in request.resource.data)
+              && holdsTeamEntryLock(registrationId)));
     }
 
     // One team entry per person per tournament: a team registration must be
@@ -103,10 +105,20 @@ service cloud.firestore {
 
     // Server-only tournament fields: registrationCount (registration
     // triggers), autoDraw / deadlineReminderFor (scheduled draw job),
-    // drawMade (draw callables + match trigger), awards / awardPlayerIds
-    // (cricket awards: match trigger + setTournamentAwards).
+    // drawMade (draw callables + match trigger), awards / awardPlayerIds /
+    // awardsNotified (cricket awards: match trigger + setTournamentAwards).
     function tournamentServerFields() {
-      return ['registrationCount', 'autoDraw', 'deadlineReminderFor', 'drawMade', 'awards', 'awardPlayerIds'];
+      return ['registrationCount', 'autoDraw', 'deadlineReminderFor', 'drawMade', 'awards', 'awardPlayerIds',
+              'awardsNotified'];
+    }
+
+    // The draw of a registration's tournament hasn't been made yet (ids in
+    // either case, like isOrganizerOf; a missing tournament isn't locked).
+    function drawNotMade(tournamentId) {
+      let exact = /databases/$(database)/documents/tournaments/$(tournamentId);
+      let lower = /databases/$(database)/documents/tournaments/$(tournamentId.lower());
+      return exists(exact) ? get(exact).data.get('drawMade', false) != true
+        : (!exists(lower) || get(lower).data.get('drawMade', false) != true);
     }
 
     // Cricket rules (event type, rules JSON, format and points) lock once the
@@ -205,6 +217,7 @@ service cloud.firestore {
         && unchangedOptional('drawMade')
         && unchangedOptional('awards')
         && unchangedOptional('awardPlayerIds')
+        && unchangedOptional('awardsNotified')
         && cricketRulesUnchangedAfterDraw()
         && sportUnchangedOrLive()
         && teamFormatForTeamSport();
@@ -222,13 +235,14 @@ service cloud.firestore {
         && isNonEmptyString(request.resource.data.playerId)
         // memberUids is server-maintained (registration triggers).
         && !('memberUids' in request.resource.data)
-        && teamEntryIfTeamEvent(registrationId);
+        && entryAllowed(registrationId);
 
-      // Older apps: pick a doubles partner. Team rosters, roles and names
-      // change only through updateRoster / setRoles (who may edit, and the
-      // draw / finished locks, are checked there).
+      // Older apps: pick a doubles partner, until the draw is made. Team
+      // rosters, roles and names change only through updateRoster / setRoles
+      // (who may edit, and the draw / finished locks, are checked there).
       allow update: if isAuthenticated()
-        && onlyUpdates(['partnerId']);
+        && onlyUpdates(['partnerId'])
+        && drawNotMade(resource.data.tournamentId);
 
       // Only the registrant can delete their own registration
       allow delete: if isAuthenticated();

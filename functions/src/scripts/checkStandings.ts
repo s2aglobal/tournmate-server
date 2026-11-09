@@ -453,6 +453,28 @@ const order = (t: StandingsTournament, regs: StandingsRegistration[], ms: Standi
 }
 
 {
+  // Swiss bye: no byes for rounds drawn before a team entered. 4 players,
+  // round 1 drawn at t=100 (A v B, C v D); E registers at t=150; round 2
+  // drawn at t=200 (A v C, B v D: E sits out). E gets the round 2 bye only.
+  const { Timestamp } = require("firebase-admin/firestore") as typeof import("firebase-admin/firestore");
+  const at = (ms: number) => Timestamp.fromMillis(ms);
+  const t = racketTournament({ matchFormatRaw: "swiss" });
+  const regs = players(5).map((r, i) => ({ ...r, doc: { ...r.doc, createdAt: at(i < 4 ? 10 + i : 150) } as RegistrationDoc }));
+  const ms = [
+    simpleMatch(0, 1, 21, 10, { round: 1, createdAt: at(100) }), simpleMatch(2, 3, 21, 10, { round: 1, createdAt: at(101) }),
+    simpleMatch(0, 2, 21, 10, { round: 2, createdAt: at(200) }), simpleMatch(1, 3, 21, 10, { round: 2, createdAt: at(201) }),
+  ];
+  const rows = computeStandings(t, regs, ms).groups[0].rows;
+  const e = rows.find((r) => label(r.registrationId) === "T4")!;
+  check("Swiss bye: late entry only credited rounds drawn after it entered", e.played === 1 && e.won === 1 && e.points === 2,
+    JSON.stringify(e));
+  check("Swiss bye: early entries unaffected", rows.filter((r) => label(r.registrationId) !== "T4").every((r) => r.played === 2));
+  const noTimes = computeStandings(t, players(5), ms.map((m) => ({ ...m, doc: { ...m.doc, createdAt: undefined } as unknown as MatchDoc })));
+  check("Swiss bye: without timestamps every absent team is credited",
+    noTimes.groups[0].rows.find((r) => label(r.registrationId) === "T4")!.played === 2);
+}
+
+{
   // Tournament finished (services/tournamentProgress.ts).
   const m = (a: number, b: number, round: number, statusRaw = "finished", groupLabel?: string) =>
     ({ tournamentId: "t", teamAId: teamId(a), teamBId: teamId(b), round, statusRaw, ...(groupLabel ? { groupLabel } : {}) }) as unknown as MatchDoc;

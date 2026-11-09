@@ -7,11 +7,12 @@ import { DrawState, loadDrawState } from "./draw/tournament";
 import { playerById } from "./identity";
 import { notifyPlayer } from "./notifyPlayer";
 import { guestKey, roleKey } from "./teamRoles";
-import { isTournamentFinished } from "./tournamentProgress";
+import { finishIsFinal, isTournamentFinished } from "./tournamentProgress";
 
 /*
  * Tournament awards (cricket only), stored on the tournament doc and written
- * only by the server (firestore.rules locks `awards` / `awardPlayerIds`):
+ * only by the server (firestore.rules locks `awards` / `awardPlayerIds` /
+ * `awardsNotified`):
  *
  *   awards: {
  *     playerOfSeries?: { key, name, teamId },
@@ -21,6 +22,9 @@ import { isTournamentFinished } from "./tournamentProgress";
  *     computedAt, updatedAt,
  *   }
  *   awardPlayerIds: registered player ids holding any award (no guests).
+ *
+ *   awardsNotified: { playerOfSeries, bestBatter, bestBowler: [player ids] }
+ *     who has been sent `award_won` for which award (each at most once).
  *
  * `teamId` is the team's registration id; `key` a player id (upper case) or
  * `guest:<name>`, like `playerOfMatchKey`. Auto awards (services/cricketAwards.ts)
@@ -198,45 +202,103 @@ function sameAwards(existing: DocumentData | undefined, next: ReturnType<typeof 
   return true;
 }
 
-export interface AwardsWrite {
-  /** Null when nothing changed. */
-  awards: AwardsDoc | null;
-  newWinners: string[];
+/** Award slots each registered player has been told about: `awardsNotified` (server-only). */
+export type AwardsNotified = Record<AwardSlot, string[]>;
+
+function notifiedOf(doc: DocumentData): AwardsNotified {
+  const raw = doc.awardsNotified as DocumentData | undefined;
+  const out = {} as AwardsNotified;
+  for (const slot of AWARD_SLOTS) {
+    const list = raw?.[slot];
+    out[slot] = Array.isArray(list) ? list.filter((x): x is string => typeof x === "string").map((x) => x.toUpperCase()) : [];
+  }
+  return out;
 }
 
-/** Writes merged awards in `tx` if they changed; returns the newly awarded player ids. */
+/** One `award_won` notification: a registered player and the awards it announces. */
+export interface AwardNotice {
+  playerId: string;
+  slots: AwardSlot[];
+}
+
+/**
+ * Notices owed for `slots`: each registered (non-guest) holder not yet told
+ * about that award in this tournament. A player is told about a given award
+ * at most once (moving it away and back, or clearing and resetting it, tells
+ * no one again); a different award is told once too. Returns the notices
+ * (one per player, slot order) and the updated `awardsNotified`.
+ */
+export function dueNotices(
+  held: Partial<Record<AwardSlot, DocumentData>>,
+  notified: AwardsNotified,
+  slots: readonly AwardSlot[],
+): { notices: AwardNotice[]; notified: AwardsNotified } {
+  const next = {} as AwardsNotified;
+  for (const slot of AWARD_SLOTS) next[slot] = [...notified[slot]];
+  const notices: AwardNotice[] = [];
+  for (const slot of AWARD_SLOTS) {
+    if (!slots.includes(slot)) continue;
+    const key = held[slot]?.key;
+    if (typeof key !== "string" || !key || key.startsWith("guest:")) continue;
+    const id = key.toUpperCase();
+    if (next[slot].includes(id)) continue;
+    next[slot].push(id);
+    const n = notices.find((x) => x.playerId === id);
+    if (n) n.slots.push(slot);
+    else notices.push({ playerId: id, slots: [slot] });
+  }
+  return { notices, notified: next };
+}
+
+export interface AwardsWrite {
+  /** Null when the awards didn't change. */
+  awards: AwardsDoc | null;
+  /** Notifications to send once the transaction has committed. */
+  notices: AwardNotice[];
+}
+
+/**
+ * Writes merged awards in `tx` if they changed, and records (in
+ * `awardsNotified`) the notices owed for `notifySlots`, which the caller
+ * sends after the commit.
+ */
 export function writeAwards(
   tx: Transaction,
   ctx: AwardContext,
   overrides: Partial<Record<AwardSlot, DocumentData | null>> = {},
+  notifySlots: readonly AwardSlot[] = AWARD_SLOTS,
 ): AwardsWrite {
   const doc = ctx.state.tournament.doc as unknown as DocumentData;
   const existing = doc.awards as DocumentData | undefined;
   const next = mergeAwards(existing, autoAwards(ctx), overrides);
-  if (sameAwards(existing, next)) return { awards: null, newWinners: [] };
-  const now = Timestamp.now();
-  const awards: AwardsDoc = { ...next.slots, source: next.source, computedAt: now, updatedAt: now };
-  const ids = awardPlayerIdsOf(next.slots);
-  const before = Array.isArray(doc.awardPlayerIds) ? (doc.awardPlayerIds as string[]).map((x) => x.toUpperCase()) : [];
-  tx.update(ctx.state.tournamentRef, { awards, awardPlayerIds: ids });
-  return { awards, newWinners: ids.filter((id) => !before.includes(id)) };
+  const changed = !sameAwards(existing, next);
+  const due = dueNotices(next.slots, notifiedOf(doc), notifySlots);
+  const update: DocumentData = {};
+  let awards: AwardsDoc | null = null;
+  if (changed) {
+    const now = Timestamp.now();
+    awards = { ...next.slots, source: next.source, computedAt: now, updatedAt: now };
+    update.awards = awards;
+    update.awardPlayerIds = awardPlayerIdsOf(next.slots);
+  }
+  if (due.notices.length > 0) update.awardsNotified = due.notified;
+  if (Object.keys(update).length > 0) tx.update(ctx.state.tournamentRef, update);
+  return { awards, notices: due.notices };
 }
 
-/** `award_won` to each newly awarded registered player (once per player, listing their awards). */
+/** `award_won` to each player in `notices` (one per player, listing the awards). */
 export async function notifyWinners(
   db: Firestore,
   tournamentId: string,
   title: string,
-  awards: AwardsDoc,
-  playerIds: string[],
+  notices: AwardNotice[],
 ): Promise<void> {
   const name = title ? `"${title}"` : "the tournament";
-  for (const id of playerIds) {
-    const held = AWARD_SLOTS.filter((s) => typeof awards[s]?.key === "string" && awards[s]!.key.toUpperCase() === id)
-      .map((s) => AWARD_TITLES[s]);
+  for (const n of notices) {
+    const held = n.slots.map((s) => AWARD_TITLES[s]);
     if (held.length === 0) continue;
     const list = held.length === 1 ? held[0] : `${held.slice(0, -1).join(", ")} and ${held[held.length - 1]}`;
-    const player = await playerById(db, id);
+    const player = await playerById(db, n.playerId);
     await notifyPlayer(db, player?.data, {
       type: "award_won",
       title: "You won an award",
@@ -249,15 +311,18 @@ export async function notifyWinners(
 /**
  * Refreshes the auto awards of a finished cricket tournament (match trigger).
  * No-op for other sports, unfinished tournaments, or when nothing changed.
+ * Manual Draw tournaments get awards for display but no notifications (their
+ * "finished" is provisional: tournamentProgress.ts `finishIsFinal`).
  */
 export async function refreshAutoAwards(db: Firestore, tournamentId: string): Promise<void> {
   const result = await db.runTransaction(async (tx) => {
     const ctx = await loadAwardContext(db, tournamentId, tx);
     if (!ctx || !ctx.isCricket || !ctx.finished) return null;
-    const w = writeAwards(tx, ctx);
-    return w.awards ? { w, title: ctx.state.tournament.doc.title, id: ctx.state.tournament.id } : null;
+    const notify = finishIsFinal(ctx.state.tournament.matchFormat) ? AWARD_SLOTS : [];
+    const w = writeAwards(tx, ctx, {}, notify);
+    return { w, title: ctx.state.tournament.doc.title, id: ctx.state.tournament.id };
   });
-  if (!result?.w.awards) return;
-  logger.info(`Awards refreshed for ${tournamentId}: ${JSON.stringify(result.w.awards.source)}`);
-  await notifyWinners(db, result.id, result.title, result.w.awards, result.w.newWinners);
+  if (!result) return;
+  if (result.w.awards) logger.info(`Awards refreshed for ${tournamentId}: ${JSON.stringify(result.w.awards.source)}`);
+  await notifyWinners(db, result.id, result.title, result.w.notices);
 }
