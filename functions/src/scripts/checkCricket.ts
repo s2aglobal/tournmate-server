@@ -27,6 +27,7 @@ import {
   validateCricketResult,
 } from "../services/cricket";
 import { applyTeamResult } from "../services/elo";
+import { playerOfSeriesRanking, seriesAwards } from "../services/cricketAwards";
 import {
   PlayerStats,
   averageHundredths,
@@ -309,6 +310,31 @@ check("unrated player starts at 1200", fresh[0].cricket === 1212);
   }
   check("missing format = single elimination", knockoutIssue(nr, T20, undefined, undefined) !== null);
   check("knockout win fine", knockoutIssue(soCard, ko, "singleElimination", undefined) === null);
+}
+
+// ─── Tournament awards (services/cricketAwards.ts) ─────
+{
+  const bat = (t: string, k: string, r: number, b: number, out = true) => ({ teamRegistrationId: t, key: k, name: k, runs: r, balls: b, out });
+  const bowl = (t: string, k: string, b: number, r: number, w: number) => ({ teamRegistrationId: t, key: k, name: k, balls: b, runs: r, wickets: w });
+  const none = seriesAwards([], []);
+  check("awards: nothing → none", !none.playerOfSeries && !none.bestBatter && !none.bestBowler);
+  const potmOnly = seriesAwards([], [{ key: "p1", name: "P1", teamId: A }]);
+  check("awards: potm only → POTS, no batter/bowler", potmOnly.playerOfSeries?.key === "P1" &&
+    potmOnly.playerOfSeries.score === 25 && !potmOnly.bestBatter && !potmOnly.bestBowler);
+  const stats = [{ batting: [bat(A, "P1", 30, 20), bat(B, "Q1", 30, 15)], bowling: [bowl(B, "Q2", 24, 20, 2), bowl(A, "P2", 24, 18, 2)] }];
+  const a = seriesAwards(stats, []);
+  check("awards: best batter = leaderboard #1 (strike rate)", a.bestBatter?.key === "Q1");
+  check("awards: best bowler = leaderboard #1 (economy)", a.bestBowler?.key === "P2");
+  const r = playerOfSeriesRanking(stats, []);
+  check("awards: POTS formula", r.find((e) => e.key === "Q2")?.score === 40 && r.find((e) => e.key === "Q1")?.score === 30);
+  check("awards: POTS wickets × 20 beats runs", a.playerOfSeries?.key === "P2", JSON.stringify(r[0]));
+  const tie = playerOfSeriesRanking([{ batting: [bat(A, "P1", 25, 20)], bowling: [] }], [{ key: "Q1", name: "Q1", teamId: B }]);
+  check("awards: POTS tie → more potm", tie[0].key === "Q1" && tie[0].score === tie[1].score);
+  const tie2 = playerOfSeriesRanking([{ batting: [bat(A, "P1", 40, 20)], bowling: [bowl(B, "Q1", 6, 10, 1)] },
+    { batting: [bat(B, "Q1", 20, 20)], bowling: [] }], []);
+  check("awards: POTS tie → more runs", tie2[0].key === "P1" && tie2[0].score === 40 && tie2[1].score === 40);
+  const tie3 = playerOfSeriesRanking([{ batting: [bat(B, "Bo", 10, 5), bat(A, "Al", 10, 5)], bowling: [] }], []);
+  check("awards: POTS tie → name", tie3[0].key === "AL");
 }
 
 console.log(failures === 0 ? "\nAll cricket checks passed." : `\n${failures} cricket check(s) failed.`);

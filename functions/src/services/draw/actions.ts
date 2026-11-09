@@ -175,8 +175,8 @@ export async function generateDrawAction(db: Firestore, actor: Actor, tournament
       break;
     }
     case "groupKnockout": {
-      const schedule = generateGroupStageSchedule(teams, Math.max(2, t.config.groupCount),
-        Math.max(1, t.config.advancingPerGroup));
+      const schedule = generateGroupStageSchedule(teams, t.config.groupCount, Math.max(1, t.config.advancingPerGroup),
+        t.groupCountChosen && t.config.advancingPerGroup >= 1); // a stored advancing < 1 never honours the pick
       for (const e of schedule) list.push({ a: e.teamA, b: e.teamB, f: { round: e.round, groupLabel: e.group } });
       message = `Generated ${schedule.length} group-stage matches across ${new Set(schedule.map((e) => e.group)).size} groups!`;
       break;
@@ -201,6 +201,7 @@ export async function generateDrawAction(db: Firestore, actor: Actor, tournament
     }
     writeMatches(db, tx, t, list);
     markAutoDraw(tx, state, "generated");
+    tx.update(state.tournamentRef, { drawMade: true });
     return { status: "generated", matchesCreated: list.length, round: 1, byes, message };
   });
 }
@@ -342,6 +343,7 @@ export async function resetDrawAction(db: Firestore, actor: Actor, tournamentId:
       fail("failed-precondition", "DRAW_LOCKED", "Scores have been entered, so the draw can't be reset.");
     }
     for (const m of state.matches) tx.delete(m.ref);
+    tx.update(state.tournamentRef, { drawMade: false });
     return {
       status: "reset", matchesCreated: 0,
       message: "All matches cleared. You can regenerate the bracket.",
@@ -392,6 +394,7 @@ export async function createManualMatchesAction(db: Firestore, actor: Actor, dat
       return { a, b, f: { round: p.round } };
     });
     writeMatches(db, tx, state.tournament, list);
+    tx.update(state.tournamentRef, { drawMade: true });
     return {
       status: "created", matchesCreated: list.length,
       message: list.length === 1 ? "Match created!" : `${list.length} matches created!`,

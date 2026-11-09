@@ -1,8 +1,10 @@
 import { onDocumentWritten } from "firebase-functions/v2/firestore";
 import { logger } from "firebase-functions/v2";
 import { DocumentReference, Firestore, Timestamp, getFirestore } from "firebase-admin/firestore";
-import { MatchDoc, PlayerDoc, RegistrationDoc, TournamentDoc } from "../types";
+import { MatchDoc, PlayerDoc, RegistrationDoc, TournamentDoc, parseSportType } from "../types";
 import { StandingsRegistration, computeStandings } from "../services/standings";
+import { refreshAutoAwards } from "../services/tournamentAwards";
+import { tournamentIdVariants } from "../services/draw/tournament";
 
 /**
  * Rebuilds `standings/{tournamentId}` on any match write (create, score,
@@ -12,6 +14,10 @@ import { StandingsRegistration, computeStandings } from "../services/standings";
  * bursts of writes (a draw, a reset) need no debouncing. `updatedAt` is the
  * time the matches were read; a run that read older data never overwrites a
  * newer table.
+ *
+ * Also keeps the server-only `drawMade` flag on the tournament in step with
+ * whether any match exists (firestore.rules locks cricket rules once the
+ * draw is made), and refreshes the awards of a finished cricket tournament.
  */
 export const onMatchWritten = onDocumentWritten("matches/{matchId}", async (event) => {
   const before = event.data?.before.data() as MatchDoc | undefined;
@@ -23,6 +29,17 @@ export const onMatchWritten = onDocumentWritten("matches/{matchId}", async (even
       await rebuildStandings(db, tournamentId);
     } catch (err) {
       logger.error(`Standings rebuild failed for tournament ${tournamentId}:`, err);
+    }
+    try {
+      await syncDrawMade(db, tournamentId);
+    } catch (err) {
+      logger.error(`drawMade sync failed for tournament ${tournamentId}:`, err);
+    }
+    try {
+      const snap = await db.collection("tournaments").doc(tournamentId).get();
+      if (snap.exists && parseSportType(snap.get("sportType")) === "cricket") await refreshAutoAwards(db, tournamentId);
+    } catch (err) {
+      logger.error(`Awards refresh failed for tournament ${tournamentId}:`, err);
     }
   }
 });
@@ -88,5 +105,16 @@ export async function rebuildStandings(db: Firestore, tournamentId: string): Pro
     if (stored instanceof Timestamp && (stored.seconds > readTime.seconds ||
       (stored.seconds === readTime.seconds && stored.nanoseconds > readTime.nanoseconds))) return;
     tx.set(standingsRef, { updatedAt: readTime, ...data });
+  });
+}
+
+/** Sets `drawMade` to whether the tournament has any match (only when it differs). */
+export async function syncDrawMade(db: Firestore, tournamentId: string): Promise<void> {
+  const ref = db.collection("tournaments").doc(tournamentId);
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists) return;
+    const any = !(await tx.get(db.collection("matches").where("tournamentId", "in", tournamentIdVariants(tournamentId)).limit(1))).empty;
+    if ((snap.get("drawMade") === true) !== any) tx.update(ref, { drawMade: any });
   });
 }

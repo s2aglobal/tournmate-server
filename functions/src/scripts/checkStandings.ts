@@ -36,6 +36,7 @@ import {
   computeStandings,
   playerAwards,
 } from "../services/standings";
+import { isTournamentFinished } from "../services/tournamentProgress";
 
 let failures = 0;
 let passes = 0;
@@ -424,6 +425,78 @@ const order = (t: StandingsTournament, regs: StandingsRegistration[], ms: Standi
   check("top performers: bowling", data.topPerformers?.bowling[0].wickets === 3);
   check("cricket rows have nrr", data.groups[0].rows.every((r) => typeof r.nrr === "number"));
   check("non-cricket: no top performers", computeStandings(racketTournament(), players(2), [simpleMatch(0, 1, 21, 10)]).topPerformers === undefined);
+}
+
+{
+  // Swiss bye: a team without a match in a drawn round is credited a win.
+  // 3 players: round 1 A beats B (C bye), round 2 C beats A (B bye), round 3 B v C pending (A bye).
+  const t = racketTournament({ matchFormatRaw: "swiss" });
+  const ms = [
+    simpleMatch(0, 1, 21, 10, { round: 1 }),
+    simpleMatch(2, 0, 21, 15, { round: 2 }),
+    simpleMatch(1, 2, 0, 0, { round: 3, statusRaw: "scheduled" }),
+  ];
+  const rows = computeStandings(t, players(3), ms).groups[0].rows;
+  const row = (i: number) => rows.find((r) => label(r.registrationId) === `T${i}`)!;
+  check("Swiss bye: A 1 win + bye in round 3", row(0).won === 2 && row(0).lost === 1 && row(0).played === 3 && row(0).points === 4,
+    JSON.stringify(row(0)));
+  check("Swiss bye: B bye in round 2", row(1).won === 1 && row(1).lost === 1 && row(1).played === 2 && row(1).points === 2,
+    JSON.stringify(row(1)));
+  check("Swiss bye: C bye in round 1 + win", row(2).won === 2 && row(2).played === 2 && row(2).points === 4, JSON.stringify(row(2)));
+  check("Swiss bye: no score for a bye", row(2).pointsFor === 21 && row(2).pointsAgainst === 15);
+  check("Swiss bye: order", order(t, players(3), ms) === "T2 T0 T1", order(t, players(3), ms));
+  const custom = racketTournament({ matchFormatRaw: "swiss", config: { pointsPerWin: 3, pointsPerLoss: 0, pointsPerDraw: 1 } });
+  check("Swiss bye: custom win points", computeStandings(custom, players(3), ms).groups[0].rows
+    .find((r) => label(r.registrationId) === "T1")!.points === 3);
+  check("round robin: no byes credited", computeStandings(racketTournament(), players(3), ms).groups[0].rows
+    .find((r) => label(r.registrationId) === "T2")!.won === 1);
+}
+
+{
+  // Swiss bye: no byes for rounds drawn before a team entered. 4 players,
+  // round 1 drawn at t=100 (A v B, C v D); E registers at t=150; round 2
+  // drawn at t=200 (A v C, B v D: E sits out). E gets the round 2 bye only.
+  const { Timestamp } = require("firebase-admin/firestore") as typeof import("firebase-admin/firestore");
+  const at = (ms: number) => Timestamp.fromMillis(ms);
+  const t = racketTournament({ matchFormatRaw: "swiss" });
+  const regs = players(5).map((r, i) => ({ ...r, doc: { ...r.doc, createdAt: at(i < 4 ? 10 + i : 150) } as RegistrationDoc }));
+  const ms = [
+    simpleMatch(0, 1, 21, 10, { round: 1, createdAt: at(100) }), simpleMatch(2, 3, 21, 10, { round: 1, createdAt: at(101) }),
+    simpleMatch(0, 2, 21, 10, { round: 2, createdAt: at(200) }), simpleMatch(1, 3, 21, 10, { round: 2, createdAt: at(201) }),
+  ];
+  const rows = computeStandings(t, regs, ms).groups[0].rows;
+  const e = rows.find((r) => label(r.registrationId) === "T4")!;
+  check("Swiss bye: late entry only credited rounds drawn after it entered", e.played === 1 && e.won === 1 && e.points === 2,
+    JSON.stringify(e));
+  check("Swiss bye: early entries unaffected", rows.filter((r) => label(r.registrationId) !== "T4").every((r) => r.played === 2));
+  const noTimes = computeStandings(t, players(5), ms.map((m) => ({ ...m, doc: { ...m.doc, createdAt: undefined } as unknown as MatchDoc })));
+  check("Swiss bye: without timestamps every absent team is credited",
+    noTimes.groups[0].rows.find((r) => label(r.registrationId) === "T4")!.played === 2);
+}
+
+{
+  // Tournament finished (services/tournamentProgress.ts).
+  const m = (a: number, b: number, round: number, statusRaw = "finished", groupLabel?: string) =>
+    ({ tournamentId: "t", teamAId: teamId(a), teamBId: teamId(b), round, statusRaw, ...(groupLabel ? { groupLabel } : {}) }) as unknown as MatchDoc;
+  const p = (matchFormat: string, matches: MatchDoc[], formedTeamCount = 4, extra: { swissRounds?: number; advancingPerGroup?: number } = {}) =>
+    isTournamentFinished({ matchFormat, matches, formedTeamCount, swissRounds: extra.swissRounds ?? 3, advancingPerGroup: extra.advancingPerGroup ?? 2 });
+  check("finished: no matches", !p("roundRobin", []));
+  check("finished: RR all done", p("roundRobin", [m(0, 1, 1), m(2, 3, 1)]));
+  check("finished: RR one pending", !p("roundRobin", [m(0, 1, 1), m(2, 3, 1, "scoreSubmitted")]));
+  check("finished: manual all done", p("manualDraw", [m(0, 1, 1)]));
+  check("finished: KO semis only", !p("singleElimination", [m(0, 1, 1), m(2, 3, 1)]));
+  check("finished: KO final done", p("singleElimination", [m(0, 1, 1), m(2, 3, 1), m(0, 2, 2)]));
+  check("finished: KO final pending", !p("singleElimination", [m(0, 1, 1), m(2, 3, 1), m(0, 2, 2, "scheduled")]));
+  check("finished: KO 3 teams, round 1 only", !p("singleElimination", [m(1, 0, 1)], 3));
+  check("finished: KO 3 teams, final", p("singleElimination", [m(1, 0, 1), m(2, 1, 2)], 3));
+  check("finished: double elim = single", p("doubleElimination", [m(0, 1, 1)], 2));
+  check("finished: Swiss short of rounds", !p("swiss", [m(0, 1, 1), m(0, 2, 2)]));
+  check("finished: Swiss all rounds", p("swiss", [m(0, 1, 1), m(0, 2, 2), m(1, 2, 3)]));
+  check("finished: Swiss last round pending", !p("swiss", [m(0, 1, 1), m(0, 2, 2), m(1, 2, 3, "disputed")]));
+  const groups = [m(0, 1, 1, "finished", "A"), m(2, 3, 1, "finished", "B"), m(0, 4, 2, "finished", "A"), m(2, 5, 2, "finished", "B")];
+  check("finished: GK groups only", !p("groupKnockout", groups, 6));
+  check("finished: GK semis", !p("groupKnockout", [...groups, m(0, 3, 1), m(2, 1, 1)], 6));
+  check("finished: GK final", p("groupKnockout", [...groups, m(0, 3, 1), m(2, 1, 1), m(0, 2, 2)], 6));
 }
 
 console.log(`\n${passes} passed, ${failures} failed`);

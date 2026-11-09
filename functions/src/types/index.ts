@@ -215,6 +215,8 @@ export interface TournamentDoc {
   countryCode?: string;
   postalCode?: string;
   timeZone?: string;
+  /** Set by the apps when the organizer explicitly picks a group count (draw/pairing.ts `effectiveGroupCount`). */
+  groupCountChosen?: boolean;
   formatConfigData?: string;
   /**
    * JSON-encoded scoring settings written by the apps, e.g.

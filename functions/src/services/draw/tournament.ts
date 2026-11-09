@@ -35,6 +35,7 @@ export interface FormatConfig {
   pointsPerLoss: number;
   tieBreaker: TieBreaker;
   doubleRoundRobin: boolean;
+  /** Stored group count; honoured only with `TournamentInfo.groupCountChosen` (pairing.ts `effectiveGroupCount`). */
   groupCount: number;
   advancingPerGroup: number;
   groupTieBreaker: TieBreaker;
@@ -127,6 +128,8 @@ export interface TournamentInfo {
   isSingles: boolean;
   isDoubles: boolean;
   cricketRules: CricketRules | null;
+  /** The organizer explicitly picked `config.groupCount` (tournament `groupCountChosen == true`). */
+  groupCountChosen: boolean;
 }
 
 const SINGLES = ["mensSingles", "womensSingles", "openSingles"];
@@ -152,6 +155,7 @@ export function tournamentInfo(id: string, doc: TournamentDoc): TournamentInfo {
     isSingles: SINGLES.includes(formatRaw),
     isDoubles: DOUBLES.includes(formatRaw),
     cricketRules: isTeamEvent ? resolveCricketRules(doc.rulesData) : null,
+    groupCountChosen: doc.groupCountChosen === true,
   };
 }
 

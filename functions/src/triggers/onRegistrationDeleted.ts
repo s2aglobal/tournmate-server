@@ -20,10 +20,11 @@ export const onRegistrationDeleted = onDocumentDeleted(
     // Keep the tournament's registrationCount in sync ("Filling fast" sort).
     await refreshRegistrationCount(db, data.tournamentId);
 
-    // Team entries: free the one-entry lock if the app didn't (e.g. the
-    // registration was deleted from the console), so they can enter again.
+    // Team entries: free the one-entry locks (registrant + roster) if the
+    // app didn't (e.g. the registration was deleted from the console), so
+    // they can enter again.
     if (data.teamId || data.teamName) {
-      await releaseTeamEntryLock(db, data, event.params.registrationId);
+      await releaseTeamEntryLocks(db, data, event.params.registrationId);
     }
 
     // Look up the tournament for context
@@ -73,16 +74,27 @@ export const onRegistrationDeleted = onDocumentDeleted(
   },
 );
 
-/** Deletes teamEntries/{tournamentId}_{playerId} if it belongs to this registration. */
-async function releaseTeamEntryLock(
+/**
+ * Deletes teamEntries/{tournamentId}_{playerId} of whoever entered the team
+ * and of every roster player, where the lock still belongs to this
+ * registration (a player may have entered another team since).
+ */
+async function releaseTeamEntryLocks(
   db: FirebaseFirestore.Firestore,
   data: RegistrationDoc,
   registrationId: string,
 ): Promise<void> {
-  const lock = db.collection("teamEntries")
-    .doc(`${data.tournamentId.toLowerCase()}_${data.playerId.toLowerCase()}`);
-  const snap = await lock.get();
-  if (snap.exists && snap.data()?.registrationId === registrationId) {
-    await lock.delete();
+  const ids = [data.playerId, ...(Array.isArray(data.rosterIds) ? data.rosterIds : [])]
+    .filter((x): x is string => typeof x === "string" && x.length > 0);
+  const seen = new Set<string>();
+  for (const id of ids) {
+    const lower = id.toLowerCase();
+    if (seen.has(lower)) continue;
+    seen.add(lower);
+    const lock = db.collection("teamEntries").doc(`${data.tournamentId.toLowerCase()}_${lower}`);
+    const snap = await lock.get();
+    if (snap.exists && String(snap.data()?.registrationId ?? "").toUpperCase() === registrationId.toUpperCase()) {
+      await lock.delete();
+    }
   }
 }

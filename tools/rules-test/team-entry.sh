@@ -33,7 +33,7 @@ expc "{\"writes\":[$(reg e3 p9),$(lock cric_p9 p9 e3)]}" 403 "second entry with 
 expc "{\"writes\":[$(reg e4 P8),$(lock cric_P8 P8 e4)]}" 403 "lock id not lower-case rejected"
 expc "{\"writes\":[$(reg e5 P7),$(lock cric_p7 P7 e1)]}" 403 "lock pointing at someone else's entry rejected"
 expc "{\"writes\":[$(lock cric_p6 P6 e1)]}" 403 "lock without its registration rejected"
-exp "registrations/e1?updateMask.fieldPaths=captainId&updateMask.fieldPaths=viceCaptainId&updateMask.fieldPaths=keeperId&updateMask.fieldPaths=playerRoles" '{"fields":{"captainId":{"stringValue":"P9"},"viceCaptainId":{"stringValue":"guest:Ravi"},"keeperId":{"stringValue":"P9"},"playerRoles":{"mapValue":{"fields":{"P9":{"stringValue":"allRounder"}}}}}}' 200 "roles can be changed"
+exp "registrations/e1?updateMask.fieldPaths=captainId&updateMask.fieldPaths=viceCaptainId&updateMask.fieldPaths=keeperId&updateMask.fieldPaths=playerRoles" '{"fields":{"captainId":{"stringValue":"P9"},"viceCaptainId":{"stringValue":"guest:Ravi"},"keeperId":{"stringValue":"P9"},"playerRoles":{"mapValue":{"fields":{"P9":{"stringValue":"allRounder"}}}}}}' 403 "roles only through setRoles (no direct writes)"
 exp "registrations/e1?updateMask.fieldPaths=playerId" '{"fields":{"playerId":{"stringValue":"P1"}}}' 403 "registrant can't be changed"
 expc "{\"writes\":[$(del teamEntries/cric_p9)]}" 403 "lock can't be freed while the entry exists"
 expc "{\"writes\":[$(del registrations/e1),$(del teamEntries/cric_p9)]}" 200 "withdrawing frees the lock with the entry"

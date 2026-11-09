@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """Open Play trigger checks (onSessionJoined / onPlaySessionCreated) for
-writes from older apps. Runs against the Firestore + Functions emulators
+writes from older apps, plus cricket-complete triggers: a deleted team
+registration frees every roster lock (onRegistrationDeleted), and auto award
+notifications once a cricket tournament finishes (onMatchWritten; never for
+a Manual Draw). Runs against the Firestore + Functions emulators
 (project demo-tm) started by run-triggers.sh. Seeds with the emulator owner
 token, so rules are bypassed and only the triggers are under test.
 Prints one PASS/FAIL line per case.
@@ -12,7 +15,7 @@ import urllib.request
 
 import urllib.error
 
-from fsrest import BASE, D, Ts, merge, set_doc
+from fsrest import BASE, D, Ts, delete, merge, set_doc
 
 failures = 0
 
@@ -237,5 +240,80 @@ time.sleep(2)
 set_doc("playSessions/HJ1", "owner", session("hj", ["HJ"], "2030-11-01T18:30:00Z", created="2026-10-02T10:00:00Z"))
 ok = wait_for(lambda: doc("playSessions/HJ1").get("status") == "cancelled")
 expect(ok, "hosted session overlapping a joined session cancelled")
+
+
+# ── cricket-complete: deleted registration frees every roster lock ──
+def cplayer(pid, uid):
+    set_doc(f"players/{pid}", "owner", {"firebaseUid": uid, "name": pid.title(), "email": f"{uid}@x.com", "phone": "",
+                                        "elo": 1200, "streak": 0, "genderRaw": "male"})
+
+
+cplayer("RA", "ra")
+cplayer("RB", "rb")
+cplayer("RC", "rc")
+set_doc("registrations/REGDEL", "owner", {"tournamentId": "TDEL", "playerId": "RA", "teamName": "Kings",
+                                          "rosterIds": ["RA", "RB", "RC"], "createdAt": Ts("2026-10-01T10:00:00Z")})
+for pid in ("ra", "rb"):
+    set_doc(f"teamEntries/tdel_{pid}", "owner", {"tournamentId": "TDEL", "playerId": pid.upper(), "registrationId": "REGDEL"})
+set_doc("teamEntries/tdel_rc", "owner", {"tournamentId": "TDEL", "playerId": "RC", "registrationId": "OTHER"})
+delete("registrations/REGDEL", "owner")
+ok = wait_for(lambda: not read("teamEntries/tdel_ra") and not read("teamEntries/tdel_rb"))
+expect(ok, "deleted registration: registrant + roster locks freed")
+expect(bool(read("teamEntries/tdel_rc")), "deleted registration: another entry's lock kept")
+
+
+# ── cricket-complete: auto awards notify once; never for a Manual Draw ──
+def award_notes(uid):
+    return [x for x in notifications(uid) if x.get("type") == "award_won"]
+
+
+def cricket_cup(tid, match_format):
+    set_doc(f"tournaments/{tid}", "owner", {"title": f"Cup {tid}", "location": "Ground", "date": Ts("2030-06-01T18:00:00Z"),
+                                            "createdBy": "org", "sportType": "cricket", "formatRaw": "team",
+                                            "matchFormatRaw": match_format, "statusRaw": "scheduled"})
+    for i, (rid, roster) in enumerate([(f"{tid}_A", ["WA"]), (f"{tid}_B", ["WB"])]):
+        set_doc(f"registrations/{rid}", "owner", {"tournamentId": tid, "playerId": roster[0], "teamName": rid,
+                                                  "rosterIds": roster, "createdAt": Ts(f"2026-10-01T10:00:0{i}Z")})
+
+
+def finish(tid, mid, runs):
+    stats = {"batting": [{"teamRegistrationId": f"{tid}_A", "key": "WA", "name": "Wa", "runs": runs, "balls": 30, "out": True}],
+             "bowling": [{"teamRegistrationId": f"{tid}_B", "key": "WB", "name": "Wb", "balls": 24, "runs": 30, "wickets": 2}]}
+    set_doc(f"matches/{mid}", "owner", {"tournamentId": tid, "teamAId": f"{tid}_A", "teamBId": f"{tid}_B", "round": 1,
+                                        "sportType": "cricket", "statusRaw": "finished", "resultType": "win",
+                                        "winnerRegistrationId": f"{tid}_A", "playerStatsData": json.dumps(stats),
+                                        "createdAt": Ts("2026-10-02T10:00:00Z")})
+
+
+cplayer("WA", "wa")
+cplayer("WB", "wb")
+cricket_cup("TAW", "roundRobin")
+finish("TAW", "TAW_M1", 50)
+ok = wait_for(lambda: doc("tournaments/TAW").get("awards"))
+expect(ok and doc("tournaments/TAW").get("awardsNotified", {}).get("bestBatter") == ["WA"], "auto awards recorded in awardsNotified",
+       doc("tournaments/TAW").get("awardsNotified"))
+ok = wait_for(lambda: award_notes("wa") and award_notes("wb"))
+expect(ok, "auto awards: winners notified")
+finish("TAW", "TAW_M1", 60)  # stats change, same winners
+time.sleep(4)
+expect(doc("tournaments/TAW").get("awards", {}).get("bestBatter", {}).get("runs") == 60, "auto awards refreshed")
+expect(len(award_notes("wa")) == 1 and len(award_notes("wb")) == 1, "auto awards: no second notification",
+       [len(award_notes("wa")), len(award_notes("wb"))])
+
+cplayer("MA", "ma")
+cricket_cup("TMD", "manualDraw")
+set_doc("registrations/TMD_A", "owner", {"tournamentId": "TMD", "playerId": "MA", "teamName": "A", "rosterIds": ["MA"],
+                                         "createdAt": Ts("2026-10-01T10:00:00Z")})
+stats = {"batting": [{"teamRegistrationId": "TMD_A", "key": "MA", "name": "Ma", "runs": 40, "balls": 30, "out": True}],
+         "bowling": []}
+set_doc("matches/TMD_M1", "owner", {"tournamentId": "TMD", "teamAId": "TMD_A", "teamBId": "TMD_B", "round": 1,
+                                    "sportType": "cricket", "statusRaw": "finished", "resultType": "win",
+                                    "winnerRegistrationId": "TMD_A", "playerStatsData": json.dumps(stats),
+                                    "createdAt": Ts("2026-10-02T10:00:00Z")})
+ok = wait_for(lambda: doc("tournaments/TMD").get("awards"))
+expect(ok and doc("tournaments/TMD").get("awards", {}).get("bestBatter", {}).get("key") == "MA",
+       "manual draw: awards computed for display")
+time.sleep(3)
+expect(not award_notes("ma") and not doc("tournaments/TMD").get("awardsNotified"), "manual draw: no automatic award notification")
 
 print(f"# {failures} failure(s)")

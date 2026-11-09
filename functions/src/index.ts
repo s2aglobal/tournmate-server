@@ -60,6 +60,7 @@ export { orphanAccountSweep } from "./triggers/orphanAccountSweep";
 export { register, withdraw, joinAsPartner, changePartner, updateRoster, setRoles } from "./callables/registrations";
 export { generateDraw, advanceRound, resetDraw, generateRandomPairs, createManualMatches } from "./callables/draw";
 export { submitScore, confirmScore, disputeScore, resolveDispute } from "./callables/scores";
+export { setTournamentAwards } from "./callables/awards";
 
 // ─── Scheduled Jobs ─────────────────────────────────────
 export { hourlyCleanup, dailyReminders, spamCleanup } from "./triggers/scheduledJobs";

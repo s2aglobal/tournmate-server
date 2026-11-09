@@ -349,6 +349,51 @@ export function tally(
   }
 }
 
+/**
+ * Swiss byes: in every round that has been drawn, each team in the table
+ * that has no match in that round sat out and is credited a win (played +1,
+ * won +1, a win's points; no score, sets or run rate). Not a result, so
+ * head-to-head ignores it. A team only sits out rounds drawn after it
+ * entered: no bye for a round whose first match (earliest `createdAt`) is
+ * older than the team's registration `createdAt` (it wasn't in that draw).
+ * Missing timestamps don't exclude anyone. Same on iOS and Android.
+ */
+export function addSwissByes(
+  entries: Map<string, StandingsEntry>,
+  matches: Array<Pick<MatchDoc, "teamAId" | "teamBId" | "round"> & { createdAt?: unknown }>,
+  points: StandingsPoints,
+  enteredAt: Map<string, number> = new Map(),
+): void {
+  const playing = new Map<number, Set<string>>();
+  const drawnAt = new Map<number, number>();
+  for (const m of matches) {
+    if (typeof m.round !== "number") continue;
+    const set = playing.get(m.round) ?? new Set<string>();
+    set.add(String(m.teamAId).toUpperCase());
+    set.add(String(m.teamBId).toUpperCase());
+    playing.set(m.round, set);
+    const at = millisOf(m.createdAt);
+    if (at !== undefined) drawnAt.set(m.round, Math.min(drawnAt.get(m.round) ?? at, at));
+  }
+  const entered = new Map([...enteredAt].map(([id, at]) => [id.toUpperCase(), at]));
+  for (const [round, set] of playing) {
+    const drawn = drawnAt.get(round);
+    for (const [id, e] of entries) {
+      if (set.has(id.toUpperCase())) continue;
+      const joined = entered.get(id.toUpperCase());
+      if (drawn !== undefined && joined !== undefined && joined > drawn) continue;
+      e.played += 1;
+      e.wins += 1;
+      e.points += points.win;
+    }
+  }
+}
+
+function millisOf(v: unknown): number | undefined {
+  const c = v as { toMillis?: () => number } | undefined;
+  return typeof c?.toMillis === "function" ? c.toMillis() : undefined;
+}
+
 /** Swift `localizedCaseInsensitiveCompare`. */
 function compareNames(a: string, b: string): number {
   return a.localeCompare(b, undefined, { sensitivity: "accent" });
@@ -557,6 +602,14 @@ export function computeStandings(
     const entries = new Map(formed.map((r) => [r.id, newEntry(r.id, registrationDisplayName(r))]));
     const results = finished.map(standingsResult);
     tally(results, entries, points, cricketRules);
+    if (format === "swiss") {
+      const enteredAt = new Map<string, number>();
+      for (const r of formed) {
+        const at = millisOf(r.doc.createdAt);
+        if (at !== undefined) enteredAt.set(r.id, at);
+      }
+      addSwissByes(entries, matches, points, enteredAt);
+    }
     const tieBreaker = format === "roundRobin" ? effectiveTieBreaker(config) : LEGACY_TIE_BREAKER;
     groups.push({ name: "", rows: toRows(ranked([...entries.values()], results, sport, tieBreaker, points), team) });
   }

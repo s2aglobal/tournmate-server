@@ -245,14 +245,34 @@ export function optimalGroupCount(totalTeams: number, advancingPerGroup: number)
   return maxGroups;
 }
 
-/** Snake-seeded groups (by rating) with a round robin inside each. The organizer's group count is ignored. */
+/**
+ * Groups actually drawn: the organizer's count only when they explicitly
+ * picked one (tournament `groupCountChosen == true`) and it suits the field:
+ * a whole number from 2 to 26, advancing ≥ 1, and every group bigger than
+ * the advancing count (⌊teams / groups⌋ ≥ advancing + 1). Otherwise
+ * `optimalGroupCount`, as before organizers could choose (the apps always
+ * store some `groupCount`, so the stored value alone means nothing).
+ */
+export function effectiveGroupCount(
+  totalTeams: number,
+  requested: number,
+  advancingPerGroup: number,
+  chosen: boolean,
+): number {
+  if (chosen && Number.isInteger(requested) && requested >= 2 && requested <= 26 && advancingPerGroup >= 1 &&
+    Math.floor(totalTeams / requested) >= advancingPerGroup + 1) return requested;
+  return optimalGroupCount(totalTeams, advancingPerGroup);
+}
+
+/** Snake-seeded groups (by rating) with a round robin inside each; group count from `effectiveGroupCount`. */
 export function generateGroupStageSchedule<T extends DrawTeam>(
   teams: T[],
   groupCount: number,
   advancingPerGroup = 2,
+  groupCountChosen = false,
 ): GroupPair<T>[] {
-  if (teams.length < 4 || groupCount < 1) return [];
-  const effective = optimalGroupCount(teams.length, advancingPerGroup);
+  if (teams.length < 4) return [];
+  const effective = effectiveGroupCount(teams.length, groupCount, advancingPerGroup, groupCountChosen);
   const groups: T[][] = Array.from({ length: effective }, () => []);
   seededByRating(teams).forEach((team, index) => {
     const row = Math.floor(index / effective);
