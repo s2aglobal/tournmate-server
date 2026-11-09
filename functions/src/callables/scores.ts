@@ -37,7 +37,7 @@ import { notifyMatchFinished, notifyScoreDisputed, notifyScoreSubmitted, safely 
 
 const OPTIONS = { region: "us-central1", invoker: "public" } as const;
 
-type Side = "A" | "B";
+export type Side = "A" | "B";
 type Fields = Record<string, unknown>;
 
 // ─── Input ──────────────────────────────────────────────
@@ -64,13 +64,13 @@ function requireMatchId(data: Record<string, unknown>): string {
   return id;
 }
 
-interface PlayerOfMatchInput {
+export interface PlayerOfMatchInput {
   key: string;
   name: string;
   teamRegistrationId: string;
 }
 
-type Score =
+export type Score =
   | { kind: "sets"; sets: SetScore[] }
   | { kind: "simple"; scoreA: number; scoreB: number }
   | { kind: "cricket"; result: CricketResult; playerOfMatch: PlayerOfMatchInput | null; stats: PlayerStats | null };
@@ -117,14 +117,14 @@ function parseScore(data: Record<string, unknown>, teamEvent: boolean): Score {
 
 // ─── Loading and roles ──────────────────────────────────
 
-interface Loaded {
+export interface Loaded {
   match: MatchDoc;
   tournament: TournamentDoc;
   regA: RegistrationDoc | null;
   regB: RegistrationDoc | null;
 }
 
-async function load(db: Firestore, tx: Transaction, matchId: string): Promise<Loaded> {
+export async function load(db: Firestore, tx: Transaction, matchId: string): Promise<Loaded> {
   const matchSnap = await tx.get(db.collection("matches").doc(matchId));
   if (!matchSnap.exists) fail("not-found", "NOT_FOUND", "This match no longer exists.");
   const match = matchSnap.data() as MatchDoc;
@@ -143,7 +143,7 @@ async function load(db: Firestore, tx: Transaction, matchId: string): Promise<Lo
 }
 
 /** Upper-cased ids of every player profile linked to `uid`. */
-async function playerIdsForUid(db: Firestore, uid: string, tx?: Transaction): Promise<Set<string>> {
+export async function playerIdsForUid(db: Firestore, uid: string, tx?: Transaction): Promise<Set<string>> {
   const query = db.collection("players").where("firebaseUid", "==", uid);
   const snap = tx ? await tx.get(query) : await query.get();
   return new Set(snap.docs.map((d) => d.id.toUpperCase()));
@@ -187,11 +187,11 @@ async function submitterSide(db: Firestore, tx: Transaction, l: Loaded): Promise
   return sideOf({ ...l, match: { ...l.match, teamAUids: undefined, teamBUids: undefined } }, by, ids);
 }
 
-function isOrganizer(l: Loaded, uid: string): boolean {
+export function isOrganizer(l: Loaded, uid: string): boolean {
   return !!l.tournament.createdBy && l.tournament.createdBy === uid;
 }
 
-function requireParticipant(l: Loaded, uid: string, playerIds: Set<string>, message: string): Side {
+export function requireParticipant(l: Loaded, uid: string, playerIds: Set<string>, message: string): Side {
   const side = sideOf(l, uid, playerIds);
   if (side) return side;
   if (!hasUidLists(l.match) && playerIds.size === 0) {
@@ -203,7 +203,7 @@ function requireParticipant(l: Loaded, uid: string, playerIds: Set<string>, mess
 // ─── Match fields (as iOS FirestoreMatchRepository writes them) ─────────
 
 /** A field update plus the match as it will be stored. */
-class Patch {
+export class Patch {
   readonly fields: Fields = {};
   readonly after: MatchDoc;
   constructor(match: MatchDoc) {
@@ -304,7 +304,7 @@ async function registrationName(db: Firestore, tx: Transaction, reg: Registratio
  * Validates a cricket scorecard like the app (`submitCricketResult`) and
  * applies its fields. `final` = organizer (finished at once).
  */
-async function applyCricket(
+export async function applyCricket(
   db: Firestore,
   tx: Transaction,
   p: Patch,
@@ -312,11 +312,14 @@ async function applyCricket(
   score: Extract<Score, { kind: "cricket" }>,
   uid: string,
   final: boolean,
+  playersPerSide?: number,
 ): Promise<Patch> {
   const { match, tournament } = l;
   const teamA = match.teamAId;
   const teamB = match.teamBId;
-  const rules = knockoutRules(resolveCricketRules(tournament.rulesData), tournament.matchFormatRaw, match.groupLabel);
+  const base = knockoutRules(resolveCricketRules(tournament.rulesData), tournament.matchFormatRaw, match.groupLabel);
+  // Live scoring with smaller XIs: all out is decided by the XI size.
+  const rules = playersPerSide !== undefined ? { ...base, playersPerSide } : base;
   const issue = validateCricketResult(score.result, rules, teamA, teamB)[0] ??
     knockoutIssue(score.result, rules, tournament.matchFormatRaw, match.groupLabel);
   if (issue) fail("invalid-argument", "INVALID_SCORE", issue.message);
@@ -392,7 +395,7 @@ async function organizerFinal(db: Firestore, tx: Transaction, l: Loaded, score: 
 
 // ─── Commit ─────────────────────────────────────────────
 
-interface Committed {
+export interface Committed {
   match: MatchDoc;
   /** Elo was applied (and `eloApplied` set) by this write. */
   ratedNow: boolean;
@@ -403,7 +406,7 @@ interface Committed {
  * from the stored-to-be match and committed in the same transaction.
  * Reads happen in `planElo`, so call this after every other read.
  */
-async function commit(db: Firestore, tx: Transaction, matchId: string, l: Loaded, p: Patch): Promise<Committed> {
+export async function commit(db: Firestore, tx: Transaction, matchId: string, l: Loaded, p: Patch): Promise<Committed> {
   let ratedNow = false;
   const ref = db.collection("matches").doc(matchId);
   // `disputeReason` (server-only) describes the current dispute; any other
@@ -425,13 +428,26 @@ async function commit(db: Firestore, tx: Transaction, matchId: string, l: Loaded
   return { match: p.after, ratedNow };
 }
 
-async function afterFinish(db: Firestore, matchId: string, c: Committed): Promise<void> {
+export async function afterFinish(db: Firestore, matchId: string, c: Committed): Promise<void> {
   // The onMatchFinished trigger skips matches this write rated, so the teams
   // hear about the result exactly once.
   if (c.ratedNow) await safely(`Result notification for ${matchId}`, () => notifyMatchFinished(db, matchId, c.match));
 }
 
 // ─── Callables ──────────────────────────────────────────
+
+/** Live statuses during which only the live scorer changes the result. */
+const LIVE_ACTIVE = ["setup", "inProgress", "inningsBreak", "ended"];
+
+/** Refuses a manual score while the match is scored live (services/cricketLive.ts). */
+function requireNotLive(l: Loaded, uid: string): void {
+  const live = (l.match as unknown as { live?: { status?: unknown } }).live;
+  if (live && typeof live.status === "string" && LIVE_ACTIVE.includes(live.status)) {
+    fail("failed-precondition", "SCORER_ACTIVE", isOrganizer(l, uid)
+      ? "This match is being scored live. Stop live scoring first."
+      : "This match is being scored live.");
+  }
+}
 
 /**
  * `submitScore({ matchId, scoreA, scoreB, setScores?, cricket? })` →
@@ -453,6 +469,7 @@ export const submitScore = onCall(OPTIONS, async (req) => {
   let side: Side | null = null;
   const committed = await db.runTransaction(async (tx) => {
     const l = await load(db, tx, matchId);
+    requireNotLive(l, uid);
     const score = parseScore(data, isTeamEvent(l.tournament));
     if (isOrganizer(l, uid)) {
       side = null;
@@ -569,6 +586,7 @@ export const resolveDispute = onCall(OPTIONS, async (req) => {
   const committed = await db.runTransaction(async (tx) => {
     const l = await load(db, tx, matchId);
     if (!isOrganizer(l, uid)) fail("permission-denied", "NOT_ORGANIZER", "Only the organizer can set this score.");
+    requireNotLive(l, uid);
     const score = parseScore(data, isTeamEvent(l.tournament));
     let p: Patch;
     if (score.kind === "sets") {

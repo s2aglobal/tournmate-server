@@ -61,6 +61,10 @@ export { register, withdraw, joinAsPartner, changePartner, updateRoster, setRole
 export { generateDraw, advanceRound, resetDraw, generateRandomPairs, createManualMatches } from "./callables/draw";
 export { submitScore, confirmScore, disputeScore, resolveDispute } from "./callables/scores";
 export { setTournamentAwards } from "./callables/awards";
+export {
+  setLineup, startScoring, setToss, startInnings, recordBall, undoBall, setRevisedTarget, endInnings, abandonMatch,
+  finishLiveMatch, stopLiveScoring,
+} from "./callables/cricketLive";
 
 // ─── Scheduled Jobs ─────────────────────────────────────
 export { hourlyCleanup, dailyReminders, spamCleanup } from "./triggers/scheduledJobs";

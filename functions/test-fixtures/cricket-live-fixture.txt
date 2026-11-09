@@ -1,0 +1,578 @@
+LIVE extras config {"battingFirstTeamId":"TA","maxOversPerBowler":null,"rules":{"ballsPerOver":6,"eventTypeId":"custom","lastManStands":false,"overs":2,"playersPerSide":11,"superOver":true},"teams":[{"id":"TA","name":"Aces","order":["A1","A2","A3","A4","A5","A6","A7","A8","A9","A10","A11"],"players":[{"key":"A1","name":"a1"},{"key":"A2","name":"a2"},{"key":"A3","name":"a3"},{"key":"A4","name":"a4"},{"key":"A5","name":"a5"},{"key":"A6","name":"a6"},{"key":"A7","name":"a7"},{"key":"A8","name":"a8"},{"key":"A9","name":"a9"},{"key":"A10","name":"a10"},{"key":"A11","name":"a11"}]},{"id":"TB","name":"Bulls","order":["B1","B2","B3","B4","B5","B6","B7","B8","B9","B10","guest:Gus"],"players":[{"key":"B1","name":"b1"},{"key":"B2","name":"b2"},{"key":"B3","name":"b3"},{"key":"B4","name":"b4"},{"key":"B5","name":"b5"},{"key":"B6","name":"b6"},{"key":"B7","name":"b7"},{"key":"B8","name":"b8"},{"key":"B9","name":"b9"},{"key":"B10","name":"b10"},{"key":"guest:Gus","name":"Gus"}]}]}
+LIVE extras event {"bowlerKey":"B1","nonStrikerKey":"A2","strikerKey":"A1","type":"startInnings"}
+LIVE extras => st=inProgress inn=1 0/0 (0) s=A1 ns=A2 b=B1 lb=- fh=0 over=[]
+LIVE extras event {"id":"b1","runs":1,"type":"ball"}
+LIVE extras => st=inProgress inn=1 1/0 (0.1) s=A2 ns=A1 b=B1 lb=- fh=0 over=[1]
+LIVE extras event {"id":"b2","runs":0,"type":"ball"}
+LIVE extras => st=inProgress inn=1 1/0 (0.2) s=A2 ns=A1 b=B1 lb=- fh=0 over=[1,.]
+LIVE extras event {"extras":{"runs":0,"type":"wide"},"id":"b3","runs":0,"type":"ball"}
+LIVE extras => st=inProgress inn=1 2/0 (0.2) s=A2 ns=A1 b=B1 lb=- fh=0 over=[1,.,wd]
+LIVE extras event {"extras":{"runs":1,"type":"wide"},"id":"b4","runs":0,"type":"ball"}
+LIVE extras => st=inProgress inn=1 4/0 (0.2) s=A1 ns=A2 b=B1 lb=- fh=0 over=[1,.,wd,2wd]
+LIVE extras event {"extras":{"runs":0,"type":"noBall"},"id":"b5","runs":4,"type":"ball"}
+LIVE extras => st=inProgress inn=1 9/0 (0.2) s=A1 ns=A2 b=B1 lb=- fh=1 over=[1,.,wd,2wd,4nb]
+LIVE extras event {"id":"b6","runs":6,"type":"ball"}
+LIVE extras => st=inProgress inn=1 15/0 (0.3) s=A1 ns=A2 b=B1 lb=- fh=0 over=[1,.,wd,2wd,4nb,6]
+LIVE extras event {"extras":{"runs":1,"type":"bye"},"id":"b7","runs":0,"type":"ball"}
+LIVE extras => st=inProgress inn=1 16/0 (0.4) s=A2 ns=A1 b=B1 lb=- fh=0 over=[1,.,wd,2wd,4nb,6,1b]
+LIVE extras event {"extras":{"runs":2,"type":"legBye"},"id":"b8","runs":0,"type":"ball"}
+LIVE extras => st=inProgress inn=1 18/0 (0.5) s=A2 ns=A1 b=B1 lb=- fh=0 over=[1,.,wd,2wd,4nb,6,1b,2lb]
+LIVE extras event {"id":"b9","runs":0,"swapStrike":true,"type":"ball"}
+LIVE extras => st=inProgress inn=1 18/0 (1) s=A2 ns=A1 b=- lb=B1 fh=0 over=[1,.,wd,2wd,4nb,6,1b,2lb,.]
+LIVE extras event {"id":"b10","runs":1,"type":"ball"}
+LIVE extras !! INVALID_BALL Pick the bowler for the next over.
+LIVE extras event {"id":"b11","nextBowlerKey":"B1","runs":1,"type":"ball"}
+LIVE extras !! INVALID_BALL That bowler bowled the last over.
+LIVE extras event {"id":"b12","nextBowlerKey":"A3","runs":1,"type":"ball"}
+LIVE extras !! INVALID_BALL That bowler isn't in the fielding side.
+LIVE extras event {"extras":{"runs":0,"type":"wide"},"id":"b13","nextBowlerKey":"B2","runs":0,"type":"ball"}
+LIVE extras => st=inProgress inn=1 19/0 (1) s=A2 ns=A1 b=B2 lb=B1 fh=0 over=[wd]
+LIVE extras event {"extras":{"runs":0,"type":"wide"},"id":"b14","runs":0,"type":"ball"}
+LIVE extras => st=inProgress inn=1 20/0 (1) s=A2 ns=A1 b=B2 lb=B1 fh=0 over=[wd,wd]
+LIVE extras event {"extras":{"runs":0,"type":"wide"},"id":"b15","runs":1,"type":"ball"}
+LIVE extras !! INVALID_BALL Runs off the bat can't be added to a wide, bye or leg bye.
+LIVE extras event {"extras":{"runs":0,"type":"bye"},"id":"b16","runs":0,"type":"ball"}
+LIVE extras !! INVALID_BALL A bye or leg bye needs at least 1 run.
+LIVE extras event {"id":"b17","runs":8,"type":"ball"}
+LIVE extras !! INVALID_BALL Runs must be a whole number from 0 to 7.
+LIVE extras event {"extras":{"runs":9,"type":"bye"},"id":"b18","runs":1,"type":"ball"}
+LIVE extras !! INVALID_BALL Extra runs must be a whole number from 0 to 7.
+LIVE extras event {"extras":{"runs":1,"type":"noBall"},"id":"b19","runs":0,"type":"ball"}
+LIVE extras => st=inProgress inn=1 22/0 (1) s=A1 ns=A2 b=B2 lb=B1 fh=1 over=[wd,wd,1nb]
+LIVE extras event {"extras":{"runs":0,"type":"wide"},"id":"b20","runs":0,"type":"ball"}
+LIVE extras => st=inProgress inn=1 23/0 (1) s=A1 ns=A2 b=B2 lb=B1 fh=1 over=[wd,wd,1nb,wd]
+LIVE extras event {"id":"b21","runs":2,"type":"ball"}
+LIVE extras => st=inProgress inn=1 25/0 (1.1) s=A1 ns=A2 b=B2 lb=B1 fh=0 over=[wd,wd,1nb,wd,2]
+LIVE extras event {"id":"b22","runs":3,"type":"ball"}
+LIVE extras => st=inProgress inn=1 28/0 (1.2) s=A2 ns=A1 b=B2 lb=B1 fh=0 over=[wd,wd,1nb,wd,2,3]
+LIVE extras event {"id":"b23","runs":4,"type":"ball"}
+LIVE extras => st=inProgress inn=1 32/0 (1.3) s=A2 ns=A1 b=B2 lb=B1 fh=0 over=[wd,wd,1nb,wd,2,3,4]
+LIVE extras event {"id":"b24","runs":4,"type":"ball"}
+LIVE extras => st=inProgress inn=1 36/0 (1.4) s=A2 ns=A1 b=B2 lb=B1 fh=0 over=[wd,wd,1nb,wd,2,3,4,4]
+LIVE extras event {"id":"b25","runs":4,"type":"ball"}
+LIVE extras => st=inProgress inn=1 40/0 (1.5) s=A2 ns=A1 b=B2 lb=B1 fh=0 over=[wd,wd,1nb,wd,2,3,4,4,4]
+LIVE extras event {"id":"b26","runs":4,"type":"ball"}
+LIVE extras => st=inningsBreak inn=1 44/0 (2) s=A2 ns=A1 b=- lb=B2 fh=0 over=[wd,wd,1nb,wd,2,3,4,4,4,4] end=overs
+LIVE extras event {"id":"b27","runs":1,"type":"ball"}
+LIVE extras !! INNINGS_OVER This innings is over. Start the next innings.
+LIVE extras card 1 total TA 44/0 (2) end=overs
+LIVE extras card 1 bat A1 16(6) 4s=1 6s=1 notOut
+LIVE extras card 1 bat A2 16(6) 4s=4 6s=0 notOut
+LIVE extras card 1 bowl B1 1-0-15-0 wd=2 nb=1
+LIVE extras card 1 bowl B2 1-0-25-0 wd=3 nb=1
+LIVE extras card 1 extras 12 (wd 6, nb 2, b 2, lb 2)
+LIVE extras card 1 fow 
+LIVE extras card 1 over 1 B1 18r 0w [1,.,wd,2wd,4nb,6,1b,2lb,.]
+LIVE extras card 1 over 2 B2 26r 0w [wd,wd,1nb,wd,2,3,4,4,4,4]
+LIVE dismissals config {"battingFirstTeamId":"TA","maxOversPerBowler":5,"rules":{"ballsPerOver":6,"eventTypeId":"custom","lastManStands":false,"overs":5,"playersPerSide":11,"superOver":true},"teams":[{"id":"TA","name":"Aces","order":["A1","A2","A3","A4","A5","A6","A7","A8","A9","A10","A11"],"players":[{"key":"A1","name":"a1"},{"key":"A2","name":"a2"},{"key":"A3","name":"a3"},{"key":"A4","name":"a4"},{"key":"A5","name":"a5"},{"key":"A6","name":"a6"},{"key":"A7","name":"a7"},{"key":"A8","name":"a8"},{"key":"A9","name":"a9"},{"key":"A10","name":"a10"},{"key":"A11","name":"a11"}]},{"id":"TB","name":"Bulls","order":["B1","B2","B3","B4","B5","B6","B7","B8","B9","B10","guest:Gus"],"players":[{"key":"B1","name":"b1"},{"key":"B2","name":"b2"},{"key":"B3","name":"b3"},{"key":"B4","name":"b4"},{"key":"B5","name":"b5"},{"key":"B6","name":"b6"},{"key":"B7","name":"b7"},{"key":"B8","name":"b8"},{"key":"B9","name":"b9"},{"key":"B10","name":"b10"},{"key":"guest:Gus","name":"Gus"}]}]}
+LIVE dismissals event {"bowlerKey":"B1","nonStrikerKey":"A2","strikerKey":"A1","type":"startInnings"}
+LIVE dismissals => st=inProgress inn=1 0/0 (0) s=A1 ns=A2 b=B1 lb=- fh=0 over=[]
+LIVE dismissals event {"id":"b28","nextBatterKey":"A3","runs":0,"type":"ball","wicket":{"batterKey":"A1","type":"bowled"}}
+LIVE dismissals => st=inProgress inn=1 0/1 (0.1) s=A3 ns=A2 b=B1 lb=- fh=0 over=[W]
+LIVE dismissals event {"id":"b29","nextBatterKey":"A4","runs":0,"type":"ball","wicket":{"batterKey":"A3","type":"caught"}}
+LIVE dismissals !! INVALID_BALL Pick the fielder.
+LIVE dismissals event {"id":"b30","nextBatterKey":"A4","runs":0,"type":"ball","wicket":{"batterKey":"A3","fielderKey":"A5","type":"caught"}}
+LIVE dismissals !! INVALID_BALL That fielder isn't in the fielding side.
+LIVE dismissals event {"id":"b31","nextBatterKey":"A4","runs":0,"type":"ball","wicket":{"batterKey":"A2","type":"lbw"}}
+LIVE dismissals !! INVALID_BALL Only the striker can be out that way.
+LIVE dismissals event {"id":"b32","nextBatterKey":"A4","runs":1,"type":"ball","wicket":{"batterKey":"A3","type":"bowled"}}
+LIVE dismissals !! INVALID_BALL That dismissal can't happen on this ball.
+LIVE dismissals event {"id":"b33","nextBatterKey":"A4","runs":0,"type":"ball","wicket":{"batterKey":"A9","type":"bowled"}}
+LIVE dismissals !! INVALID_BALL The dismissed batter must be at the crease.
+LIVE dismissals event {"id":"b34","runs":0,"type":"ball","wicket":{"batterKey":"A3","fielderKey":"B3","type":"caught"}}
+LIVE dismissals !! INVALID_BALL Pick the next batter.
+LIVE dismissals event {"id":"b35","nextBatterKey":"A1","runs":0,"type":"ball","wicket":{"batterKey":"A3","fielderKey":"B3","type":"caught"}}
+LIVE dismissals !! INVALID_BALL That batter has already batted.
+LIVE dismissals event {"id":"b36","nextBatterKey":"B2","runs":0,"type":"ball","wicket":{"batterKey":"A3","fielderKey":"B3","type":"caught"}}
+LIVE dismissals !! INVALID_BALL That batter isn't in the batting side.
+LIVE dismissals event {"id":"b37","nextBatterKey":"A4","runs":0,"type":"ball","wicket":{"batterKey":"A3","fielderKey":"B3","type":"caught"}}
+LIVE dismissals => st=inProgress inn=1 0/2 (0.2) s=A4 ns=A2 b=B1 lb=- fh=0 over=[W,W]
+LIVE dismissals event {"id":"b38","nextBatterKey":"A5","runs":1,"type":"ball"}
+LIVE dismissals !! INVALID_BALL No new batter is needed.
+LIVE dismissals event {"id":"b39","runs":1,"type":"ball"}
+LIVE dismissals => st=inProgress inn=1 1/2 (0.3) s=A2 ns=A4 b=B1 lb=- fh=0 over=[W,W,1]
+LIVE dismissals event {"id":"b40","nextBatterKey":"A5","runs":1,"type":"ball","wicket":{"batterKey":"A2","fielderKey":"B4","type":"runOut"}}
+LIVE dismissals => st=inProgress inn=1 2/3 (0.4) s=A4 ns=A5 b=B1 lb=- fh=0 over=[W,W,1,1W]
+LIVE dismissals event {"id":"b41","nextBatterKey":"A6","runs":0,"type":"ball","wicket":{"batterKey":"A4","type":"lbw"}}
+LIVE dismissals => st=inProgress inn=1 2/4 (0.5) s=A6 ns=A5 b=B1 lb=- fh=0 over=[W,W,1,1W,W]
+LIVE dismissals event {"extras":{"runs":0,"type":"noBall"},"id":"b42","nextBatterKey":"A7","runs":0,"type":"ball","wicket":{"batterKey":"A6","type":"bowled"}}
+LIVE dismissals !! INVALID_BALL That dismissal can't happen on this ball.
+LIVE dismissals event {"extras":{"runs":1,"type":"bye"},"id":"b43","nextBatterKey":"A7","runs":0,"type":"ball","wicket":{"batterKey":"A6","fielderKey":"guest:Gus","type":"stumped"}}
+LIVE dismissals !! INVALID_BALL That dismissal can't happen on this ball.
+LIVE dismissals event {"extras":{"runs":0,"type":"wide"},"id":"b44","nextBatterKey":"A7","runs":0,"type":"ball","wicket":{"batterKey":"A6","fielderKey":"guest:Gus","type":"stumped"}}
+LIVE dismissals => st=inProgress inn=1 3/5 (0.5) s=A7 ns=A5 b=B1 lb=- fh=0 over=[W,W,1,1W,W,wdW]
+LIVE dismissals event {"id":"b45","nextBatterKey":"A8","runs":0,"type":"ball","wicket":{"batterKey":"A7","type":"hitWicket"}}
+LIVE dismissals => st=inProgress inn=1 3/6 (1) s=A5 ns=A8 b=- lb=B1 fh=0 over=[W,W,1,1W,W,wdW,W]
+LIVE dismissals event {"id":"b46","runs":0,"type":"ball","wicket":{"batterKey":"A5","type":"retiredHurt"}}
+LIVE dismissals !! INVALID_BALL Pick the next batter.
+LIVE dismissals event {"id":"b47","nextBatterKey":"A9","runs":1,"type":"ball","wicket":{"batterKey":"A5","type":"retiredHurt"}}
+LIVE dismissals !! INVALID_BALL Record the retirement on its own, without runs.
+LIVE dismissals event {"id":"b48","nextBatterKey":"A9","runs":0,"type":"ball","wicket":{"batterKey":"A5","type":"retiredHurt"}}
+LIVE dismissals => st=inProgress inn=1 3/6 (1) s=A9 ns=A8 b=- lb=B1 fh=0 over=[RH]
+LIVE dismissals event {"id":"b49","nextBowlerKey":"B2","runs":4,"type":"ball"}
+LIVE dismissals => st=inProgress inn=1 7/6 (1.1) s=A9 ns=A8 b=B2 lb=B1 fh=0 over=[RH,4]
+LIVE dismissals event {"id":"b50","nextBatterKey":"A10","runs":0,"type":"ball","wicket":{"batterKey":"A8","type":"retiredOut"}}
+LIVE dismissals => st=inProgress inn=1 7/7 (1.1) s=A9 ns=A10 b=B2 lb=B1 fh=0 over=[RH,4,RO]
+LIVE dismissals event {"id":"b51","nextBatterKey":"A5","runs":0,"type":"ball","wicket":{"batterKey":"A9","type":"bowled"}}
+LIVE dismissals => st=inProgress inn=1 7/8 (1.2) s=A5 ns=A10 b=B2 lb=B1 fh=0 over=[RH,4,RO,W]
+LIVE dismissals event {"id":"b52","nextBatterKey":"A11","runs":0,"type":"ball","wicket":{"batterKey":"A5","fielderKey":"B2","type":"caught"}}
+LIVE dismissals => st=inProgress inn=1 7/9 (1.3) s=A11 ns=A10 b=B2 lb=B1 fh=0 over=[RH,4,RO,W,W]
+LIVE dismissals event {"id":"b53","nextBatterKey":"A1","runs":0,"type":"ball","wicket":{"batterKey":"A11","type":"runOut"}}
+LIVE dismissals !! INVALID_BALL No new batter is needed.
+LIVE dismissals event {"id":"b54","runs":0,"type":"ball","wicket":{"batterKey":"A11","fielderKey":"guest:Gus","type":"runOut"}}
+LIVE dismissals => st=inningsBreak inn=1 7/10 (1.4) s=- ns=A10 b=- lb=B1 fh=0 over=[RH,4,RO,W,W,W] end=allOut
+LIVE dismissals card 1 total TA 7/10 (1.4) end=allOut
+LIVE dismissals card 1 bat A1 0(1) 4s=0 6s=0 bowled b=B1
+LIVE dismissals card 1 bat A2 1(1) 4s=0 6s=0 runOut f=B4
+LIVE dismissals card 1 bat A3 0(1) 4s=0 6s=0 caught b=B1 f=B3
+LIVE dismissals card 1 bat A4 1(2) 4s=0 6s=0 lbw b=B1
+LIVE dismissals card 1 bat A5 0(1) 4s=0 6s=0 caught b=B2 f=B2
+LIVE dismissals card 1 bat A6 0(0) 4s=0 6s=0 stumped b=B1 f=guest:Gus
+LIVE dismissals card 1 bat A7 0(1) 4s=0 6s=0 hitWicket b=B1
+LIVE dismissals card 1 bat A8 0(0) 4s=0 6s=0 retiredOut
+LIVE dismissals card 1 bat A9 4(2) 4s=1 6s=0 bowled b=B2
+LIVE dismissals card 1 bat A10 0(0) 4s=0 6s=0 notOut
+LIVE dismissals card 1 bat A11 0(1) 4s=0 6s=0 runOut f=guest:Gus
+LIVE dismissals card 1 bowl B1 1-0-3-5 wd=1 nb=0
+LIVE dismissals card 1 bowl B2 0.4-0-4-2 wd=0 nb=0
+LIVE dismissals card 1 extras 1 (wd 1, nb 0, b 0, lb 0)
+LIVE dismissals card 1 fow 1-0 A1 (0.1), 2-0 A3 (0.2), 3-2 A2 (0.4), 4-2 A4 (0.5), 5-3 A6 (0.5), 6-3 A7 (1), 7-7 A8 (1.1), 8-7 A9 (1.2), 9-7 A5 (1.3), 10-7 A11 (1.4)
+LIVE dismissals card 1 over 1 B1 3r 6w [W,W,1,1W,W,wdW,W]
+LIVE dismissals card 1 over 2 B2 4r 4w [RH,4,RO,W,W,W]
+LIVE bowlers config {"battingFirstTeamId":"TA","maxOversPerBowler":null,"rules":{"ballsPerOver":6,"eventTypeId":"custom","lastManStands":false,"overs":3,"playersPerSide":11,"superOver":true},"teams":[{"id":"TA","name":"Aces","order":["A1","A2","A3","A4","A5","A6","A7","A8","A9","A10","A11"],"players":[{"key":"A1","name":"a1"},{"key":"A2","name":"a2"},{"key":"A3","name":"a3"},{"key":"A4","name":"a4"},{"key":"A5","name":"a5"},{"key":"A6","name":"a6"},{"key":"A7","name":"a7"},{"key":"A8","name":"a8"},{"key":"A9","name":"a9"},{"key":"A10","name":"a10"},{"key":"A11","name":"a11"}]},{"id":"TB","name":"Bulls","order":["B1","B2","B3","B4","B5","B6","B7","B8","B9","B10","guest:Gus"],"players":[{"key":"B1","name":"b1"},{"key":"B2","name":"b2"},{"key":"B3","name":"b3"},{"key":"B4","name":"b4"},{"key":"B5","name":"b5"},{"key":"B6","name":"b6"},{"key":"B7","name":"b7"},{"key":"B8","name":"b8"},{"key":"B9","name":"b9"},{"key":"B10","name":"b10"},{"key":"guest:Gus","name":"Gus"}]}]}
+LIVE bowlers event {"bowlerKey":"B1","nonStrikerKey":"A2","strikerKey":"A1","type":"startInnings"}
+LIVE bowlers => st=inProgress inn=1 0/0 (0) s=A1 ns=A2 b=B1 lb=- fh=0 over=[]
+LIVE bowlers event {"id":"b55","runs":0,"type":"ball"}
+LIVE bowlers => st=inProgress inn=1 0/0 (0.1) s=A1 ns=A2 b=B1 lb=- fh=0 over=[.]
+LIVE bowlers event {"id":"b56","runs":0,"type":"ball"}
+LIVE bowlers => st=inProgress inn=1 0/0 (0.2) s=A1 ns=A2 b=B1 lb=- fh=0 over=[.,.]
+LIVE bowlers event {"id":"b57","runs":0,"type":"ball"}
+LIVE bowlers => st=inProgress inn=1 0/0 (0.3) s=A1 ns=A2 b=B1 lb=- fh=0 over=[.,.,.]
+LIVE bowlers event {"id":"b58","runs":0,"type":"ball"}
+LIVE bowlers => st=inProgress inn=1 0/0 (0.4) s=A1 ns=A2 b=B1 lb=- fh=0 over=[.,.,.,.]
+LIVE bowlers event {"id":"b59","runs":0,"type":"ball"}
+LIVE bowlers => st=inProgress inn=1 0/0 (0.5) s=A1 ns=A2 b=B1 lb=- fh=0 over=[.,.,.,.,.]
+LIVE bowlers event {"id":"b60","runs":0,"type":"ball"}
+LIVE bowlers => st=inProgress inn=1 0/0 (1) s=A2 ns=A1 b=- lb=B1 fh=0 over=[.,.,.,.,.,.]
+LIVE bowlers event {"id":"b61","nextBowlerKey":"B2","runs":0,"type":"ball"}
+LIVE bowlers => st=inProgress inn=1 0/0 (1.1) s=A2 ns=A1 b=B2 lb=B1 fh=0 over=[.]
+LIVE bowlers event {"id":"b62","nextBowlerKey":"B3","runs":0,"type":"ball"}
+LIVE bowlers !! INVALID_BALL The bowler can't change in the middle of an over.
+LIVE bowlers event {"id":"b63","nextBowlerKey":"B2","runs":1,"type":"ball"}
+LIVE bowlers => st=inProgress inn=1 1/0 (1.2) s=A1 ns=A2 b=B2 lb=B1 fh=0 over=[.,1]
+LIVE bowlers event {"id":"b64","runs":0,"type":"ball"}
+LIVE bowlers => st=inProgress inn=1 1/0 (1.3) s=A1 ns=A2 b=B2 lb=B1 fh=0 over=[.,1,.]
+LIVE bowlers event {"id":"b65","runs":0,"type":"ball"}
+LIVE bowlers => st=inProgress inn=1 1/0 (1.4) s=A1 ns=A2 b=B2 lb=B1 fh=0 over=[.,1,.,.]
+LIVE bowlers event {"id":"b66","runs":0,"type":"ball"}
+LIVE bowlers => st=inProgress inn=1 1/0 (1.5) s=A1 ns=A2 b=B2 lb=B1 fh=0 over=[.,1,.,.,.]
+LIVE bowlers event {"id":"b67","runs":0,"type":"ball"}
+LIVE bowlers => st=inProgress inn=1 1/0 (2) s=A2 ns=A1 b=- lb=B2 fh=0 over=[.,1,.,.,.,.]
+LIVE bowlers event {"id":"b68","nextBowlerKey":"B1","runs":0,"type":"ball"}
+LIVE bowlers !! INVALID_BALL That bowler has no overs left.
+LIVE bowlers event {"id":"b69","nextBowlerKey":"B2","runs":0,"type":"ball"}
+LIVE bowlers !! INVALID_BALL That bowler bowled the last over.
+LIVE bowlers event {"id":"b70","nextBowlerKey":"guest:Gus","runs":1,"type":"ball"}
+LIVE bowlers => st=inProgress inn=1 2/0 (2.1) s=A1 ns=A2 b=guest:Gus lb=B2 fh=0 over=[1]
+LIVE bowlers event {"id":"b71","runs":0,"swapStrike":true,"type":"ball"}
+LIVE bowlers => st=inProgress inn=1 2/0 (2.2) s=A2 ns=A1 b=guest:Gus lb=B2 fh=0 over=[1,.]
+LIVE bowlers event {"reason":"Rain","type":"endInnings"}
+LIVE bowlers => st=inningsBreak inn=1 2/0 (2.2) s=A2 ns=A1 b=- lb=B2 fh=0 over=[1,.] end=manual
+LIVE bowlers event {"reason":"Again","type":"endInnings"}
+LIVE bowlers !! INNINGS_OVER This innings is over. Start the next innings.
+LIVE bowlers card 1 total TA 2/0 (2.2) end=manual
+LIVE bowlers card 1 bat A1 0(10) 4s=0 6s=0 notOut
+LIVE bowlers card 1 bat A2 2(4) 4s=0 6s=0 notOut
+LIVE bowlers card 1 bowl B1 1-1-0-0 wd=0 nb=0
+LIVE bowlers card 1 bowl B2 1-0-1-0 wd=0 nb=0
+LIVE bowlers card 1 bowl guest:Gus 0.2-0-1-0 wd=0 nb=0
+LIVE bowlers card 1 extras 0 (wd 0, nb 0, b 0, lb 0)
+LIVE bowlers card 1 fow 
+LIVE bowlers card 1 over 1 B1 0r 0w [.,.,.,.,.,.]
+LIVE bowlers card 1 over 2 B2 1r 0w [.,1,.,.,.,.]
+LIVE bowlers card 1 over 3 guest:Gus 1r 0w [1,.]
+LIVE chase config {"battingFirstTeamId":"TA","maxOversPerBowler":null,"rules":{"ballsPerOver":6,"eventTypeId":"custom","lastManStands":false,"overs":1,"playersPerSide":3,"superOver":true},"teams":[{"id":"TA","name":"Aces","order":["A1","A2","A3"],"players":[{"key":"A1","name":"a1"},{"key":"A2","name":"a2"},{"key":"A3","name":"a3"}]},{"id":"TB","name":"Bulls","order":["B1","B2","guest:Gus"],"players":[{"key":"B1","name":"b1"},{"key":"B2","name":"b2"},{"key":"guest:Gus","name":"Gus"}]}]}
+LIVE chase event {"id":"b72","runs":1,"type":"ball"}
+LIVE chase !! INNINGS_OVER Start the innings first.
+LIVE chase event {"overs":1,"runs":10,"type":"revisedTarget"}
+LIVE chase !! INVALID_ARGUMENT A revised target is set once the first innings is over.
+LIVE chase event {"bowlerKey":"B1","nonStrikerKey":"A1","strikerKey":"A1","type":"startInnings"}
+LIVE chase !! INVALID_BALL Pick two different batters.
+LIVE chase event {"bowlerKey":"B1","nonStrikerKey":"B2","strikerKey":"A1","type":"startInnings"}
+LIVE chase !! INVALID_BALL That batter isn't in the batting side.
+LIVE chase event {"bowlerKey":"A3","nonStrikerKey":"A2","strikerKey":"A1","type":"startInnings"}
+LIVE chase !! INVALID_BALL That bowler isn't in the fielding side.
+LIVE chase event {"bowlerKey":"B1","nonStrikerKey":"A2","strikerKey":"A1","type":"startInnings"}
+LIVE chase => st=inProgress inn=1 0/0 (0) s=A1 ns=A2 b=B1 lb=- fh=0 over=[]
+LIVE chase event {"bowlerKey":"B1","nonStrikerKey":"A2","strikerKey":"A1","type":"startInnings"}
+LIVE chase !! INVALID_BALL This innings has already started.
+LIVE chase event {"id":"b73","runs":6,"type":"ball"}
+LIVE chase => st=inProgress inn=1 6/0 (0.1) s=A1 ns=A2 b=B1 lb=- fh=0 over=[6]
+LIVE chase event {"id":"b74","runs":4,"type":"ball"}
+LIVE chase => st=inProgress inn=1 10/0 (0.2) s=A1 ns=A2 b=B1 lb=- fh=0 over=[6,4]
+LIVE chase event {"id":"b75","runs":1,"type":"ball"}
+LIVE chase => st=inProgress inn=1 11/0 (0.3) s=A2 ns=A1 b=B1 lb=- fh=0 over=[6,4,1]
+LIVE chase event {"id":"b76","runs":0,"type":"ball"}
+LIVE chase => st=inProgress inn=1 11/0 (0.4) s=A2 ns=A1 b=B1 lb=- fh=0 over=[6,4,1,.]
+LIVE chase event {"id":"b77","runs":2,"type":"ball"}
+LIVE chase => st=inProgress inn=1 13/0 (0.5) s=A2 ns=A1 b=B1 lb=- fh=0 over=[6,4,1,.,2]
+LIVE chase event {"id":"b78","runs":1,"type":"ball"}
+LIVE chase => st=inningsBreak inn=1 14/0 (1) s=A1 ns=A2 b=- lb=B1 fh=0 over=[6,4,1,.,2,1] end=overs
+LIVE chase event {"bowlerKey":"B1","nonStrikerKey":"B2","strikerKey":"B1","type":"startInnings"}
+LIVE chase !! INVALID_BALL That bowler isn't in the fielding side.
+LIVE chase event {"bowlerKey":"A1","nonStrikerKey":"B2","strikerKey":"B1","type":"startInnings"}
+LIVE chase => st=inProgress inn=2 0/0 (0) tgt=15 s=B1 ns=B2 b=A1 lb=- fh=0 over=[]
+LIVE chase event {"id":"b79","runs":4,"type":"ball"}
+LIVE chase => st=inProgress inn=2 4/0 (0.1) tgt=15 s=B1 ns=B2 b=A1 lb=- fh=0 over=[4]
+LIVE chase event {"id":"b80","runs":6,"type":"ball"}
+LIVE chase => st=inProgress inn=2 10/0 (0.2) tgt=15 s=B1 ns=B2 b=A1 lb=- fh=0 over=[4,6]
+LIVE chase event {"id":"b81","runs":1,"type":"ball"}
+LIVE chase => st=inProgress inn=2 11/0 (0.3) tgt=15 s=B2 ns=B1 b=A1 lb=- fh=0 over=[4,6,1]
+LIVE chase event {"extras":{"runs":3,"type":"wide"},"id":"b82","runs":0,"type":"ball"}
+LIVE chase => st=ended inn=2 15/0 (0.3) tgt=15 s=B1 ns=B2 b=- lb=- fh=0 over=[4,6,1,4wd] end=target
+LIVE chase event {"id":"b83","runs":1,"type":"ball"}
+LIVE chase !! INNINGS_OVER Both innings are over. Finish the match.
+LIVE chase event {"bowlerKey":"B1","nonStrikerKey":"A2","strikerKey":"A1","type":"startInnings"}
+LIVE chase !! INNINGS_OVER Both innings have been played.
+LIVE chase event {"overs":1,"runs":10,"type":"revisedTarget"}
+LIVE chase !! INNINGS_OVER Both innings have been played.
+LIVE chase card 1 total TA 14/0 (1) end=overs
+LIVE chase card 1 bat A1 11(3) 4s=1 6s=1 notOut
+LIVE chase card 1 bat A2 3(3) 4s=0 6s=0 notOut
+LIVE chase card 1 bowl B1 1-0-14-0 wd=0 nb=0
+LIVE chase card 1 extras 0 (wd 0, nb 0, b 0, lb 0)
+LIVE chase card 1 fow 
+LIVE chase card 1 over 1 B1 14r 0w [6,4,1,.,2,1]
+LIVE chase card 2 total TB 15/0 (0.3) tgt=15 end=target
+LIVE chase card 2 bat B1 11(3) 4s=1 6s=1 notOut
+LIVE chase card 2 bat B2 0(0) 4s=0 6s=0 notOut
+LIVE chase card 2 bowl A1 0.3-0-15-0 wd=1 nb=0
+LIVE chase card 2 extras 4 (wd 4, nb 0, b 0, lb 0)
+LIVE chase card 2 fow 
+LIVE chase card 2 over 1 A1 15r 0w [4,6,1,4wd]
+LIVE chase result {"innings":[{"balls":6,"battingRegistrationId":"TA","runs":14,"wickets":0},{"balls":3,"battingRegistrationId":"TB","runs":15,"wickets":0}]}
+LIVE chase stats {"batting":[{"balls":3,"key":"A1","name":"a1","out":false,"runs":11,"teamRegistrationId":"TA"},{"balls":3,"key":"A2","name":"a2","out":false,"runs":3,"teamRegistrationId":"TA"},{"balls":3,"key":"B1","name":"b1","out":false,"runs":11,"teamRegistrationId":"TB"},{"balls":0,"key":"B2","name":"b2","out":false,"runs":0,"teamRegistrationId":"TB"}],"bowling":[{"balls":6,"key":"B1","name":"b1","runs":14,"teamRegistrationId":"TB","wickets":0},{"balls":3,"key":"A1","name":"a1","runs":15,"teamRegistrationId":"TA","wickets":0}]}
+LIVE chase outcome win TB won by 2 wickets (3 balls left)
+LIVE revised config {"battingFirstTeamId":"TA","maxOversPerBowler":null,"rules":{"ballsPerOver":6,"eventTypeId":"custom","lastManStands":false,"overs":2,"playersPerSide":11,"superOver":true},"teams":[{"id":"TA","name":"Aces","order":["A1","A2","A3","A4","A5","A6","A7","A8","A9","A10","A11"],"players":[{"key":"A1","name":"a1"},{"key":"A2","name":"a2"},{"key":"A3","name":"a3"},{"key":"A4","name":"a4"},{"key":"A5","name":"a5"},{"key":"A6","name":"a6"},{"key":"A7","name":"a7"},{"key":"A8","name":"a8"},{"key":"A9","name":"a9"},{"key":"A10","name":"a10"},{"key":"A11","name":"a11"}]},{"id":"TB","name":"Bulls","order":["B1","B2","B3","B4","B5","B6","B7","B8","B9","B10","guest:Gus"],"players":[{"key":"B1","name":"b1"},{"key":"B2","name":"b2"},{"key":"B3","name":"b3"},{"key":"B4","name":"b4"},{"key":"B5","name":"b5"},{"key":"B6","name":"b6"},{"key":"B7","name":"b7"},{"key":"B8","name":"b8"},{"key":"B9","name":"b9"},{"key":"B10","name":"b10"},{"key":"guest:Gus","name":"Gus"}]}]}
+LIVE revised event {"bowlerKey":"B1","nonStrikerKey":"A2","strikerKey":"A1","type":"startInnings"}
+LIVE revised => st=inProgress inn=1 0/0 (0) s=A1 ns=A2 b=B1 lb=- fh=0 over=[]
+LIVE revised event {"id":"b84","runs":1,"type":"ball"}
+LIVE revised => st=inProgress inn=1 1/0 (0.1) s=A2 ns=A1 b=B1 lb=- fh=0 over=[1]
+LIVE revised event {"id":"b85","runs":1,"type":"ball"}
+LIVE revised => st=inProgress inn=1 2/0 (0.2) s=A1 ns=A2 b=B1 lb=- fh=0 over=[1,1]
+LIVE revised event {"id":"b86","runs":1,"type":"ball"}
+LIVE revised => st=inProgress inn=1 3/0 (0.3) s=A2 ns=A1 b=B1 lb=- fh=0 over=[1,1,1]
+LIVE revised event {"id":"b87","runs":1,"type":"ball"}
+LIVE revised => st=inProgress inn=1 4/0 (0.4) s=A1 ns=A2 b=B1 lb=- fh=0 over=[1,1,1,1]
+LIVE revised event {"id":"b88","runs":1,"type":"ball"}
+LIVE revised => st=inProgress inn=1 5/0 (0.5) s=A2 ns=A1 b=B1 lb=- fh=0 over=[1,1,1,1,1]
+LIVE revised event {"id":"b89","runs":1,"type":"ball"}
+LIVE revised => st=inProgress inn=1 6/0 (1) s=A2 ns=A1 b=- lb=B1 fh=0 over=[1,1,1,1,1,1]
+LIVE revised event {"id":"b90","nextBowlerKey":"B2","runs":1,"type":"ball"}
+LIVE revised => st=inProgress inn=1 7/0 (1.1) s=A1 ns=A2 b=B2 lb=B1 fh=0 over=[1]
+LIVE revised event {"id":"b91","runs":1,"type":"ball"}
+LIVE revised => st=inProgress inn=1 8/0 (1.2) s=A2 ns=A1 b=B2 lb=B1 fh=0 over=[1,1]
+LIVE revised event {"id":"b92","runs":1,"type":"ball"}
+LIVE revised => st=inProgress inn=1 9/0 (1.3) s=A1 ns=A2 b=B2 lb=B1 fh=0 over=[1,1,1]
+LIVE revised event {"id":"b93","runs":1,"type":"ball"}
+LIVE revised => st=inProgress inn=1 10/0 (1.4) s=A2 ns=A1 b=B2 lb=B1 fh=0 over=[1,1,1,1]
+LIVE revised event {"id":"b94","runs":1,"type":"ball"}
+LIVE revised => st=inProgress inn=1 11/0 (1.5) s=A1 ns=A2 b=B2 lb=B1 fh=0 over=[1,1,1,1,1]
+LIVE revised event {"id":"b95","runs":1,"type":"ball"}
+LIVE revised => st=inningsBreak inn=1 12/0 (2) s=A2 ns=A1 b=- lb=B2 fh=0 over=[1,1,1,1,1,1] end=overs
+LIVE revised event {"overs":3,"runs":10,"type":"revisedTarget"}
+LIVE revised !! INVALID_ARGUMENT Revised overs must be between 1 and 2.
+LIVE revised event {"overs":1,"runs":0,"type":"revisedTarget"}
+LIVE revised !! INVALID_ARGUMENT Revised target must be at least 1 run.
+LIVE revised event {"overs":2,"runs":10,"type":"revisedTarget"}
+LIVE revised => st=inningsBreak inn=1 12/0 (2) s=A2 ns=A1 b=- lb=B2 fh=0 over=[1,1,1,1,1,1] end=overs
+LIVE revised event {"bowlerKey":"A1","nonStrikerKey":"B2","strikerKey":"B1","type":"startInnings"}
+LIVE revised => st=inProgress inn=2 0/0 (0) tgt=10 s=B1 ns=B2 b=A1 lb=- fh=0 over=[]
+LIVE revised event {"id":"b96","runs":1,"type":"ball"}
+LIVE revised => st=inProgress inn=2 1/0 (0.1) tgt=10 s=B2 ns=B1 b=A1 lb=- fh=0 over=[1]
+LIVE revised event {"id":"b97","runs":1,"type":"ball"}
+LIVE revised => st=inProgress inn=2 2/0 (0.2) tgt=10 s=B1 ns=B2 b=A1 lb=- fh=0 over=[1,1]
+LIVE revised event {"id":"b98","runs":1,"type":"ball"}
+LIVE revised => st=inProgress inn=2 3/0 (0.3) tgt=10 s=B2 ns=B1 b=A1 lb=- fh=0 over=[1,1,1]
+LIVE revised event {"id":"b99","runs":1,"type":"ball"}
+LIVE revised => st=inProgress inn=2 4/0 (0.4) tgt=10 s=B1 ns=B2 b=A1 lb=- fh=0 over=[1,1,1,1]
+LIVE revised event {"id":"b100","runs":1,"type":"ball"}
+LIVE revised => st=inProgress inn=2 5/0 (0.5) tgt=10 s=B2 ns=B1 b=A1 lb=- fh=0 over=[1,1,1,1,1]
+LIVE revised event {"id":"b101","runs":1,"type":"ball"}
+LIVE revised => st=inProgress inn=2 6/0 (1) tgt=10 s=B2 ns=B1 b=- lb=A1 fh=0 over=[1,1,1,1,1,1]
+LIVE revised event {"id":"b102","nextBowlerKey":"A2","runs":1,"type":"ball"}
+LIVE revised => st=inProgress inn=2 7/0 (1.1) tgt=10 s=B1 ns=B2 b=A2 lb=A1 fh=0 over=[1]
+LIVE revised event {"overs":1,"runs":9,"type":"revisedTarget"}
+LIVE revised !! INVALID_ARGUMENT Revised overs can't be fewer than the overs already bowled.
+LIVE revised event {"overs":2,"runs":8,"type":"revisedTarget"}
+LIVE revised => st=inProgress inn=2 7/0 (1.1) tgt=8 s=B1 ns=B2 b=A2 lb=A1 fh=0 over=[1]
+LIVE revised event {"id":"b103","runs":1,"type":"ball"}
+LIVE revised => st=ended inn=2 8/0 (1.2) tgt=8 s=B2 ns=B1 b=- lb=A1 fh=0 over=[1,1] end=target
+LIVE revised card 1 total TA 12/0 (2) end=overs
+LIVE revised card 1 bat A1 6(6) 4s=0 6s=0 notOut
+LIVE revised card 1 bat A2 6(6) 4s=0 6s=0 notOut
+LIVE revised card 1 bowl B1 1-0-6-0 wd=0 nb=0
+LIVE revised card 1 bowl B2 1-0-6-0 wd=0 nb=0
+LIVE revised card 1 extras 0 (wd 0, nb 0, b 0, lb 0)
+LIVE revised card 1 fow 
+LIVE revised card 1 over 1 B1 6r 0w [1,1,1,1,1,1]
+LIVE revised card 1 over 2 B2 6r 0w [1,1,1,1,1,1]
+LIVE revised card 2 total TB 8/0 (1.2) tgt=8 rov=2 end=target
+LIVE revised card 2 bat B1 4(4) 4s=0 6s=0 notOut
+LIVE revised card 2 bat B2 4(4) 4s=0 6s=0 notOut
+LIVE revised card 2 bowl A1 1-0-6-0 wd=0 nb=0
+LIVE revised card 2 bowl A2 0.2-0-2-0 wd=0 nb=0
+LIVE revised card 2 extras 0 (wd 0, nb 0, b 0, lb 0)
+LIVE revised card 2 fow 
+LIVE revised card 2 over 1 A1 6r 0w [1,1,1,1,1,1]
+LIVE revised card 2 over 2 A2 2r 0w [1,1]
+LIVE revised result {"innings":[{"balls":12,"battingRegistrationId":"TA","runs":12,"wickets":0},{"balls":8,"battingRegistrationId":"TB","runs":8,"wickets":0}],"revisedTarget":{"overs":2,"runs":8}}
+LIVE revised stats {"batting":[{"balls":6,"key":"A1","name":"a1","out":false,"runs":6,"teamRegistrationId":"TA"},{"balls":6,"key":"A2","name":"a2","out":false,"runs":6,"teamRegistrationId":"TA"},{"balls":4,"key":"B1","name":"b1","out":false,"runs":4,"teamRegistrationId":"TB"},{"balls":4,"key":"B2","name":"b2","out":false,"runs":4,"teamRegistrationId":"TB"}],"bowling":[{"balls":6,"key":"B1","name":"b1","runs":6,"teamRegistrationId":"TB","wickets":0},{"balls":6,"key":"B2","name":"b2","runs":6,"teamRegistrationId":"TB","wickets":0},{"balls":6,"key":"A1","name":"a1","runs":6,"teamRegistrationId":"TA","wickets":0},{"balls":2,"key":"A2","name":"a2","runs":2,"teamRegistrationId":"TA","wickets":0}]}
+LIVE revised outcome win TB won by 10 wickets (4 balls left) (revised target)
+LIVE rainEnd config {"battingFirstTeamId":"TA","maxOversPerBowler":null,"rules":{"ballsPerOver":6,"eventTypeId":"custom","lastManStands":false,"overs":2,"playersPerSide":11,"superOver":true},"teams":[{"id":"TA","name":"Aces","order":["A1","A2","A3","A4","A5","A6","A7","A8","A9","A10","A11"],"players":[{"key":"A1","name":"a1"},{"key":"A2","name":"a2"},{"key":"A3","name":"a3"},{"key":"A4","name":"a4"},{"key":"A5","name":"a5"},{"key":"A6","name":"a6"},{"key":"A7","name":"a7"},{"key":"A8","name":"a8"},{"key":"A9","name":"a9"},{"key":"A10","name":"a10"},{"key":"A11","name":"a11"}]},{"id":"TB","name":"Bulls","order":["B1","B2","B3","B4","B5","B6","B7","B8","B9","B10","guest:Gus"],"players":[{"key":"B1","name":"b1"},{"key":"B2","name":"b2"},{"key":"B3","name":"b3"},{"key":"B4","name":"b4"},{"key":"B5","name":"b5"},{"key":"B6","name":"b6"},{"key":"B7","name":"b7"},{"key":"B8","name":"b8"},{"key":"B9","name":"b9"},{"key":"B10","name":"b10"},{"key":"guest:Gus","name":"Gus"}]}]}
+LIVE rainEnd event {"bowlerKey":"B1","nonStrikerKey":"A2","strikerKey":"A1","type":"startInnings"}
+LIVE rainEnd => st=inProgress inn=1 0/0 (0) s=A1 ns=A2 b=B1 lb=- fh=0 over=[]
+LIVE rainEnd event {"id":"b104","runs":2,"type":"ball"}
+LIVE rainEnd => st=inProgress inn=1 2/0 (0.1) s=A1 ns=A2 b=B1 lb=- fh=0 over=[2]
+LIVE rainEnd event {"id":"b105","runs":2,"type":"ball"}
+LIVE rainEnd => st=inProgress inn=1 4/0 (0.2) s=A1 ns=A2 b=B1 lb=- fh=0 over=[2,2]
+LIVE rainEnd event {"id":"b106","runs":2,"type":"ball"}
+LIVE rainEnd => st=inProgress inn=1 6/0 (0.3) s=A1 ns=A2 b=B1 lb=- fh=0 over=[2,2,2]
+LIVE rainEnd event {"id":"b107","runs":2,"type":"ball"}
+LIVE rainEnd => st=inProgress inn=1 8/0 (0.4) s=A1 ns=A2 b=B1 lb=- fh=0 over=[2,2,2,2]
+LIVE rainEnd event {"id":"b108","runs":2,"type":"ball"}
+LIVE rainEnd => st=inProgress inn=1 10/0 (0.5) s=A1 ns=A2 b=B1 lb=- fh=0 over=[2,2,2,2,2]
+LIVE rainEnd event {"id":"b109","runs":2,"type":"ball"}
+LIVE rainEnd => st=inProgress inn=1 12/0 (1) s=A2 ns=A1 b=- lb=B1 fh=0 over=[2,2,2,2,2,2]
+LIVE rainEnd event {"id":"b110","nextBowlerKey":"B2","runs":2,"type":"ball"}
+LIVE rainEnd => st=inProgress inn=1 14/0 (1.1) s=A2 ns=A1 b=B2 lb=B1 fh=0 over=[2]
+LIVE rainEnd event {"id":"b111","runs":2,"type":"ball"}
+LIVE rainEnd => st=inProgress inn=1 16/0 (1.2) s=A2 ns=A1 b=B2 lb=B1 fh=0 over=[2,2]
+LIVE rainEnd event {"id":"b112","runs":2,"type":"ball"}
+LIVE rainEnd => st=inProgress inn=1 18/0 (1.3) s=A2 ns=A1 b=B2 lb=B1 fh=0 over=[2,2,2]
+LIVE rainEnd event {"id":"b113","runs":2,"type":"ball"}
+LIVE rainEnd => st=inProgress inn=1 20/0 (1.4) s=A2 ns=A1 b=B2 lb=B1 fh=0 over=[2,2,2,2]
+LIVE rainEnd event {"id":"b114","runs":2,"type":"ball"}
+LIVE rainEnd => st=inProgress inn=1 22/0 (1.5) s=A2 ns=A1 b=B2 lb=B1 fh=0 over=[2,2,2,2,2]
+LIVE rainEnd event {"id":"b115","runs":2,"type":"ball"}
+LIVE rainEnd => st=inningsBreak inn=1 24/0 (2) s=A2 ns=A1 b=- lb=B2 fh=0 over=[2,2,2,2,2,2] end=overs
+LIVE rainEnd event {"bowlerKey":"A1","nonStrikerKey":"B2","strikerKey":"B1","type":"startInnings"}
+LIVE rainEnd => st=inProgress inn=2 0/0 (0) tgt=25 s=B1 ns=B2 b=A1 lb=- fh=0 over=[]
+LIVE rainEnd event {"id":"b116","runs":2,"type":"ball"}
+LIVE rainEnd => st=inProgress inn=2 2/0 (0.1) tgt=25 s=B1 ns=B2 b=A1 lb=- fh=0 over=[2]
+LIVE rainEnd event {"id":"b117","runs":2,"type":"ball"}
+LIVE rainEnd => st=inProgress inn=2 4/0 (0.2) tgt=25 s=B1 ns=B2 b=A1 lb=- fh=0 over=[2,2]
+LIVE rainEnd event {"id":"b118","runs":2,"type":"ball"}
+LIVE rainEnd => st=inProgress inn=2 6/0 (0.3) tgt=25 s=B1 ns=B2 b=A1 lb=- fh=0 over=[2,2,2]
+LIVE rainEnd event {"id":"b119","runs":2,"type":"ball"}
+LIVE rainEnd => st=inProgress inn=2 8/0 (0.4) tgt=25 s=B1 ns=B2 b=A1 lb=- fh=0 over=[2,2,2,2]
+LIVE rainEnd event {"id":"b120","runs":2,"type":"ball"}
+LIVE rainEnd => st=inProgress inn=2 10/0 (0.5) tgt=25 s=B1 ns=B2 b=A1 lb=- fh=0 over=[2,2,2,2,2]
+LIVE rainEnd event {"id":"b121","runs":2,"type":"ball"}
+LIVE rainEnd => st=inProgress inn=2 12/0 (1) tgt=25 s=B2 ns=B1 b=- lb=A1 fh=0 over=[2,2,2,2,2,2]
+LIVE rainEnd event {"reason":"Rain","type":"endInnings"}
+LIVE rainEnd => st=ended inn=2 12/0 (1) tgt=25 s=B2 ns=B1 b=- lb=A1 fh=0 over=[2,2,2,2,2,2] end=manual
+LIVE rainEnd event {"overs":1,"runs":15,"type":"revisedTarget"}
+LIVE rainEnd => st=ended inn=2 12/0 (1) tgt=15 s=B2 ns=B1 b=- lb=A1 fh=0 over=[2,2,2,2,2,2] end=overs
+LIVE rainEnd card 1 total TA 24/0 (2) end=overs
+LIVE rainEnd card 1 bat A1 12(6) 4s=0 6s=0 notOut
+LIVE rainEnd card 1 bat A2 12(6) 4s=0 6s=0 notOut
+LIVE rainEnd card 1 bowl B1 1-0-12-0 wd=0 nb=0
+LIVE rainEnd card 1 bowl B2 1-0-12-0 wd=0 nb=0
+LIVE rainEnd card 1 extras 0 (wd 0, nb 0, b 0, lb 0)
+LIVE rainEnd card 1 fow 
+LIVE rainEnd card 1 over 1 B1 12r 0w [2,2,2,2,2,2]
+LIVE rainEnd card 1 over 2 B2 12r 0w [2,2,2,2,2,2]
+LIVE rainEnd card 2 total TB 12/0 (1) tgt=15 rov=1 end=overs
+LIVE rainEnd card 2 bat B1 12(6) 4s=0 6s=0 notOut
+LIVE rainEnd card 2 bat B2 0(0) 4s=0 6s=0 notOut
+LIVE rainEnd card 2 bowl A1 1-0-12-0 wd=0 nb=0
+LIVE rainEnd card 2 extras 0 (wd 0, nb 0, b 0, lb 0)
+LIVE rainEnd card 2 fow 
+LIVE rainEnd card 2 over 1 A1 12r 0w [2,2,2,2,2,2]
+LIVE rainEnd result {"innings":[{"balls":12,"battingRegistrationId":"TA","runs":24,"wickets":0},{"balls":6,"battingRegistrationId":"TB","runs":12,"wickets":0}],"revisedTarget":{"overs":1,"runs":15}}
+LIVE rainEnd stats {"batting":[{"balls":6,"key":"A1","name":"a1","out":false,"runs":12,"teamRegistrationId":"TA"},{"balls":6,"key":"A2","name":"a2","out":false,"runs":12,"teamRegistrationId":"TA"},{"balls":6,"key":"B1","name":"b1","out":false,"runs":12,"teamRegistrationId":"TB"},{"balls":0,"key":"B2","name":"b2","out":false,"runs":0,"teamRegistrationId":"TB"}],"bowling":[{"balls":6,"key":"B1","name":"b1","runs":12,"teamRegistrationId":"TB","wickets":0},{"balls":6,"key":"B2","name":"b2","runs":12,"teamRegistrationId":"TB","wickets":0},{"balls":6,"key":"A1","name":"a1","runs":12,"teamRegistrationId":"TA","wickets":0}]}
+LIVE rainEnd outcome win TA won by 2 runs (revised target)
+LIVE undo config {"battingFirstTeamId":"TA","maxOversPerBowler":null,"rules":{"ballsPerOver":6,"eventTypeId":"custom","lastManStands":false,"overs":2,"playersPerSide":3,"superOver":true},"teams":[{"id":"TA","name":"Aces","order":["A1","A2","A3"],"players":[{"key":"A1","name":"a1"},{"key":"A2","name":"a2"},{"key":"A3","name":"a3"}]},{"id":"TB","name":"Bulls","order":["B1","B2","guest:Gus"],"players":[{"key":"B1","name":"b1"},{"key":"B2","name":"b2"},{"key":"guest:Gus","name":"Gus"}]}]}
+LIVE undo event {"bowlerKey":"B1","nonStrikerKey":"A2","strikerKey":"A1","type":"startInnings"}
+LIVE undo => st=inProgress inn=1 0/0 (0) s=A1 ns=A2 b=B1 lb=- fh=0 over=[]
+LIVE undo undo
+LIVE undo !! INVALID_BALL Nothing to undo.
+LIVE undo event {"id":"b122","runs":1,"type":"ball"}
+LIVE undo => st=inProgress inn=1 1/0 (0.1) s=A2 ns=A1 b=B1 lb=- fh=0 over=[1]
+LIVE undo undo
+LIVE undo => st=inProgress inn=1 0/0 (0) s=A1 ns=A2 b=B1 lb=- fh=0 over=[]
+LIVE undo event {"id":"b123","runs":1,"type":"ball"}
+LIVE undo => st=inProgress inn=1 1/0 (0.1) s=A2 ns=A1 b=B1 lb=- fh=0 over=[1]
+LIVE undo event {"id":"b124","runs":1,"type":"ball"}
+LIVE undo => st=inProgress inn=1 2/0 (0.2) s=A1 ns=A2 b=B1 lb=- fh=0 over=[1,1]
+LIVE undo event {"id":"b125","runs":1,"type":"ball"}
+LIVE undo => st=inProgress inn=1 3/0 (0.3) s=A2 ns=A1 b=B1 lb=- fh=0 over=[1,1,1]
+LIVE undo event {"id":"b126","runs":1,"type":"ball"}
+LIVE undo => st=inProgress inn=1 4/0 (0.4) s=A1 ns=A2 b=B1 lb=- fh=0 over=[1,1,1,1]
+LIVE undo event {"id":"b127","runs":1,"type":"ball"}
+LIVE undo => st=inProgress inn=1 5/0 (0.5) s=A2 ns=A1 b=B1 lb=- fh=0 over=[1,1,1,1,1]
+LIVE undo event {"id":"b128","runs":1,"type":"ball"}
+LIVE undo => st=inProgress inn=1 6/0 (1) s=A2 ns=A1 b=- lb=B1 fh=0 over=[1,1,1,1,1,1]
+LIVE undo undo
+LIVE undo => st=inProgress inn=1 5/0 (0.5) s=A2 ns=A1 b=B1 lb=- fh=0 over=[1,1,1,1,1]
+LIVE undo event {"id":"b129","runs":1,"type":"ball"}
+LIVE undo => st=inProgress inn=1 6/0 (1) s=A2 ns=A1 b=- lb=B1 fh=0 over=[1,1,1,1,1,1]
+LIVE undo event {"id":"b130","nextBatterKey":"A3","nextBowlerKey":"B2","runs":0,"type":"ball","wicket":{"batterKey":"A2","type":"bowled"}}
+LIVE undo => st=inProgress inn=1 6/1 (1.1) s=A3 ns=A1 b=B2 lb=B1 fh=0 over=[W]
+LIVE undo event {"id":"b131","runs":0,"type":"ball","wicket":{"batterKey":"A3","type":"bowled"}}
+LIVE undo => st=inningsBreak inn=1 6/2 (1.2) s=- ns=A1 b=- lb=B1 fh=0 over=[W,W] end=allOut
+LIVE undo undo
+LIVE undo => st=inProgress inn=1 6/1 (1.1) s=A3 ns=A1 b=B2 lb=B1 fh=0 over=[W]
+LIVE undo event {"reason":"Declared","type":"endInnings"}
+LIVE undo => st=inningsBreak inn=1 6/1 (1.1) s=A3 ns=A1 b=- lb=B1 fh=0 over=[W] end=manual
+LIVE undo undo
+LIVE undo => st=inProgress inn=1 6/0 (1) s=A2 ns=A1 b=- lb=B1 fh=0 over=[1,1,1,1,1,1]
+LIVE undo event {"reason":"Declared","type":"endInnings"}
+LIVE undo => st=inningsBreak inn=1 6/0 (1) s=A2 ns=A1 b=- lb=B1 fh=0 over=[1,1,1,1,1,1] end=manual
+LIVE undo event {"bowlerKey":"A1","nonStrikerKey":"B2","strikerKey":"B1","type":"startInnings"}
+LIVE undo => st=inProgress inn=2 0/0 (0) tgt=7 s=B1 ns=B2 b=A1 lb=- fh=0 over=[]
+LIVE undo undo
+LIVE undo !! INVALID_BALL Nothing to undo.
+LIVE undo event {"id":"b132","runs":4,"type":"ball"}
+LIVE undo => st=inProgress inn=2 4/0 (0.1) tgt=7 s=B1 ns=B2 b=A1 lb=- fh=0 over=[4]
+LIVE undo undo
+LIVE undo => st=inProgress inn=2 0/0 (0) tgt=7 s=B1 ns=B2 b=A1 lb=- fh=0 over=[]
+LIVE undo card 1 total TA 6/0 (1) end=manual
+LIVE undo card 1 bat A1 3(3) 4s=0 6s=0 notOut
+LIVE undo card 1 bat A2 3(3) 4s=0 6s=0 notOut
+LIVE undo card 1 bowl B1 1-0-6-0 wd=0 nb=0
+LIVE undo card 1 extras 0 (wd 0, nb 0, b 0, lb 0)
+LIVE undo card 1 fow 
+LIVE undo card 1 over 1 B1 6r 0w [1,1,1,1,1,1]
+LIVE undo card 2 total TB 0/0 (0) tgt=7 end=-
+LIVE undo card 2 bat B1 0(0) 4s=0 6s=0 notOut
+LIVE undo card 2 bat B2 0(0) 4s=0 6s=0 notOut
+LIVE undo card 2 extras 0 (wd 0, nb 0, b 0, lb 0)
+LIVE undo card 2 fow 
+LIVE lastManStands config {"battingFirstTeamId":"TA","maxOversPerBowler":null,"rules":{"ballsPerOver":6,"eventTypeId":"custom","lastManStands":true,"overs":2,"playersPerSide":3,"superOver":true},"teams":[{"id":"TA","name":"Aces","order":["A1","A2","A3"],"players":[{"key":"A1","name":"a1"},{"key":"A2","name":"a2"},{"key":"A3","name":"a3"}]},{"id":"TB","name":"Bulls","order":["B1","B2","guest:Gus"],"players":[{"key":"B1","name":"b1"},{"key":"B2","name":"b2"},{"key":"guest:Gus","name":"Gus"}]}]}
+LIVE lastManStands event {"bowlerKey":"B1","nonStrikerKey":"A2","strikerKey":"A1","type":"startInnings"}
+LIVE lastManStands => st=inProgress inn=1 0/0 (0) s=A1 ns=A2 b=B1 lb=- fh=0 over=[]
+LIVE lastManStands event {"id":"b133","nextBatterKey":"A3","runs":0,"type":"ball","wicket":{"batterKey":"A1","type":"bowled"}}
+LIVE lastManStands => st=inProgress inn=1 0/1 (0.1) s=A3 ns=A2 b=B1 lb=- fh=0 over=[W]
+LIVE lastManStands event {"id":"b134","nextBatterKey":"A1","runs":0,"type":"ball","wicket":{"batterKey":"A3","type":"bowled"}}
+LIVE lastManStands !! INVALID_BALL That batter has already batted.
+LIVE lastManStands event {"id":"b135","runs":0,"type":"ball","wicket":{"batterKey":"A3","type":"bowled"}}
+LIVE lastManStands => st=inProgress inn=1 0/2 (0.2) s=A2 ns=- b=B1 lb=- fh=0 over=[W,W]
+LIVE lastManStands event {"id":"b136","runs":1,"type":"ball"}
+LIVE lastManStands => st=inProgress inn=1 1/2 (0.3) s=A2 ns=- b=B1 lb=- fh=0 over=[W,W,1]
+LIVE lastManStands event {"id":"b137","runs":0,"swapStrike":true,"type":"ball"}
+LIVE lastManStands !! INVALID_BALL That ball isn't valid. Update the app and try again.
+LIVE lastManStands event {"id":"b138","runs":0,"type":"ball"}
+LIVE lastManStands => st=inProgress inn=1 1/2 (0.4) s=A2 ns=- b=B1 lb=- fh=0 over=[W,W,1,.]
+LIVE lastManStands event {"id":"b139","runs":0,"type":"ball"}
+LIVE lastManStands => st=inProgress inn=1 1/2 (0.5) s=A2 ns=- b=B1 lb=- fh=0 over=[W,W,1,.,.]
+LIVE lastManStands event {"id":"b140","runs":0,"type":"ball"}
+LIVE lastManStands => st=inProgress inn=1 1/2 (1) s=A2 ns=- b=- lb=B1 fh=0 over=[W,W,1,.,.,.]
+LIVE lastManStands event {"id":"b141","nextBowlerKey":"B2","runs":0,"type":"ball","wicket":{"batterKey":"A2","type":"bowled"}}
+LIVE lastManStands => st=inningsBreak inn=1 1/3 (1.1) s=- ns=- b=- lb=B1 fh=0 over=[W] end=allOut
+LIVE lastManStands event {"bowlerKey":"A1","nonStrikerKey":"B2","strikerKey":"B1","type":"startInnings"}
+LIVE lastManStands => st=inProgress inn=2 0/0 (0) tgt=2 s=B1 ns=B2 b=A1 lb=- fh=0 over=[]
+LIVE lastManStands event {"id":"b142","runs":2,"type":"ball"}
+LIVE lastManStands => st=ended inn=2 2/0 (0.1) tgt=2 s=B1 ns=B2 b=- lb=- fh=0 over=[2] end=target
+LIVE lastManStands card 1 total TA 1/3 (1.1) end=allOut
+LIVE lastManStands card 1 bat A1 0(1) 4s=0 6s=0 bowled b=B1
+LIVE lastManStands card 1 bat A2 1(5) 4s=0 6s=0 bowled b=B2
+LIVE lastManStands card 1 bat A3 0(1) 4s=0 6s=0 bowled b=B1
+LIVE lastManStands card 1 bowl B1 1-0-1-2 wd=0 nb=0
+LIVE lastManStands card 1 bowl B2 0.1-0-0-1 wd=0 nb=0
+LIVE lastManStands card 1 extras 0 (wd 0, nb 0, b 0, lb 0)
+LIVE lastManStands card 1 fow 1-0 A1 (0.1), 2-0 A3 (0.2), 3-1 A2 (1.1)
+LIVE lastManStands card 1 over 1 B1 1r 2w [W,W,1,.,.,.]
+LIVE lastManStands card 1 over 2 B2 0r 1w [W]
+LIVE lastManStands card 2 total TB 2/0 (0.1) tgt=2 end=target
+LIVE lastManStands card 2 bat B1 2(1) 4s=0 6s=0 notOut
+LIVE lastManStands card 2 bat B2 0(0) 4s=0 6s=0 notOut
+LIVE lastManStands card 2 bowl A1 0.1-0-2-0 wd=0 nb=0
+LIVE lastManStands card 2 extras 0 (wd 0, nb 0, b 0, lb 0)
+LIVE lastManStands card 2 fow 
+LIVE lastManStands card 2 over 1 A1 2r 0w [2]
+LIVE lastManStands result {"innings":[{"balls":7,"battingRegistrationId":"TA","runs":1,"wickets":3},{"balls":1,"battingRegistrationId":"TB","runs":2,"wickets":0}]}
+LIVE lastManStands stats {"batting":[{"balls":1,"key":"A1","name":"a1","out":true,"runs":0,"teamRegistrationId":"TA"},{"balls":5,"key":"A2","name":"a2","out":true,"runs":1,"teamRegistrationId":"TA"},{"balls":1,"key":"A3","name":"a3","out":true,"runs":0,"teamRegistrationId":"TA"},{"balls":1,"key":"B1","name":"b1","out":false,"runs":2,"teamRegistrationId":"TB"},{"balls":0,"key":"B2","name":"b2","out":false,"runs":0,"teamRegistrationId":"TB"}],"bowling":[{"balls":6,"key":"B1","name":"b1","runs":1,"teamRegistrationId":"TB","wickets":2},{"balls":1,"key":"B2","name":"b2","runs":0,"teamRegistrationId":"TB","wickets":1},{"balls":1,"key":"A1","name":"a1","runs":2,"teamRegistrationId":"TA","wickets":0}]}
+LIVE lastManStands outcome win TB won by 3 wickets (11 balls left)
+LIVE shortXI config {"battingFirstTeamId":"TA","maxOversPerBowler":null,"rules":{"ballsPerOver":6,"eventTypeId":"custom","lastManStands":false,"overs":2,"playersPerSide":11,"superOver":true},"teams":[{"id":"TA","name":"Aces","order":["A1","A2","A3"],"players":[{"key":"A1","name":"a1"},{"key":"A2","name":"a2"},{"key":"A3","name":"a3"}]},{"id":"TB","name":"Bulls","order":["B1","B2","guest:Gus"],"players":[{"key":"B1","name":"b1"},{"key":"B2","name":"b2"},{"key":"guest:Gus","name":"Gus"}]}]}
+LIVE shortXI event {"bowlerKey":"B1","nonStrikerKey":"A2","strikerKey":"A1","type":"startInnings"}
+LIVE shortXI => st=inProgress inn=1 0/0 (0) s=A1 ns=A2 b=B1 lb=- fh=0 over=[]
+LIVE shortXI event {"id":"b143","nextBatterKey":"A4","runs":0,"type":"ball","wicket":{"batterKey":"A1","type":"bowled"}}
+LIVE shortXI !! INVALID_BALL That batter isn't in the batting side.
+LIVE shortXI event {"id":"b144","nextBatterKey":"A3","runs":0,"type":"ball","wicket":{"batterKey":"A1","type":"bowled"}}
+LIVE shortXI => st=inProgress inn=1 0/1 (0.1) s=A3 ns=A2 b=B1 lb=- fh=0 over=[W]
+LIVE shortXI event {"id":"b145","runs":0,"type":"ball","wicket":{"batterKey":"A3","type":"retiredHurt"}}
+LIVE shortXI => st=inningsBreak inn=1 0/1 (0.1) s=- ns=A2 b=- lb=- fh=0 over=[W,RH] end=allOut
+LIVE shortXI undo
+LIVE shortXI => st=inProgress inn=1 0/1 (0.1) s=A3 ns=A2 b=B1 lb=- fh=0 over=[W]
+LIVE shortXI event {"id":"b146","runs":0,"type":"ball","wicket":{"batterKey":"A3","type":"retiredHurt"}}
+LIVE shortXI => st=inningsBreak inn=1 0/1 (0.1) s=- ns=A2 b=- lb=- fh=0 over=[W,RH] end=allOut
+LIVE shortXI event {"bowlerKey":"A1","nonStrikerKey":"B2","strikerKey":"B1","type":"startInnings"}
+LIVE shortXI => st=inProgress inn=2 0/0 (0) tgt=1 s=B1 ns=B2 b=A1 lb=- fh=0 over=[]
+LIVE shortXI event {"extras":{"runs":0,"type":"wide"},"id":"b147","runs":0,"type":"ball"}
+LIVE shortXI => st=ended inn=2 1/0 (0) tgt=1 s=B1 ns=B2 b=- lb=- fh=0 over=[wd] end=target
+LIVE shortXI card 1 total TA 0/1 (0.1) end=allOut
+LIVE shortXI card 1 bat A1 0(1) 4s=0 6s=0 bowled b=B1
+LIVE shortXI card 1 bat A2 0(0) 4s=0 6s=0 notOut
+LIVE shortXI card 1 bat A3 0(0) 4s=0 6s=0 retiredHurt
+LIVE shortXI card 1 bowl B1 0.1-0-0-1 wd=0 nb=0
+LIVE shortXI card 1 extras 0 (wd 0, nb 0, b 0, lb 0)
+LIVE shortXI card 1 fow 1-0 A1 (0.1)
+LIVE shortXI card 1 over 1 B1 0r 1w [W,RH]
+LIVE shortXI card 2 total TB 1/0 (0) tgt=1 end=target
+LIVE shortXI card 2 bat B1 0(0) 4s=0 6s=0 notOut
+LIVE shortXI card 2 bat B2 0(0) 4s=0 6s=0 notOut
+LIVE shortXI card 2 bowl A1 0-0-1-0 wd=1 nb=0
+LIVE shortXI card 2 extras 1 (wd 1, nb 0, b 0, lb 0)
+LIVE shortXI card 2 fow 
+LIVE shortXI card 2 over 1 A1 1r 0w [wd]
+LIVE shortXI result {"innings":[{"balls":1,"battingRegistrationId":"TA","runs":0,"wickets":1},{"balls":0,"battingRegistrationId":"TB","runs":1,"wickets":0}]}
+LIVE shortXI stats {"batting":[{"balls":1,"key":"A1","name":"a1","out":true,"runs":0,"teamRegistrationId":"TA"},{"balls":0,"key":"A2","name":"a2","out":false,"runs":0,"teamRegistrationId":"TA"},{"balls":0,"key":"A3","name":"a3","out":false,"runs":0,"teamRegistrationId":"TA"},{"balls":0,"key":"B1","name":"b1","out":false,"runs":0,"teamRegistrationId":"TB"},{"balls":0,"key":"B2","name":"b2","out":false,"runs":0,"teamRegistrationId":"TB"}],"bowling":[{"balls":1,"key":"B1","name":"b1","runs":0,"teamRegistrationId":"TB","wickets":1},{"balls":0,"key":"A1","name":"a1","runs":1,"teamRegistrationId":"TA","wickets":0}]}
+LIVE shortXI outcome win TB won by 1 wicket (12 balls left)
+LIVE tie config {"battingFirstTeamId":"TA","maxOversPerBowler":null,"rules":{"ballsPerOver":6,"eventTypeId":"custom","lastManStands":false,"overs":1,"playersPerSide":11,"superOver":true},"teams":[{"id":"TA","name":"Aces","order":["A1","A2","A3","A4","A5","A6","A7","A8","A9","A10","A11"],"players":[{"key":"A1","name":"a1"},{"key":"A2","name":"a2"},{"key":"A3","name":"a3"},{"key":"A4","name":"a4"},{"key":"A5","name":"a5"},{"key":"A6","name":"a6"},{"key":"A7","name":"a7"},{"key":"A8","name":"a8"},{"key":"A9","name":"a9"},{"key":"A10","name":"a10"},{"key":"A11","name":"a11"}]},{"id":"TB","name":"Bulls","order":["B1","B2","B3","B4","B5","B6","B7","B8","B9","B10","guest:Gus"],"players":[{"key":"B1","name":"b1"},{"key":"B2","name":"b2"},{"key":"B3","name":"b3"},{"key":"B4","name":"b4"},{"key":"B5","name":"b5"},{"key":"B6","name":"b6"},{"key":"B7","name":"b7"},{"key":"B8","name":"b8"},{"key":"B9","name":"b9"},{"key":"B10","name":"b10"},{"key":"guest:Gus","name":"Gus"}]}]}
+LIVE tie event {"bowlerKey":"B1","nonStrikerKey":"A2","strikerKey":"A1","type":"startInnings"}
+LIVE tie => st=inProgress inn=1 0/0 (0) s=A1 ns=A2 b=B1 lb=- fh=0 over=[]
+LIVE tie event {"id":"b148","runs":1,"type":"ball"}
+LIVE tie => st=inProgress inn=1 1/0 (0.1) s=A2 ns=A1 b=B1 lb=- fh=0 over=[1]
+LIVE tie event {"id":"b149","runs":1,"type":"ball"}
+LIVE tie => st=inProgress inn=1 2/0 (0.2) s=A1 ns=A2 b=B1 lb=- fh=0 over=[1,1]
+LIVE tie event {"id":"b150","runs":1,"type":"ball"}
+LIVE tie => st=inProgress inn=1 3/0 (0.3) s=A2 ns=A1 b=B1 lb=- fh=0 over=[1,1,1]
+LIVE tie event {"id":"b151","runs":1,"type":"ball"}
+LIVE tie => st=inProgress inn=1 4/0 (0.4) s=A1 ns=A2 b=B1 lb=- fh=0 over=[1,1,1,1]
+LIVE tie event {"id":"b152","runs":1,"type":"ball"}
+LIVE tie => st=inProgress inn=1 5/0 (0.5) s=A2 ns=A1 b=B1 lb=- fh=0 over=[1,1,1,1,1]
+LIVE tie event {"id":"b153","runs":1,"type":"ball"}
+LIVE tie => st=inningsBreak inn=1 6/0 (1) s=A1 ns=A2 b=- lb=B1 fh=0 over=[1,1,1,1,1,1] end=overs
+LIVE tie event {"bowlerKey":"A1","nonStrikerKey":"B2","strikerKey":"B1","type":"startInnings"}
+LIVE tie => st=inProgress inn=2 0/0 (0) tgt=7 s=B1 ns=B2 b=A1 lb=- fh=0 over=[]
+LIVE tie event {"id":"b154","runs":1,"type":"ball"}
+LIVE tie => st=inProgress inn=2 1/0 (0.1) tgt=7 s=B2 ns=B1 b=A1 lb=- fh=0 over=[1]
+LIVE tie event {"id":"b155","runs":1,"type":"ball"}
+LIVE tie => st=inProgress inn=2 2/0 (0.2) tgt=7 s=B1 ns=B2 b=A1 lb=- fh=0 over=[1,1]
+LIVE tie event {"id":"b156","runs":1,"type":"ball"}
+LIVE tie => st=inProgress inn=2 3/0 (0.3) tgt=7 s=B2 ns=B1 b=A1 lb=- fh=0 over=[1,1,1]
+LIVE tie event {"id":"b157","runs":1,"type":"ball"}
+LIVE tie => st=inProgress inn=2 4/0 (0.4) tgt=7 s=B1 ns=B2 b=A1 lb=- fh=0 over=[1,1,1,1]
+LIVE tie event {"id":"b158","runs":1,"type":"ball"}
+LIVE tie => st=inProgress inn=2 5/0 (0.5) tgt=7 s=B2 ns=B1 b=A1 lb=- fh=0 over=[1,1,1,1,1]
+LIVE tie event {"id":"b159","runs":1,"type":"ball"}
+LIVE tie => st=ended inn=2 6/0 (1) tgt=7 s=B1 ns=B2 b=- lb=A1 fh=0 over=[1,1,1,1,1,1] end=overs
+LIVE tie card 1 total TA 6/0 (1) end=overs
+LIVE tie card 1 bat A1 3(3) 4s=0 6s=0 notOut
+LIVE tie card 1 bat A2 3(3) 4s=0 6s=0 notOut
+LIVE tie card 1 bowl B1 1-0-6-0 wd=0 nb=0
+LIVE tie card 1 extras 0 (wd 0, nb 0, b 0, lb 0)
+LIVE tie card 1 fow 
+LIVE tie card 1 over 1 B1 6r 0w [1,1,1,1,1,1]
+LIVE tie card 2 total TB 6/0 (1) tgt=7 end=overs
+LIVE tie card 2 bat B1 3(3) 4s=0 6s=0 notOut
+LIVE tie card 2 bat B2 3(3) 4s=0 6s=0 notOut
+LIVE tie card 2 bowl A1 1-0-6-0 wd=0 nb=0
+LIVE tie card 2 extras 0 (wd 0, nb 0, b 0, lb 0)
+LIVE tie card 2 fow 
+LIVE tie card 2 over 1 A1 6r 0w [1,1,1,1,1,1]
+LIVE tie result {"innings":[{"balls":6,"battingRegistrationId":"TA","runs":6,"wickets":0},{"balls":6,"battingRegistrationId":"TB","runs":6,"wickets":0}],"superOverWinnerRegistrationId":"TB"}
+LIVE tie stats {"batting":[{"balls":3,"key":"A1","name":"a1","out":false,"runs":3,"teamRegistrationId":"TA"},{"balls":3,"key":"A2","name":"a2","out":false,"runs":3,"teamRegistrationId":"TA"},{"balls":3,"key":"B1","name":"b1","out":false,"runs":3,"teamRegistrationId":"TB"},{"balls":3,"key":"B2","name":"b2","out":false,"runs":3,"teamRegistrationId":"TB"}],"bowling":[{"balls":6,"key":"B1","name":"b1","runs":6,"teamRegistrationId":"TB","wickets":0},{"balls":6,"key":"A1","name":"a1","runs":6,"teamRegistrationId":"TA","wickets":0}]}
+LIVE tie outcome win TB won the super over
