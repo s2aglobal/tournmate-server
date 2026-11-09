@@ -239,7 +239,7 @@ async function captainFlow(db: Firestore): Promise<void> {
     md?.submittedBy === P.a1.uid && md?.confirmedBy === undefined && md?.live?.status === "finished", JSON.stringify(md?.live));
   check("result written like the manual path", md?.resultData ===
     `{"innings":[{"balls":6,"battingRegistrationId":"${RA}","runs":8,"wickets":1},{"balls":2,"battingRegistrationId":"${RB}","runs":10,"wickets":0}]}` &&
-    md?.resultType === "win" && md?.winnerRegistrationId === RB && md?.summary === "Bulls won by 3 wickets (4 balls left)" &&
+    md?.resultType === "win" && md?.winnerRegistrationId === RB && md?.summary === "Bulls won by 2 wickets (4 balls left)" &&
     md?.scoreA === 8 && md?.scoreB === 10 && md?.playerOfMatchKey === B1 && md?.playerOfMatchName === "Bala" &&
     md?.playerOfMatchTeamId === RB, `${md?.resultData} ${md?.summary}`);
   const stats = JSON.parse(md?.playerStatsData ?? "{}");
@@ -296,6 +296,33 @@ async function organizerFlow(db: Firestore): Promise<void> {
   check("live finish == manual submitScore", diff.length === 0, diff.join(","));
 }
 
+async function manualEndFlow(db: Firestore): Promise<void> {
+  console.log("\n── End innings 1 by hand, XIs smaller than the side → finishable, margin from the XI ──");
+  const { setLineup, startScoring, startInnings, recordBall, endInnings, finishLiveMatch } = live;
+  const M = "M-END";
+  await newMatch(db, M);
+  // Rules: 4 a side; Aces pick 3, Bulls keep no lineup (roster of 4 → the smaller XI, 3, counts for both).
+  await ok("lineup: Aces XI of 3", setLineup, P.a1.uid, { matchId: M, teamId: RA, xi: [A1, A2, A3], order: [A1, A2, A3] });
+  await ok("organizer starts", startScoring, P.org.uid, { matchId: M, battingFirstTeamId: RA });
+  await ok("innings 1", startInnings, P.org.uid, { matchId: M, strikerKey: A1, nonStrikerKey: A2, bowlerKey: B1 });
+  await ok("ball e1", recordBall, P.org.uid, { matchId: M, ballId: "e1", runs: 4 });
+  await ok("ball e2", recordBall, P.org.uid, { matchId: M, ballId: "e2", runs: 1 });
+  await ok("end innings 1 (declared)", endInnings, P.org.uid, { matchId: M, reason: "Declared" });
+  await ok("innings 2", startInnings, P.org.uid, { matchId: M, strikerKey: B1, nonStrikerKey: B2, bowlerKey: A3 });
+  await ok("ball e3: six wins it", recordBall, P.org.uid, { matchId: M, ballId: "e3", runs: 6 });
+  check("ended", (await m(db, M)).live?.status === "ended");
+  const fin = await ok<{ status: string }>("finish after a manual first-innings end", finishLiveMatch, P.org.uid, { matchId: M });
+  const md = await m(db, M);
+  check("finished; margin from the 3-player XI", fin?.status === "finished" && md?.statusRaw === "finished" &&
+    md?.summary === "Bulls won by 2 wickets (5 balls left)", md?.summary);
+
+  // Same unfinished first innings through manual Enter Result: still refused.
+  await newMatch(db, "M-END-MANUAL");
+  await expectFail("manual result: unfinished first innings refused", scores.submitScore, P.org.uid, {
+    matchId: "M-END-MANUAL", cricket: { resultData: md.resultData },
+  }, "INVALID_SCORE", "The first innings isn't finished. It ends when 3 wickets fall or 1 overs are bowled.");
+}
+
 async function abandonAndStop(db: Firestore): Promise<void> {
   console.log("\n── End innings, abandon, stop live scoring ──");
   const { startScoring, startInnings, recordBall, endInnings, abandonMatch, stopLiveScoring } = live;
@@ -337,6 +364,7 @@ async function main(): Promise<void> {
   await seed(db);
   await captainFlow(db);
   await organizerFlow(db);
+  await manualEndFlow(db);
   await abandonAndStop(db);
   console.log(`\n${passes} passed, ${failures} failed`);
   process.exit(failures === 0 ? 0 : 1);

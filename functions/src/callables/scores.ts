@@ -312,15 +312,16 @@ export async function applyCricket(
   score: Extract<Score, { kind: "cricket" }>,
   uid: string,
   final: boolean,
-  playersPerSide?: number,
+  live: { playersPerSide?: number; endedEarly?: boolean[] } = {},
 ): Promise<Patch> {
   const { match, tournament } = l;
   const teamA = match.teamAId;
   const teamB = match.teamBId;
   const base = knockoutRules(resolveCricketRules(tournament.rulesData), tournament.matchFormatRaw, match.groupLabel);
   // Live scoring with smaller XIs: all out is decided by the XI size.
-  const rules = playersPerSide !== undefined ? { ...base, playersPerSide } : base;
-  const issue = validateCricketResult(score.result, rules, teamA, teamB)[0] ??
+  const rules = live.playersPerSide !== undefined ? { ...base, playersPerSide: live.playersPerSide } : base;
+  // An innings the live scorer ended counts as finished.
+  const issue = validateCricketResult(score.result, rules, teamA, teamB, { endedEarly: live.endedEarly })[0] ??
     knockoutIssue(score.result, rules, tournament.matchFormatRaw, match.groupLabel);
   if (issue) fail("invalid-argument", "INVALID_SCORE", issue.message);
 

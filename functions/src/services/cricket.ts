@@ -213,12 +213,15 @@ function plural(n: number, one: string, many: string): string {
 /**
  * Validates a scorecard for a match between `teamAId` and `teamBId`.
  * Returns every problem found; an empty list means the result can be saved.
+ * `opts.endedEarly[i]`: live scoring only, innings i was ended by the scorer
+ * (declared / abandoned), so it counts as finished.
  */
 export function validateCricketResult(
   result: CricketResult,
   r: CricketRules,
   teamAId: string,
   teamBId: string,
+  opts: { endedEarly?: boolean[] } = {},
 ): CricketIssue[] {
   const issues: CricketIssue[] = [];
   const add = (field: string, message: string) => issues.push({ field, message });
@@ -273,13 +276,15 @@ export function validateCricketResult(
 
   // First innings ends all out or when its overs run out (or early in a
   // reduced match, which the revised target covers).
-  const firstDone = first.wickets === wMax || first.balls === limit || result.revisedTarget !== undefined;
+  // A live-scored innings the scorer ended (declared / abandoned) counts as done.
+  const firstDone = first.wickets === wMax || first.balls === limit || result.revisedTarget !== undefined ||
+    opts.endedEarly?.[0] === true;
   if (!firstDone) {
     add("innings[0]", `The first innings isn't finished. It ends when ${wMax} wickets fall or ${r.overs} overs are bowled.`);
   }
 
   const chased = second.runs >= target;
-  const secondDone = chased || second.wickets === wMax || second.balls === secondLimit;
+  const secondDone = chased || second.wickets === wMax || second.balls === secondLimit || opts.endedEarly?.[1] === true;
   if (!secondDone) {
     add("innings[1]", `The chase isn't finished. It ends when the target of ${target} is reached, ${wMax} wickets fall, or the overs run out.`);
   }

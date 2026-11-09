@@ -22,7 +22,7 @@ import { validatePlayerStats } from "../services/cricketPlayerStats";
 import {
   BallEvent, Extras, LiveConfig, LiveEvent, LiveRuleError, LiveState, Wicket, applyEvent, ballCode, ballPosition,
   formatScorecardLines, formatStateLine, initialState, liveStatus, liveSummary, replay, sortedJson, toCricketResult,
-  toPlayerStats, undoLastBall, validationPlayersPerSide,
+  toPlayerStats, undoLastBall, validationPlayersPerSide, validationRules, inningsEndedEarly, effectiveRules,
 } from "../services/cricketLive";
 
 let failures = 0;
@@ -138,13 +138,12 @@ function run(sc: Scenario): LiveState {
   if (liveStatus(s) === "ended") {
     const result = toCricketResult(s, sc.superOver ? { superOverWinnerRegistrationId: sc.superOver } : {});
     const stats = toPlayerStats(s);
-    const pps = validationPlayersPerSide(s);
-    const rules = pps ? { ...s.config.rules, playersPerSide: pps } : s.config.rules;
+    const rules = validationRules(s);
     const outcome = cricketOutcome(result, rules);
     fixture.push(`${p} result ${sortedJson(result)}`);
     fixture.push(`${p} stats ${sortedJson(stats)}`);
     fixture.push(`${p} outcome ${outcome.resultType} ${outcome.winnerRegistrationId ?? "-"} ${outcome.margin}`);
-    const issues = validateCricketResult(result, rules, "TA", "TB");
+    const issues = validateCricketResult(result, rules, "TA", "TB", { endedEarly: inningsEndedEarly(s) });
     check(`${sc.name}: validateCricketResult accepts the derived result`, issues.length === 0, JSON.stringify(issues));
     const sIssues = validatePlayerStats(stats, result, "TA", "TB", (id) => id);
     check(`${sc.name}: validatePlayerStats accepts the derived figures`, sIssues.length === 0, JSON.stringify(sIssues));
@@ -364,6 +363,50 @@ const scenarios: Scenario[] = [
     outcome: "won by 1 wicket (12 balls left)",
   },
   {
+    // Hands-on test: 6 a side, 3 overs, XIs of 3. Innings 1 ended by the scorer, innings 2 chased.
+    name: "manualEndSmallXI",
+    config: cfg({ overs: 3, pps: 6, a: 3, b: 3 }),
+    steps: [
+      start("A1", "A2", "B1"),
+      b(4), b(1), b(2), b(1), b(0), b(4),
+      [b(0, { bw: "B2" }), "12/0 (1.1) s=A2 ns=A1 b=B2"],
+      [end("Time"), "12/0 (1.1) st=inningsBreak end=manual"],
+      start("B1", "B2", "A1"),
+      b(6), b(4),
+      [b(6), "16/0 (0.3) tgt=13 st=ended end=target"],
+    ],
+    card: ["1 total TA 12/0 (1.1) end=manual"],
+    outcome: "won by 2 wickets (15 balls left)",
+  },
+  {
+    // The smaller XI (3) sets all out for the bigger side too: 2 wickets end Aces' innings.
+    name: "unevenXI",
+    config: cfg({ overs: 3, pps: 6, a: 6, b: 3 }),
+    steps: [
+      start("A1", "A2", "B1"),
+      out("bowled", "A1", { nb: "A3" }),
+      [out("bowled", "A3"), "0/2 (0.2) st=inningsBreak end=allOut"],
+      start("B1", "B2", "A1"),
+      [b(1), "1/0 (0.1) tgt=1 st=ended end=target"],
+    ],
+    card: ["1 total TA 0/2 (0.2) end=allOut"],
+    outcome: "won by 2 wickets (17 balls left)",
+  },
+  {
+    // The chase ended by the scorer: the side batting first wins on runs.
+    name: "manualEndChase",
+    config: cfg({ overs: 2, pps: 6, a: 3, b: 3, lms: true }),
+    steps: [
+      start("A1", "A2", "B1"),
+      b(4), b(4),
+      [end("Rain"), "8/0 (0.2) st=inningsBreak end=manual"],
+      start("B1", "B2", "A1"),
+      b(1),
+      [end("Rain"), "1/0 (0.1) tgt=9 st=ended end=manual"],
+    ],
+    outcome: "won by 7 runs",
+  },
+  {
     name: "tie",
     config: cfg({ overs: 1, pps: 11 }),
     steps: [
@@ -426,6 +469,19 @@ check("code: retired hurt", ballCode({ runs: 0, wicket: { type: "retiredHurt", b
     { ...(base as object), live: { seq: 2 }, lineups: {} } as never));
   check("trigger: score write rebuilds", !onlyLiveChanged({ ...(base as object), live: { seq: 1 } } as never,
     { ...(base as object), statusRaw: "finished", live: { seq: 1 } } as never));
+}
+
+{
+  // Effective XI: the smaller lineup / roster, capped by the rules.
+  check("effectiveRules: smaller XI", effectiveRules(cfg({ overs: 3, pps: 6, a: 3, b: 4 })).playersPerSide === 3);
+  check("effectiveRules: XI bigger than the rules", effectiveRules(cfg({ overs: 3, pps: 4, a: 6, b: 5 })).playersPerSide === 4);
+  // Manual "Enter Result" is unchanged: an unfinished first innings is still refused without the live flag.
+  const r: CricketRules = { eventTypeId: "custom", playersPerSide: 6, overs: 3, ballsPerOver: 6, lastManStands: false, superOver: true };
+  const res = { innings: [{ battingRegistrationId: "TA", runs: 12, wickets: 0, balls: 7 }, { battingRegistrationId: "TB", runs: 16, wickets: 0, balls: 3 }] };
+  const manual = validateCricketResult(res, r, "TA", "TB");
+  check("manual result: unfinished innings refused", manual[0]?.message ===
+    "The first innings isn't finished. It ends when 5 wickets fall or 3 overs are bowled.", JSON.stringify(manual));
+  check("live result: innings ended by the scorer accepted", validateCricketResult(res, r, "TA", "TB", { endedEarly: [true, false] }).length === 0);
 }
 
 // ─── Fixture ────────────────────────────────────────────

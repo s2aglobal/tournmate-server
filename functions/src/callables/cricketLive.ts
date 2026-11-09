@@ -14,6 +14,7 @@ import {
   BallEvent, ExtrasType, LiveConfig, LiveEvent, LiveRuleError, LiveState, LiveTeam, applyEvent, ballCode,
   ballPosition, initialState, liveStatus, liveSummary, replay, scorecard, toCricketResult, toPlayerStats, undoLastBall,
   validationPlayersPerSide,
+  inningsEndedEarly,
 } from "../services/cricketLive";
 import { RegistrationDoc, parseSportType } from "../types";
 import { notifyScoreSubmitted, safely } from "../services/matchNotifications";
@@ -532,7 +533,7 @@ export const endInnings = onCall(CALLABLE_OPTS, async (req) => {
 async function finalize(
   uid: string,
   matchId: string,
-  build: (c: Ctx, s: LiveState | null) => { score: Extract<Score, { kind: "cricket" }>; noResult: boolean; playersPerSide?: number },
+  build: (c: Ctx, s: LiveState | null) => { score: Extract<Score, { kind: "cricket" }>; noResult: boolean; playersPerSide?: number; endedEarly?: boolean[] },
 ): Promise<{ status: string }> {
   const db = getFirestore();
   const playerIds = await playerIdsForUid(db, uid);
@@ -542,11 +543,11 @@ async function finalize(
     const { live, log } = requireScorer(c);
     requireNotFinished(c);
     const s = log.config ? replayLog(log) : null;
-    const { score, noResult, playersPerSide } = build(c, s);
+    const { score, noResult, playersPerSide, endedEarly } = build(c, s);
     const final = isOrganizer(c.l, uid);
     if (!final) side = requireParticipant(c.l, uid, playerIds, "Only the players in this match or the organizer can enter its score.");
     const p = new Patch(c.l.match);
-    await applyCricket(db, tx, p, c.l, score, uid, final, playersPerSide);
+    await applyCricket(db, tx, p, c.l, score, uid, final, { playersPerSide, endedEarly });
     p.set("live", liveFor(live, s, { status: "finished", ...(noResult ? { result: "noResult" } : {}) }));
     return commit(db, tx, matchId, c.l, p);
   });
@@ -585,6 +586,7 @@ export const finishLiveMatch = onCall(CALLABLE_OPTS, async (req) => {
       },
       noResult: false,
       playersPerSide: validationPlayersPerSide(s),
+      endedEarly: inningsEndedEarly(s),
     };
   });
 });

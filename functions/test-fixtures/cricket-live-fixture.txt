@@ -530,34 +530,141 @@ LIVE shortXI card 2 over 1 A1 1r 0w [wd]
 LIVE shortXI result {"innings":[{"balls":1,"battingRegistrationId":"TA","runs":0,"wickets":1},{"balls":0,"battingRegistrationId":"TB","runs":1,"wickets":0}]}
 LIVE shortXI stats {"batting":[{"balls":1,"key":"A1","name":"a1","out":true,"runs":0,"teamRegistrationId":"TA"},{"balls":0,"key":"A2","name":"a2","out":false,"runs":0,"teamRegistrationId":"TA"},{"balls":0,"key":"A3","name":"a3","out":false,"runs":0,"teamRegistrationId":"TA"},{"balls":0,"key":"B1","name":"b1","out":false,"runs":0,"teamRegistrationId":"TB"},{"balls":0,"key":"B2","name":"b2","out":false,"runs":0,"teamRegistrationId":"TB"}],"bowling":[{"balls":1,"key":"B1","name":"b1","runs":0,"teamRegistrationId":"TB","wickets":1},{"balls":0,"key":"A1","name":"a1","runs":1,"teamRegistrationId":"TA","wickets":0}]}
 LIVE shortXI outcome win TB won by 1 wicket (12 balls left)
+LIVE manualEndSmallXI config {"battingFirstTeamId":"TA","maxOversPerBowler":null,"rules":{"ballsPerOver":6,"eventTypeId":"custom","lastManStands":false,"overs":3,"playersPerSide":6,"superOver":true},"teams":[{"id":"TA","name":"Aces","order":["A1","A2","A3"],"players":[{"key":"A1","name":"a1"},{"key":"A2","name":"a2"},{"key":"A3","name":"a3"}]},{"id":"TB","name":"Bulls","order":["B1","B2","guest:Gus"],"players":[{"key":"B1","name":"b1"},{"key":"B2","name":"b2"},{"key":"guest:Gus","name":"Gus"}]}]}
+LIVE manualEndSmallXI event {"bowlerKey":"B1","nonStrikerKey":"A2","strikerKey":"A1","type":"startInnings"}
+LIVE manualEndSmallXI => st=inProgress inn=1 0/0 (0) s=A1 ns=A2 b=B1 lb=- fh=0 over=[]
+LIVE manualEndSmallXI event {"id":"b148","runs":4,"type":"ball"}
+LIVE manualEndSmallXI => st=inProgress inn=1 4/0 (0.1) s=A1 ns=A2 b=B1 lb=- fh=0 over=[4]
+LIVE manualEndSmallXI event {"id":"b149","runs":1,"type":"ball"}
+LIVE manualEndSmallXI => st=inProgress inn=1 5/0 (0.2) s=A2 ns=A1 b=B1 lb=- fh=0 over=[4,1]
+LIVE manualEndSmallXI event {"id":"b150","runs":2,"type":"ball"}
+LIVE manualEndSmallXI => st=inProgress inn=1 7/0 (0.3) s=A2 ns=A1 b=B1 lb=- fh=0 over=[4,1,2]
+LIVE manualEndSmallXI event {"id":"b151","runs":1,"type":"ball"}
+LIVE manualEndSmallXI => st=inProgress inn=1 8/0 (0.4) s=A1 ns=A2 b=B1 lb=- fh=0 over=[4,1,2,1]
+LIVE manualEndSmallXI event {"id":"b152","runs":0,"type":"ball"}
+LIVE manualEndSmallXI => st=inProgress inn=1 8/0 (0.5) s=A1 ns=A2 b=B1 lb=- fh=0 over=[4,1,2,1,.]
+LIVE manualEndSmallXI event {"id":"b153","runs":4,"type":"ball"}
+LIVE manualEndSmallXI => st=inProgress inn=1 12/0 (1) s=A2 ns=A1 b=- lb=B1 fh=0 over=[4,1,2,1,.,4]
+LIVE manualEndSmallXI event {"id":"b154","nextBowlerKey":"B2","runs":0,"type":"ball"}
+LIVE manualEndSmallXI => st=inProgress inn=1 12/0 (1.1) s=A2 ns=A1 b=B2 lb=B1 fh=0 over=[.]
+LIVE manualEndSmallXI event {"reason":"Time","type":"endInnings"}
+LIVE manualEndSmallXI => st=inningsBreak inn=1 12/0 (1.1) s=A2 ns=A1 b=- lb=B1 fh=0 over=[.] end=manual
+LIVE manualEndSmallXI event {"bowlerKey":"A1","nonStrikerKey":"B2","strikerKey":"B1","type":"startInnings"}
+LIVE manualEndSmallXI => st=inProgress inn=2 0/0 (0) tgt=13 s=B1 ns=B2 b=A1 lb=- fh=0 over=[]
+LIVE manualEndSmallXI event {"id":"b155","runs":6,"type":"ball"}
+LIVE manualEndSmallXI => st=inProgress inn=2 6/0 (0.1) tgt=13 s=B1 ns=B2 b=A1 lb=- fh=0 over=[6]
+LIVE manualEndSmallXI event {"id":"b156","runs":4,"type":"ball"}
+LIVE manualEndSmallXI => st=inProgress inn=2 10/0 (0.2) tgt=13 s=B1 ns=B2 b=A1 lb=- fh=0 over=[6,4]
+LIVE manualEndSmallXI event {"id":"b157","runs":6,"type":"ball"}
+LIVE manualEndSmallXI => st=ended inn=2 16/0 (0.3) tgt=13 s=B1 ns=B2 b=- lb=- fh=0 over=[6,4,6] end=target
+LIVE manualEndSmallXI card 1 total TA 12/0 (1.1) end=manual
+LIVE manualEndSmallXI card 1 bat A1 9(4) 4s=2 6s=0 notOut
+LIVE manualEndSmallXI card 1 bat A2 3(3) 4s=0 6s=0 notOut
+LIVE manualEndSmallXI card 1 bowl B1 1-0-12-0 wd=0 nb=0
+LIVE manualEndSmallXI card 1 bowl B2 0.1-0-0-0 wd=0 nb=0
+LIVE manualEndSmallXI card 1 extras 0 (wd 0, nb 0, b 0, lb 0)
+LIVE manualEndSmallXI card 1 fow 
+LIVE manualEndSmallXI card 1 over 1 B1 12r 0w [4,1,2,1,.,4]
+LIVE manualEndSmallXI card 1 over 2 B2 0r 0w [.]
+LIVE manualEndSmallXI card 2 total TB 16/0 (0.3) tgt=13 end=target
+LIVE manualEndSmallXI card 2 bat B1 16(3) 4s=1 6s=2 notOut
+LIVE manualEndSmallXI card 2 bat B2 0(0) 4s=0 6s=0 notOut
+LIVE manualEndSmallXI card 2 bowl A1 0.3-0-16-0 wd=0 nb=0
+LIVE manualEndSmallXI card 2 extras 0 (wd 0, nb 0, b 0, lb 0)
+LIVE manualEndSmallXI card 2 fow 
+LIVE manualEndSmallXI card 2 over 1 A1 16r 0w [6,4,6]
+LIVE manualEndSmallXI result {"innings":[{"balls":7,"battingRegistrationId":"TA","runs":12,"wickets":0},{"balls":3,"battingRegistrationId":"TB","runs":16,"wickets":0}]}
+LIVE manualEndSmallXI stats {"batting":[{"balls":4,"key":"A1","name":"a1","out":false,"runs":9,"teamRegistrationId":"TA"},{"balls":3,"key":"A2","name":"a2","out":false,"runs":3,"teamRegistrationId":"TA"},{"balls":3,"key":"B1","name":"b1","out":false,"runs":16,"teamRegistrationId":"TB"},{"balls":0,"key":"B2","name":"b2","out":false,"runs":0,"teamRegistrationId":"TB"}],"bowling":[{"balls":6,"key":"B1","name":"b1","runs":12,"teamRegistrationId":"TB","wickets":0},{"balls":1,"key":"B2","name":"b2","runs":0,"teamRegistrationId":"TB","wickets":0},{"balls":3,"key":"A1","name":"a1","runs":16,"teamRegistrationId":"TA","wickets":0}]}
+LIVE manualEndSmallXI outcome win TB won by 2 wickets (15 balls left)
+LIVE unevenXI config {"battingFirstTeamId":"TA","maxOversPerBowler":null,"rules":{"ballsPerOver":6,"eventTypeId":"custom","lastManStands":false,"overs":3,"playersPerSide":6,"superOver":true},"teams":[{"id":"TA","name":"Aces","order":["A1","A2","A3","A4","A5","A6"],"players":[{"key":"A1","name":"a1"},{"key":"A2","name":"a2"},{"key":"A3","name":"a3"},{"key":"A4","name":"a4"},{"key":"A5","name":"a5"},{"key":"A6","name":"a6"}]},{"id":"TB","name":"Bulls","order":["B1","B2","guest:Gus"],"players":[{"key":"B1","name":"b1"},{"key":"B2","name":"b2"},{"key":"guest:Gus","name":"Gus"}]}]}
+LIVE unevenXI event {"bowlerKey":"B1","nonStrikerKey":"A2","strikerKey":"A1","type":"startInnings"}
+LIVE unevenXI => st=inProgress inn=1 0/0 (0) s=A1 ns=A2 b=B1 lb=- fh=0 over=[]
+LIVE unevenXI event {"id":"b158","nextBatterKey":"A3","runs":0,"type":"ball","wicket":{"batterKey":"A1","type":"bowled"}}
+LIVE unevenXI => st=inProgress inn=1 0/1 (0.1) s=A3 ns=A2 b=B1 lb=- fh=0 over=[W]
+LIVE unevenXI event {"id":"b159","runs":0,"type":"ball","wicket":{"batterKey":"A3","type":"bowled"}}
+LIVE unevenXI => st=inningsBreak inn=1 0/2 (0.2) s=- ns=A2 b=- lb=- fh=0 over=[W,W] end=allOut
+LIVE unevenXI event {"bowlerKey":"A1","nonStrikerKey":"B2","strikerKey":"B1","type":"startInnings"}
+LIVE unevenXI => st=inProgress inn=2 0/0 (0) tgt=1 s=B1 ns=B2 b=A1 lb=- fh=0 over=[]
+LIVE unevenXI event {"id":"b160","runs":1,"type":"ball"}
+LIVE unevenXI => st=ended inn=2 1/0 (0.1) tgt=1 s=B2 ns=B1 b=- lb=- fh=0 over=[1] end=target
+LIVE unevenXI card 1 total TA 0/2 (0.2) end=allOut
+LIVE unevenXI card 1 bat A1 0(1) 4s=0 6s=0 bowled b=B1
+LIVE unevenXI card 1 bat A2 0(0) 4s=0 6s=0 notOut
+LIVE unevenXI card 1 bat A3 0(1) 4s=0 6s=0 bowled b=B1
+LIVE unevenXI card 1 bowl B1 0.2-0-0-2 wd=0 nb=0
+LIVE unevenXI card 1 extras 0 (wd 0, nb 0, b 0, lb 0)
+LIVE unevenXI card 1 fow 1-0 A1 (0.1), 2-0 A3 (0.2)
+LIVE unevenXI card 1 over 1 B1 0r 2w [W,W]
+LIVE unevenXI card 2 total TB 1/0 (0.1) tgt=1 end=target
+LIVE unevenXI card 2 bat B1 1(1) 4s=0 6s=0 notOut
+LIVE unevenXI card 2 bat B2 0(0) 4s=0 6s=0 notOut
+LIVE unevenXI card 2 bowl A1 0.1-0-1-0 wd=0 nb=0
+LIVE unevenXI card 2 extras 0 (wd 0, nb 0, b 0, lb 0)
+LIVE unevenXI card 2 fow 
+LIVE unevenXI card 2 over 1 A1 1r 0w [1]
+LIVE unevenXI result {"innings":[{"balls":2,"battingRegistrationId":"TA","runs":0,"wickets":2},{"balls":1,"battingRegistrationId":"TB","runs":1,"wickets":0}]}
+LIVE unevenXI stats {"batting":[{"balls":1,"key":"A1","name":"a1","out":true,"runs":0,"teamRegistrationId":"TA"},{"balls":0,"key":"A2","name":"a2","out":false,"runs":0,"teamRegistrationId":"TA"},{"balls":1,"key":"A3","name":"a3","out":true,"runs":0,"teamRegistrationId":"TA"},{"balls":1,"key":"B1","name":"b1","out":false,"runs":1,"teamRegistrationId":"TB"},{"balls":0,"key":"B2","name":"b2","out":false,"runs":0,"teamRegistrationId":"TB"}],"bowling":[{"balls":2,"key":"B1","name":"b1","runs":0,"teamRegistrationId":"TB","wickets":2},{"balls":1,"key":"A1","name":"a1","runs":1,"teamRegistrationId":"TA","wickets":0}]}
+LIVE unevenXI outcome win TB won by 2 wickets (17 balls left)
+LIVE manualEndChase config {"battingFirstTeamId":"TA","maxOversPerBowler":null,"rules":{"ballsPerOver":6,"eventTypeId":"custom","lastManStands":true,"overs":2,"playersPerSide":6,"superOver":true},"teams":[{"id":"TA","name":"Aces","order":["A1","A2","A3"],"players":[{"key":"A1","name":"a1"},{"key":"A2","name":"a2"},{"key":"A3","name":"a3"}]},{"id":"TB","name":"Bulls","order":["B1","B2","guest:Gus"],"players":[{"key":"B1","name":"b1"},{"key":"B2","name":"b2"},{"key":"guest:Gus","name":"Gus"}]}]}
+LIVE manualEndChase event {"bowlerKey":"B1","nonStrikerKey":"A2","strikerKey":"A1","type":"startInnings"}
+LIVE manualEndChase => st=inProgress inn=1 0/0 (0) s=A1 ns=A2 b=B1 lb=- fh=0 over=[]
+LIVE manualEndChase event {"id":"b161","runs":4,"type":"ball"}
+LIVE manualEndChase => st=inProgress inn=1 4/0 (0.1) s=A1 ns=A2 b=B1 lb=- fh=0 over=[4]
+LIVE manualEndChase event {"id":"b162","runs":4,"type":"ball"}
+LIVE manualEndChase => st=inProgress inn=1 8/0 (0.2) s=A1 ns=A2 b=B1 lb=- fh=0 over=[4,4]
+LIVE manualEndChase event {"reason":"Rain","type":"endInnings"}
+LIVE manualEndChase => st=inningsBreak inn=1 8/0 (0.2) s=A1 ns=A2 b=- lb=- fh=0 over=[4,4] end=manual
+LIVE manualEndChase event {"bowlerKey":"A1","nonStrikerKey":"B2","strikerKey":"B1","type":"startInnings"}
+LIVE manualEndChase => st=inProgress inn=2 0/0 (0) tgt=9 s=B1 ns=B2 b=A1 lb=- fh=0 over=[]
+LIVE manualEndChase event {"id":"b163","runs":1,"type":"ball"}
+LIVE manualEndChase => st=inProgress inn=2 1/0 (0.1) tgt=9 s=B2 ns=B1 b=A1 lb=- fh=0 over=[1]
+LIVE manualEndChase event {"reason":"Rain","type":"endInnings"}
+LIVE manualEndChase => st=ended inn=2 1/0 (0.1) tgt=9 s=B2 ns=B1 b=- lb=- fh=0 over=[1] end=manual
+LIVE manualEndChase card 1 total TA 8/0 (0.2) end=manual
+LIVE manualEndChase card 1 bat A1 8(2) 4s=2 6s=0 notOut
+LIVE manualEndChase card 1 bat A2 0(0) 4s=0 6s=0 notOut
+LIVE manualEndChase card 1 bowl B1 0.2-0-8-0 wd=0 nb=0
+LIVE manualEndChase card 1 extras 0 (wd 0, nb 0, b 0, lb 0)
+LIVE manualEndChase card 1 fow 
+LIVE manualEndChase card 1 over 1 B1 8r 0w [4,4]
+LIVE manualEndChase card 2 total TB 1/0 (0.1) tgt=9 end=manual
+LIVE manualEndChase card 2 bat B1 1(1) 4s=0 6s=0 notOut
+LIVE manualEndChase card 2 bat B2 0(0) 4s=0 6s=0 notOut
+LIVE manualEndChase card 2 bowl A1 0.1-0-1-0 wd=0 nb=0
+LIVE manualEndChase card 2 extras 0 (wd 0, nb 0, b 0, lb 0)
+LIVE manualEndChase card 2 fow 
+LIVE manualEndChase card 2 over 1 A1 1r 0w [1]
+LIVE manualEndChase result {"innings":[{"balls":2,"battingRegistrationId":"TA","runs":8,"wickets":0},{"balls":1,"battingRegistrationId":"TB","runs":1,"wickets":0}]}
+LIVE manualEndChase stats {"batting":[{"balls":2,"key":"A1","name":"a1","out":false,"runs":8,"teamRegistrationId":"TA"},{"balls":0,"key":"A2","name":"a2","out":false,"runs":0,"teamRegistrationId":"TA"},{"balls":1,"key":"B1","name":"b1","out":false,"runs":1,"teamRegistrationId":"TB"},{"balls":0,"key":"B2","name":"b2","out":false,"runs":0,"teamRegistrationId":"TB"}],"bowling":[{"balls":2,"key":"B1","name":"b1","runs":8,"teamRegistrationId":"TB","wickets":0},{"balls":1,"key":"A1","name":"a1","runs":1,"teamRegistrationId":"TA","wickets":0}]}
+LIVE manualEndChase outcome win TA won by 7 runs
 LIVE tie config {"battingFirstTeamId":"TA","maxOversPerBowler":null,"rules":{"ballsPerOver":6,"eventTypeId":"custom","lastManStands":false,"overs":1,"playersPerSide":11,"superOver":true},"teams":[{"id":"TA","name":"Aces","order":["A1","A2","A3","A4","A5","A6","A7","A8","A9","A10","A11"],"players":[{"key":"A1","name":"a1"},{"key":"A2","name":"a2"},{"key":"A3","name":"a3"},{"key":"A4","name":"a4"},{"key":"A5","name":"a5"},{"key":"A6","name":"a6"},{"key":"A7","name":"a7"},{"key":"A8","name":"a8"},{"key":"A9","name":"a9"},{"key":"A10","name":"a10"},{"key":"A11","name":"a11"}]},{"id":"TB","name":"Bulls","order":["B1","B2","B3","B4","B5","B6","B7","B8","B9","B10","guest:Gus"],"players":[{"key":"B1","name":"b1"},{"key":"B2","name":"b2"},{"key":"B3","name":"b3"},{"key":"B4","name":"b4"},{"key":"B5","name":"b5"},{"key":"B6","name":"b6"},{"key":"B7","name":"b7"},{"key":"B8","name":"b8"},{"key":"B9","name":"b9"},{"key":"B10","name":"b10"},{"key":"guest:Gus","name":"Gus"}]}]}
 LIVE tie event {"bowlerKey":"B1","nonStrikerKey":"A2","strikerKey":"A1","type":"startInnings"}
 LIVE tie => st=inProgress inn=1 0/0 (0) s=A1 ns=A2 b=B1 lb=- fh=0 over=[]
-LIVE tie event {"id":"b148","runs":1,"type":"ball"}
+LIVE tie event {"id":"b164","runs":1,"type":"ball"}
 LIVE tie => st=inProgress inn=1 1/0 (0.1) s=A2 ns=A1 b=B1 lb=- fh=0 over=[1]
-LIVE tie event {"id":"b149","runs":1,"type":"ball"}
+LIVE tie event {"id":"b165","runs":1,"type":"ball"}
 LIVE tie => st=inProgress inn=1 2/0 (0.2) s=A1 ns=A2 b=B1 lb=- fh=0 over=[1,1]
-LIVE tie event {"id":"b150","runs":1,"type":"ball"}
+LIVE tie event {"id":"b166","runs":1,"type":"ball"}
 LIVE tie => st=inProgress inn=1 3/0 (0.3) s=A2 ns=A1 b=B1 lb=- fh=0 over=[1,1,1]
-LIVE tie event {"id":"b151","runs":1,"type":"ball"}
+LIVE tie event {"id":"b167","runs":1,"type":"ball"}
 LIVE tie => st=inProgress inn=1 4/0 (0.4) s=A1 ns=A2 b=B1 lb=- fh=0 over=[1,1,1,1]
-LIVE tie event {"id":"b152","runs":1,"type":"ball"}
+LIVE tie event {"id":"b168","runs":1,"type":"ball"}
 LIVE tie => st=inProgress inn=1 5/0 (0.5) s=A2 ns=A1 b=B1 lb=- fh=0 over=[1,1,1,1,1]
-LIVE tie event {"id":"b153","runs":1,"type":"ball"}
+LIVE tie event {"id":"b169","runs":1,"type":"ball"}
 LIVE tie => st=inningsBreak inn=1 6/0 (1) s=A1 ns=A2 b=- lb=B1 fh=0 over=[1,1,1,1,1,1] end=overs
 LIVE tie event {"bowlerKey":"A1","nonStrikerKey":"B2","strikerKey":"B1","type":"startInnings"}
 LIVE tie => st=inProgress inn=2 0/0 (0) tgt=7 s=B1 ns=B2 b=A1 lb=- fh=0 over=[]
-LIVE tie event {"id":"b154","runs":1,"type":"ball"}
+LIVE tie event {"id":"b170","runs":1,"type":"ball"}
 LIVE tie => st=inProgress inn=2 1/0 (0.1) tgt=7 s=B2 ns=B1 b=A1 lb=- fh=0 over=[1]
-LIVE tie event {"id":"b155","runs":1,"type":"ball"}
+LIVE tie event {"id":"b171","runs":1,"type":"ball"}
 LIVE tie => st=inProgress inn=2 2/0 (0.2) tgt=7 s=B1 ns=B2 b=A1 lb=- fh=0 over=[1,1]
-LIVE tie event {"id":"b156","runs":1,"type":"ball"}
+LIVE tie event {"id":"b172","runs":1,"type":"ball"}
 LIVE tie => st=inProgress inn=2 3/0 (0.3) tgt=7 s=B2 ns=B1 b=A1 lb=- fh=0 over=[1,1,1]
-LIVE tie event {"id":"b157","runs":1,"type":"ball"}
+LIVE tie event {"id":"b173","runs":1,"type":"ball"}
 LIVE tie => st=inProgress inn=2 4/0 (0.4) tgt=7 s=B1 ns=B2 b=A1 lb=- fh=0 over=[1,1,1,1]
-LIVE tie event {"id":"b158","runs":1,"type":"ball"}
+LIVE tie event {"id":"b174","runs":1,"type":"ball"}
 LIVE tie => st=inProgress inn=2 5/0 (0.5) tgt=7 s=B2 ns=B1 b=A1 lb=- fh=0 over=[1,1,1,1,1]
-LIVE tie event {"id":"b159","runs":1,"type":"ball"}
+LIVE tie event {"id":"b175","runs":1,"type":"ball"}
 LIVE tie => st=ended inn=2 6/0 (1) tgt=7 s=B1 ns=B2 b=- lb=A1 fh=0 over=[1,1,1,1,1,1] end=overs
 LIVE tie card 1 total TA 6/0 (1) end=overs
 LIVE tie card 1 bat A1 3(3) 4s=0 6s=0 notOut

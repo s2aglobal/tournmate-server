@@ -341,7 +341,7 @@ function checkEnd(s: LiveState, inn: InningsState, idx: number): boolean {
   const r = s.config.rules;
   let reason: EndReason | null = null;
   if (idx === 1 && inn.target !== undefined && inn.runs >= inn.target) reason = "target";
-  else if (inn.wickets >= maxWickets(r)) reason = "allOut";
+  else if (inn.wickets >= maxWickets(effectiveRules(s.config))) reason = "allOut";
   else if (inn.legalBalls >= oversLimit(s, inn) * r.ballsPerOver) reason = "overs";
   if (!reason) return false;
   inn.complete = true;
@@ -786,16 +786,39 @@ export function ballPosition(before: LiveState, e: BallEvent): { innings: number
 }
 
 /**
+ * The rules with players per side = the smaller XI (lineup XI, else roster),
+ * capped by the rules and at least 2. A smaller XI sets the wickets that make
+ * "all out" and the margin in wickets, for both teams.
+ */
+export function effectiveRules(c: LiveConfig): CricketRules {
+  const xi = Math.min(...c.teams.map((t) => t.players.length));
+  const pps = Math.max(2, Math.min(c.rules.playersPerSide, xi));
+  return pps === c.rules.playersPerSide ? c.rules : { ...c.rules, playersPerSide: pps };
+}
+
+/**
  * Players per side for validating the result with `validateCricketResult`:
- * undefined normally; when an innings ran out of batters (an XI smaller than
- * the rules' side), the smallest such XI, so "all out" matches.
+ * undefined when the full rules apply; otherwise the smaller XI (see
+ * `effectiveRules`), or less when an innings ran out of batters earlier (a
+ * batter retired hurt with nobody left), so "all out" matches.
  */
 export function validationPlayersPerSide(s: LiveState): number | undefined {
-  const r = s.config.rules;
+  const r = effectiveRules(s.config);
   const lms = r.lastManStands ? 0 : 1;
   const short = s.innings.filter((i) => i.complete && i.endReason === "allOut" && i.wickets < maxWickets(r));
-  if (short.length === 0) return undefined;
-  return Math.max(2, Math.min(r.playersPerSide, ...short.map((i) => i.wickets + lms)));
+  const n = Math.max(2, Math.min(r.playersPerSide, ...short.map((i) => i.wickets + lms)));
+  return n < s.config.rules.playersPerSide ? n : undefined;
+}
+
+/** Per innings: true when the scorer ended it (`endInnings`), so validation accepts it unfinished. */
+export function inningsEndedEarly(s: LiveState): boolean[] {
+  return s.innings.map((i) => i.complete && i.endReason === "manual");
+}
+
+/** Rules + options for validating the derived result (`validateCricketResult`, `cricketOutcome`). */
+export function validationRules(s: LiveState): CricketRules {
+  const pps = validationPlayersPerSide(s);
+  return pps !== undefined ? { ...s.config.rules, playersPerSide: pps } : s.config.rules;
 }
 
 // ─── Fixture formatting (parity) ───────────────────────
