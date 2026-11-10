@@ -33,6 +33,8 @@
     "list:feedback": "npm run build && node lib/scripts/listFeedback.js",
     "test:emulator-feedback": "npm run build && firebase emulators:exec --only firestore --project demo-tournmate \"node lib/scripts/emulatorFeedbackChecks.js\"",
     "check:profile-photos": "npm run build && node lib/scripts/checkProfilePhotos.js",
+    "send:broadcast": "npm run build && node lib/scripts/sendBroadcast.js",
+    "test:emulator-broadcast": "npm run build && firebase emulators:exec --only firestore --project demo-tournmate \"node lib/scripts/emulatorBroadcastChecks.js\"",
     "test:emulator-photos": "npm run build && firebase emulators:exec --only firestore,storage,auth --project demo-tournmate \"node lib/scripts/emulatorPhotoChecks.js\""
   },
   "engines": {
