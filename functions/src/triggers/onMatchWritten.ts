@@ -5,6 +5,7 @@ import { MatchDoc, PlayerDoc, RegistrationDoc, TournamentDoc, parseSportType } f
 import { StandingsRegistration, computeStandings } from "../services/standings";
 import { refreshAutoAwards } from "../services/tournamentAwards";
 import { tournamentIdVariants } from "../services/draw/tournament";
+import { syncTournamentFinished } from "../services/tournamentFinished";
 
 /**
  * Rebuilds `standings/{tournamentId}` on any match write (create, score,
@@ -17,13 +18,17 @@ import { tournamentIdVariants } from "../services/draw/tournament";
  *
  * Also keeps the server-only `drawMade` flag on the tournament in step with
  * whether any match exists (firestore.rules locks cricket rules once the
- * draw is made), and refreshes the awards of a finished cricket tournament.
+ * draw is made), the server-only `finished` / `finishedAt` (all sports;
+ * services/tournamentFinished.ts) the app lists show COMPLETED from, and
+ * refreshes the awards of a finished cricket tournament. Tournament fields
+ * are only written when they change, and this trigger only watches matches,
+ * so it never re-triggers itself.
  */
 export const onMatchWritten = onDocumentWritten("matches/{matchId}", async (event) => {
   const before = event.data?.before.data() as MatchDoc | undefined;
   const after = event.data?.after.data() as MatchDoc | undefined;
   // Cricket live scoring writes `live` on every ball (and `lineups`); those
-  // don't change standings, the draw or awards.
+  // don't change standings, the draw, `finished` or awards.
   if (before && after && onlyLiveChanged(before, after)) return;
   const ids = new Set([before?.tournamentId, after?.tournamentId].filter((id): id is string => !!id));
   const db = getFirestore();
@@ -37,6 +42,11 @@ export const onMatchWritten = onDocumentWritten("matches/{matchId}", async (even
       await syncDrawMade(db, tournamentId);
     } catch (err) {
       logger.error(`drawMade sync failed for tournament ${tournamentId}:`, err);
+    }
+    try {
+      await syncTournamentFinished(db, tournamentId);
+    } catch (err) {
+      logger.error(`finished sync failed for tournament ${tournamentId}:`, err);
     }
     try {
       const snap = await db.collection("tournaments").doc(tournamentId).get();

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Rules checks for cricket-complete: server-only tournament fields (awards,
-awardPlayerIds, awardsNotified, drawMade), the client-writable
+awardPlayerIds, awardsNotified, drawMade, finished, finishedAt), the client-writable
 groupCountChosen, the cricket rules lock once the draw is made, registration
 rosters / roles written only through the callables, and no direct
 registration create or partner change once the draw is made.
@@ -50,13 +50,18 @@ base = {"title": "New Cup", "location": "Ground", "date": Ts(DATE), "createdBy":
         "sportType": "cricket", "formatRaw": "team"}
 expect(set_doc("tournaments/N1", "org", base), 200, "cricket create")
 for f, v in [("awards", {"source": {}}), ("awardPlayerIds", ["P1"]), ("awardsNotified", {"bestBatter": ["P1"]}),
-             ("drawMade", False)]:
+             ("drawMade", False), ("finished", True), ("finished", False), ("finishedAt", Ts(DATE))]:
     expect(set_doc(f"tournaments/N_{f}", "org", {**base, f: v}), 403, f"create with {f} rejected")
     expect(merge("tournaments/CC_OPEN", "org", {f: v}), 403, f"organizer write of {f} rejected")
 expect(merge("tournaments/CC_AWARDS", "org", {"title": "Renamed"}), 200, "edit keeps awards (merge)")
 expect(merge("tournaments/CC_AWARDS", "org", {"awards": None}), 403, "clearing awards rejected")
 expect(merge("tournaments/CC_AWARDS", "org", {"awardPlayerIds": ["P1", "P2"]}), 403, "adding to awardPlayerIds rejected")
 expect(merge("tournaments/CC_AWARDS", "org", {"awardsNotified": {"playerOfSeries": []}}), 403, "resetting awardsNotified rejected")
+tournament("CC_FINISHED", finished=True, finishedAt=Ts(DATE))
+expect(merge("tournaments/CC_FINISHED", "org", {"title": "Renamed"}), 200, "edit keeps finished (merge)")
+expect(merge("tournaments/CC_FINISHED", "org", {"title": "Renamed", "finished": True}), 200, "edit resending finished unchanged")
+expect(merge("tournaments/CC_FINISHED", "org", {"finished": False}), 403, "un-finishing rejected")
+expect(merge("tournaments/CC_FINISHED", "org", {"finishedAt": None}), 403, "clearing finishedAt rejected")
 
 print("# groupCountChosen is the organizer's")
 expect(set_doc("tournaments/N_GC", "org", {**base, "sportType": "badminton", "formatRaw": "openDoubles",

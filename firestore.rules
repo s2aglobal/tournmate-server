@@ -106,10 +106,11 @@ service cloud.firestore {
     // Server-only tournament fields: registrationCount (registration
     // triggers), autoDraw / deadlineReminderFor (scheduled draw job),
     // drawMade (draw callables + match trigger), awards / awardPlayerIds /
-    // awardsNotified (cricket awards: match trigger + setTournamentAwards).
+    // awardsNotified (cricket awards: match trigger + setTournamentAwards),
+    // finished / finishedAt (match trigger + resetDraw; the apps' COMPLETED).
     function tournamentServerFields() {
       return ['registrationCount', 'autoDraw', 'deadlineReminderFor', 'drawMade', 'awards', 'awardPlayerIds',
-              'awardsNotified'];
+              'awardsNotified', 'finished', 'finishedAt'];
     }
 
     // The draw of a registration's tournament hasn't been made yet (ids in
@@ -218,6 +219,8 @@ service cloud.firestore {
         && unchangedOptional('awards')
         && unchangedOptional('awardPlayerIds')
         && unchangedOptional('awardsNotified')
+        && unchangedOptional('finished')
+        && unchangedOptional('finishedAt')
         && cricketRulesUnchangedAfterDraw()
         && sportUnchangedOrLive()
         && teamFormatForTeamSport();
