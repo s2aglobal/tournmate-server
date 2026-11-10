@@ -28,6 +28,7 @@ import {
 } from "../services/cricket";
 import { applyTeamResult } from "../services/elo";
 import { playerOfSeriesRanking, seriesAwards } from "../services/cricketAwards";
+import { AwardContext, autoAwards } from "../services/tournamentAwards";
 import {
   PlayerStats,
   averageHundredths,
@@ -335,6 +336,15 @@ check("unrated player starts at 1200", fresh[0].cricket === 1212);
   check("awards: POTS tie → more runs", tie2[0].key === "P1" && tie2[0].score === 40 && tie2[1].score === 40);
   const tie3 = playerOfSeriesRanking([{ batting: [bat(B, "Bo", 10, 5), bat(A, "Al", 10, 5)], bowling: [] }], []);
   check("awards: POTS tie → name", tie3[0].key === "AL");
+  // No wickets taken anywhere: Best Bowler stays empty (not the best economy).
+  const dry = [{ batting: [bat(A, "P1", 30, 20)], bowling: [bowl(A, "Max", 24, 24, 0), bowl(B, "Q2", 24, 40, 0)] }];
+  const d = seriesAwards(dry, []);
+  check("awards: no wickets → no best bowler", !d.bestBowler && d.bestBatter?.key === "P1" && d.playerOfSeries?.key === "P1");
+  const auto = autoAwards({ stats: dry, potm: [] } as unknown as AwardContext);
+  check("awards: auto awards leave best bowler out without wickets", auto.bestBowler === undefined && auto.bestBatter?.key === "P1",
+    JSON.stringify(auto));
+  const oneWkt = seriesAwards([...dry, { batting: [], bowling: [bowl(B, "Q3", 24, 60, 1)] }], []);
+  check("awards: one wicket beats any economy", oneWkt.bestBowler?.key === "Q3");
 }
 
 console.log(failures === 0 ? "\nAll cricket checks passed." : `\n${failures} cricket check(s) failed.`);

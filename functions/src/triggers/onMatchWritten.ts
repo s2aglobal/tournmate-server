@@ -5,6 +5,7 @@ import { MatchDoc, PlayerDoc, RegistrationDoc, TournamentDoc, parseSportType } f
 import { StandingsRegistration, computeStandings } from "../services/standings";
 import { refreshAutoAwards } from "../services/tournamentAwards";
 import { tournamentIdVariants } from "../services/draw/tournament";
+import { syncTournamentFinished } from "../services/tournamentFinished";
 
 /**
  * Rebuilds `standings/{tournamentId}` on any match write (create, score,
@@ -17,11 +18,18 @@ import { tournamentIdVariants } from "../services/draw/tournament";
  *
  * Also keeps the server-only `drawMade` flag on the tournament in step with
  * whether any match exists (firestore.rules locks cricket rules once the
- * draw is made), and refreshes the awards of a finished cricket tournament.
+ * draw is made), the server-only `finished` / `finishedAt` (all sports;
+ * services/tournamentFinished.ts) the app lists show COMPLETED from, and
+ * refreshes the awards of a finished cricket tournament. Tournament fields
+ * are only written when they change, and this trigger only watches matches,
+ * so it never re-triggers itself.
  */
 export const onMatchWritten = onDocumentWritten("matches/{matchId}", async (event) => {
   const before = event.data?.before.data() as MatchDoc | undefined;
   const after = event.data?.after.data() as MatchDoc | undefined;
+  // Cricket live scoring writes `live` on every ball (and `lineups`); those
+  // don't change standings, the draw, `finished` or awards.
+  if (before && after && onlyLiveChanged(before, after)) return;
   const ids = new Set([before?.tournamentId, after?.tournamentId].filter((id): id is string => !!id));
   const db = getFirestore();
   for (const tournamentId of ids) {
@@ -36,6 +44,11 @@ export const onMatchWritten = onDocumentWritten("matches/{matchId}", async (even
       logger.error(`drawMade sync failed for tournament ${tournamentId}:`, err);
     }
     try {
+      await syncTournamentFinished(db, tournamentId);
+    } catch (err) {
+      logger.error(`finished sync failed for tournament ${tournamentId}:`, err);
+    }
+    try {
       const snap = await db.collection("tournaments").doc(tournamentId).get();
       if (snap.exists && parseSportType(snap.get("sportType")) === "cricket") await refreshAutoAwards(db, tournamentId);
     } catch (err) {
@@ -43,6 +56,16 @@ export const onMatchWritten = onDocumentWritten("matches/{matchId}", async (even
     }
   }
 });
+
+/** True when nothing but the live-scoring fields (`live`, `lineups`) differs. */
+export function onlyLiveChanged(before: MatchDoc, after: MatchDoc): boolean {
+  const strip = (m: MatchDoc) => {
+    const { live: _l, lineups: _u, ...rest } = m;
+    void _l; void _u;
+    return JSON.stringify(Object.keys(rest).sort().map((k) => [k, (rest as Record<string, unknown>)[k]]));
+  };
+  return strip(before) === strip(after);
+}
 
 /** Player names by id; ids are tried as stored, then upper and lower case. */
 async function playerNames(db: Firestore, ids: string[]): Promise<Map<string, string>> {

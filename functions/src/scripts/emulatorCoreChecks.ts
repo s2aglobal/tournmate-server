@@ -33,6 +33,9 @@ const account = require("../callables/account") as typeof import("../callables/a
 const autoClose = require("../triggers/autoCloseSessions") as typeof import("../triggers/autoCloseSessions");
 const awardsFn = require("../callables/awards") as typeof import("../callables/awards");
 const awardsSvc = require("../services/tournamentAwards") as typeof import("../services/tournamentAwards");
+const finishedSvc = require("../services/tournamentFinished") as typeof import("../services/tournamentFinished");
+const drawActions = require("../services/draw/actions") as typeof import("../services/draw/actions");
+const backfill = require("./backfillTournamentFinished") as typeof import("./backfillTournamentFinished");
 
 let failures = 0;
 let passes = 0;
@@ -880,6 +883,96 @@ async function autoCloseChecks(db: Firestore): Promise<void> {
     && (await session(db, "AC-DONE")).autoClosed === undefined);
 }
 
+// ─── finished / finishedAt (services/tournamentFinished.ts) ─────────────
+// The match trigger calls syncTournamentFinished on every match write; here it
+// is called directly (no Functions emulator), like refreshAutoAwards above.
+async function finishedChecks(db: Firestore): Promise<void> {
+  const date = Timestamp.fromMillis(Date.now() - 24 * HOUR);
+  const tour = (id: string, extra: Record<string, unknown> = {}) => db.collection("tournaments").doc(id).set({
+    title: id, date, statusRaw: "scheduled", formatRaw: "openSingles", matchFormatRaw: "roundRobin",
+    createdBy: P.org.uid, location: "Hall", createdAt: Timestamp.now(), ...extra,
+  });
+  const reg = (id: string, tid: string, player: string) => db.collection("registrations").doc(id).set({
+    tournamentId: tid, playerId: up(player), createdAt: Timestamp.now(),
+  });
+  const match = (id: string, tid: string, a: string, b: string, done: boolean, round = 1) => db.collection("matches").doc(id).set({
+    tournamentId: tid, teamAId: a, teamBId: b, round, createdAt: Timestamp.now(),
+    ...(done ? { statusRaw: "finished", scoreA: 21, scoreB: 15, winnerRegistrationId: a } : { statusRaw: "scheduled" }),
+  });
+  const read = async (id: string) => db.collection("tournaments").doc(id).get();
+  const sync = (id: string) => finishedSvc.syncTournamentFinished(db, id);
+
+  // Round robin (badminton singles): the stored value follows the matches.
+  const RR = "T-FIN-RR";
+  await tour(RR);
+  await reg("R-FIN-A", RR, P.p1.id);
+  await reg("R-FIN-B", RR, P.p2.id);
+  check("no matches: finished false written once", await sync(RR) === "unset" && (await read(RR)).get("finished") === false);
+  check("no change: nothing written", await sync(RR) === "unchanged");
+  await match("M-FIN-1", RR, "R-FIN-A", "R-FIN-B", false);
+  check("scheduled match: still unchanged", await sync(RR) === "unchanged");
+  await match("M-FIN-1", RR, "R-FIN-A", "R-FIN-B", true);
+  check("last match finished: set", await sync(RR) === "set");
+  let snap = await read(RR);
+  const at = snap.get("finishedAt");
+  check("finished true + finishedAt", snap.get("finished") === true && at instanceof Timestamp, JSON.stringify(snap.data()));
+  check("finished again: no write", await sync(RR) === "unchanged" &&
+    (await read(RR)).updateTime?.isEqual(snap.updateTime!) === true);
+  await match("M-FIN-1", RR, "R-FIN-A", "R-FIN-B", false);
+  check("result undone: unset", await sync(RR) === "unset");
+  snap = await read(RR);
+  check("finished false, finishedAt removed", snap.get("finished") === false && snap.get("finishedAt") === undefined,
+    JSON.stringify(snap.data()));
+
+  // Single elimination: an early round finished is not the tournament finished.
+  const KO = "T-FIN-KO";
+  await tour(KO, { matchFormatRaw: "singleElimination" });
+  for (const [i, p] of [P.p1, P.p2, P.p3, P.p4].entries()) await reg(`R-KO-${i}`, KO, p.id);
+  await match("M-KO-1", KO, "R-KO-0", "R-KO-1", true);
+  await match("M-KO-2", KO, "R-KO-2", "R-KO-3", true);
+  check("knockout: round 1 done is not finished", await sync(KO) === "unset" && (await read(KO)).get("finished") === false);
+  await match("M-KO-F", KO, "R-KO-0", "R-KO-2", true, 2);
+  check("knockout: final done is finished", await sync(KO) === "set" && (await read(KO)).get("finished") === true);
+
+  // Manual Draw: finished while every match so far is; a new match un-finishes it.
+  const MD = "T-FIN-MD";
+  await tour(MD, { matchFormatRaw: "manualDraw" });
+  await reg("R-MD-A", MD, P.p1.id);
+  await reg("R-MD-B", MD, P.p2.id);
+  await match("M-MD-1", MD, "R-MD-A", "R-MD-B", true);
+  check("manual draw: every match finished = finished", await sync(MD) === "set" && (await read(MD)).get("finished") === true);
+  await drawActions.createManualMatchesAction(db, { uid: P.org.uid }, { tournamentId: MD, pairs: [{ teamAId: "R-MD-A", teamBId: "R-MD-B", round: 2 }] });
+  check("manual draw: new match un-finishes", await sync(MD) === "unset" &&
+    (await read(MD)).get("finished") === false && (await read(MD)).get("finishedAt") === undefined);
+
+  // resetDraw clears both fields (no scores yet, so the reset is allowed).
+  const RS = "T-FIN-RESET";
+  await tour(RS, { finished: true, finishedAt: Timestamp.now(), drawMade: true });
+  await reg("R-RS-A", RS, P.p1.id);
+  await reg("R-RS-B", RS, P.p2.id);
+  await match("M-RS-1", RS, "R-RS-A", "R-RS-B", false);
+  await drawActions.resetDrawAction(db, { uid: P.org.uid }, RS);
+  snap = await read(RS);
+  check("resetDraw: finished false, finishedAt removed", snap.get("finished") === false && snap.get("finishedAt") === undefined &&
+    snap.get("drawMade") === false, JSON.stringify(snap.data()));
+  check("after reset: trigger sync is a no-op", await sync(RS) === "unchanged");
+
+  // Backfill: dry run by default writes nothing; --apply writes; re-run is a no-op.
+  const BF = "T-FIN-BF";
+  await tour(BF);
+  await reg("R-BF-A", BF, P.p1.id);
+  await reg("R-BF-B", BF, P.p2.id);
+  await match("M-BF-1", BF, "R-BF-A", "R-BF-B", true);
+  const quiet = () => undefined;
+  const dry = await backfill.backfillTournamentFinished(false, quiet);
+  check("backfill dry run: reports, writes nothing", dry.set >= 1 && (await read(BF)).get("finished") === undefined, JSON.stringify(dry));
+  const applied = await backfill.backfillTournamentFinished(true, quiet);
+  check("backfill --apply: writes", applied.set === dry.set && applied.unset === dry.unset &&
+    (await read(BF)).get("finished") === true && (await read(BF)).get("finishedAt") instanceof Timestamp, JSON.stringify(applied));
+  const again = await backfill.backfillTournamentFinished(true, quiet);
+  check("backfill re-run: nothing to change", again.set === 0 && again.unset === 0, JSON.stringify(again));
+}
+
 async function main(): Promise<void> {
   const db = getFirestore();
   await clear(db);
@@ -892,6 +985,7 @@ async function main(): Promise<void> {
   await memberUidChecks(db);
   await accountChecks(db);
   await autoCloseChecks(db);
+  await finishedChecks(db);
   console.log(`\n${passes} passed, ${failures} failed`);
   process.exit(failures === 0 ? 0 : 1);
 }
