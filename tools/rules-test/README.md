@@ -15,9 +15,11 @@ tools/rules-test/run.sh
 - rosters, team names and roles (`captainId`, `viceCaptainId`, `keeperId`, `playerRoles`) are never written directly (only through `updateRoster` / `setRoles`); the registrant can't be changed.
 
 `cricket_complete.py` covers the cricket-complete rules:
-- server-only tournament fields `awards`, `awardPlayerIds`, `awardsNotified`, `drawMade`: never set on create or changed on update (edits that leave them alone still pass); `groupCountChosen` is the organizer's to write;
+- server-only tournament fields `awards`, `awardPlayerIds`, `awardsNotified`, `drawMade`, `finished`, `finishedAt`: never set on create or changed on update (edits that leave them alone still pass); `groupCountChosen` is the organizer's to write;
 - cricket rules (`eventTypeId`, `rulesData`, `formatConfigData`, `matchFormatRaw`, `formatRaw`, `sportType`) lock once `drawMade` is true; resending unchanged values passes; other sports unaffected;
 - registrations: direct roster / name / role edits rejected; older apps' doubles `partnerId` update allowed until the draw is made; direct registration creates (all sports) rejected once `drawMade` is true.
+
+`cricket_live.py` covers cricket live scoring: `matches.live` / `matches.lineups` are never client-written (create or update); `matches/{id}/balls/*` and `matches/{id}/cricketLive/*` are readable by anyone and never client-written; while `live.status` isn't `finished` no client may update the match (older apps can't enter a score mid-live), after it they confirm as usual. The callables are checked by `npm run test:emulator-cricket-live` and the reducer by `npm run check:cricket-live` in `functions/`.
 
 `phase0.py` (stdlib Python, one PASS/FAIL line per case) covers the Phase 0 server-authority rules, using the write shapes of the older apps (iOS 1.7, Android 1.0) so their legitimate flows are proven to pass:
 - `players.genderRaw` only goes from missing/`preferNotToSay` to `male`/`female`; full-profile writes with an unchanged gender (and the old apps writing back `preferNotToSay` for a missing value) still pass; web profile create/update unaffected;
@@ -26,7 +28,7 @@ tools/rules-test/run.sh
 - server-only fields: `tournaments.autoDraw` / `deadlineReminderFor`, `registrations.memberUids`, `matches.teamAUids` / `teamBUids` / `eloApplied` (unchanged values in full-doc edits still pass);
 - playSessions: no cricket; server-only fields (`maxPlayers`, `endsAt`, `waitlistIds`, `attendeeUids`, `autoRemoved`, `autoCancelled`) never client-written; host-only edits with key fields locked once others joined (full-doc iOS merge / Android update with unchanged values passes); cancel/finish but never reopen; others may only add/remove their own player id by one, joins only while active, before the start, and within the cap (the server-set `maxPlayers` = courts × per court + 2 bench; legacy docs without it: singles 2, else 4); `courts` is server-written only.
 
-`run-triggers.sh` builds functions and runs `triggers.py` against the Firestore + Functions emulators (`demo-tm`). It covers the Open Play triggers that clean up after older apps: a joiner who clashes with another session (missing duration = 120 min) or overflows a mixed session's 2 men / 2 women is removed and notified (the host isn't told "player left"), and a newly created session is cancelled, with a note to the host, when the host already has 3 upcoming active sessions or it overlaps a session they host or joined.
+`run-triggers.sh` builds functions and runs `triggers.py` against the Firestore + Functions emulators (`demo-tm`). It covers the Open Play triggers that clean up after older apps: a joiner who clashes with another session (missing duration = 120 min) or overflows a mixed session's 2 men / 2 women is removed and notified (the host isn't told "player left"), and a newly created session is cancelled, with a note to the host, when the host already has 3 upcoming active sessions or it overlaps a session they host or joined. It also covers the match trigger's `finished` / `finishedAt` on the tournament: set when the last match finishes, removed when a new Manual Draw match or a deleted draw un-finishes it, and no tournament rewrite when nothing changed (no write loop).
 
 Pure Open Play helpers (`functions/src/services/openPlay.ts`) are checked by `npm run check:openplay` in `functions/`.
 

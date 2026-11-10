@@ -7,7 +7,7 @@
  */
 
 import { randomUUID } from "crypto";
-import { Firestore, Timestamp, Transaction } from "firebase-admin/firestore";
+import { FieldValue, Firestore, Timestamp, Transaction } from "firebase-admin/firestore";
 import { fail } from "../../callables/errors";
 import { MatchDoc } from "../../types";
 import {
@@ -343,7 +343,8 @@ export async function resetDrawAction(db: Firestore, actor: Actor, tournamentId:
       fail("failed-precondition", "DRAW_LOCKED", "Scores have been entered, so the draw can't be reset.");
     }
     for (const m of state.matches) tx.delete(m.ref);
-    tx.update(state.tournamentRef, { drawMade: false });
+    // No matches = not finished (services/tournamentFinished.ts).
+    tx.update(state.tournamentRef, { drawMade: false, finished: false, finishedAt: FieldValue.delete() });
     return {
       status: "reset", matchesCreated: 0,
       message: "All matches cleared. You can regenerate the bracket.",

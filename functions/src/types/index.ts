@@ -316,6 +316,10 @@ export interface MatchDoc {
   eloApplied?: boolean;
   /** Server-only: the opposing side's reason while the score is disputed. */
   disputeReason?: string;
+  /** Cricket live scoring summary (server-only; see services/cricketLive.ts). */
+  live?: Record<string, unknown>;
+  /** Cricket playing XI + batting order per registration id (server-only). */
+  lineups?: Record<string, { xi: string[]; order: string[]; setBy: string; setAt: Timestamp }>;
   createdAt: Timestamp;
 }
 

@@ -3,7 +3,8 @@
 writes from older apps, plus cricket-complete triggers: a deleted team
 registration frees every roster lock (onRegistrationDeleted), and auto award
 notifications once a cricket tournament finishes (onMatchWritten; never for
-a Manual Draw). Runs against the Firestore + Functions emulators
+a Manual Draw), and the server-only `finished` / `finishedAt` the match
+trigger keeps in step (set, unset, no rewrite when unchanged). Runs against the Firestore + Functions emulators
 (project demo-tm) started by run-triggers.sh. Seeds with the emulator owner
 token, so rules are bypassed and only the triggers are under test.
 Prints one PASS/FAIL line per case.
@@ -315,5 +316,52 @@ expect(ok and doc("tournaments/TMD").get("awards", {}).get("bestBatter", {}).get
        "manual draw: awards computed for display")
 time.sleep(3)
 expect(not award_notes("ma") and not doc("tournaments/TMD").get("awardsNotified"), "manual draw: no automatic award notification")
+
+# ── finished / finishedAt: set when the last match finishes, unset when un-finished, no loops ──
+cplayer("FA", "fa")
+cplayer("FB", "fb")
+set_doc("tournaments/TFIN", "owner", {"title": "Fin Open", "location": "Hall", "date": Ts("2030-06-01T18:00:00Z"),
+                                      "createdBy": "org", "sportType": "badminton", "formatRaw": "openSingles",
+                                      "matchFormatRaw": "manualDraw", "statusRaw": "scheduled"})
+for rid, pid in [("TFIN_A", "FA"), ("TFIN_B", "FB")]:
+    set_doc(f"registrations/{rid}", "owner", {"tournamentId": "TFIN", "playerId": pid, "createdAt": Ts("2026-10-01T10:00:00Z")})
+
+
+def fin_match(mid, done, rnd=1):
+    d = {"tournamentId": "TFIN", "teamAId": "TFIN_A", "teamBId": "TFIN_B", "round": rnd, "sportType": "badminton",
+         "statusRaw": "finished" if done else "scheduled", "createdAt": Ts("2026-10-02T10:00:00Z")}
+    if done:
+        d.update({"scoreA": 21, "scoreB": 10, "winnerRegistrationId": "TFIN_A"})
+    set_doc(f"matches/{mid}", "owner", d)
+
+
+fin_match("TFIN_M1", False)
+ok = wait_for(lambda: doc("tournaments/TFIN").get("finished") is False)
+expect(ok and "finishedAt" not in doc("tournaments/TFIN"), "finished false while a match is unplayed", doc("tournaments/TFIN"))
+fin_match("TFIN_M1", True)
+ok = wait_for(lambda: doc("tournaments/TFIN").get("finished") is True)
+expect(ok and doc("tournaments/TFIN").get("finishedAt"), "finished + finishedAt set by the match trigger", doc("tournaments/TFIN"))
+time.sleep(3)
+t0 = update_time("tournaments/TFIN")
+fin_match("TFIN_M1", True)  # same result written again
+time.sleep(4)
+expect(update_time("tournaments/TFIN") == t0, "unchanged result: tournament not rewritten (no write loop)")
+merge("tournaments/TFIN", "owner", {"title": "Fin Open 2"})
+time.sleep(4)
+t1 = update_time("tournaments/TFIN")
+time.sleep(3)
+expect(update_time("tournaments/TFIN") == t1 and doc("tournaments/TFIN").get("finished") is True,
+       "tournament edit: no trigger write, finished kept")
+fin_match("TFIN_M2", False, 2)  # manual draw: organizer adds a match
+ok = wait_for(lambda: doc("tournaments/TFIN").get("finished") is False)
+expect(ok and "finishedAt" not in doc("tournaments/TFIN"), "new manual match: finished false, finishedAt removed",
+       doc("tournaments/TFIN"))
+delete("matches/TFIN_M2", "owner")
+ok = wait_for(lambda: doc("tournaments/TFIN").get("finished") is True)
+expect(ok, "match deleted: finished again")
+for mid in ("TFIN_M1",):
+    delete(f"matches/{mid}", "owner")
+ok = wait_for(lambda: doc("tournaments/TFIN").get("finished") is False)
+expect(ok and "finishedAt" not in doc("tournaments/TFIN"), "every match deleted (reset): finished false", doc("tournaments/TFIN"))
 
 print(f"# {failures} failure(s)")

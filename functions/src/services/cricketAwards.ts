@@ -7,7 +7,9 @@
  * - Best Batter: batting leaderboard #1 (most runs, then strike rate, then
  *   name, team and key: `battingLeaders`).
  * - Best Bowler: bowling leaderboard #1 (most wickets, then economy, then
- *   name, team and key: `bowlingLeaders`).
+ *   name, team and key: `bowlingLeaders`), but only when that bowler took at
+ *   least one wicket: no wickets in the tournament leaves it unset (an
+ *   organizer may still pick anyone via setTournamentAwards).
  * - Player of the Series: highest `potm × 25 + runs + wickets × 20`, where
  *   potm is the player's Player of the Match count. Ties: more potm, then
  *   more runs, then name, team id and key (plain code-point order).
@@ -82,6 +84,6 @@ export function seriesAwards(stats: PlayerStats[], potm: PotmAward[]): SeriesAwa
   const bat = battingLeaders(stats)[0];
   if (bat) out.bestBatter = bat;
   const bowl = bowlingLeaders(stats)[0];
-  if (bowl) out.bestBowler = bowl;
+  if (bowl && bowl.wickets > 0) out.bestBowler = bowl;
   return out;
 }
