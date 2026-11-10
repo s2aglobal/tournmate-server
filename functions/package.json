@@ -26,6 +26,8 @@
     "backfill:member-uids": "npm run build && node lib/scripts/backfillMemberUids.js",
     "check:prod-data": "npm run build && node lib/scripts/checkProdData.js",
     "test:emulator-core": "npm run build && firebase emulators:exec --only firestore,auth,storage --project demo-tournmate \"node lib/scripts/emulatorCoreChecks.js\"",
+    "list:feedback": "npm run build && node lib/scripts/listFeedback.js",
+    "test:emulator-feedback": "npm run build && firebase emulators:exec --only firestore --project demo-tournmate \"node lib/scripts/emulatorFeedbackChecks.js\"",
     "check:profile-photos": "npm run build && node lib/scripts/checkProfilePhotos.js",
     "test:emulator-photos": "npm run build && firebase emulators:exec --only firestore,storage,auth --project demo-tournmate \"node lib/scripts/emulatorPhotoChecks.js\""
   },

@@ -505,6 +505,13 @@ service cloud.firestore {
         && resource.data.recipientId == request.auth.uid;
     }
 
+    // ─── Feedback ───────────────────────────────────────
+    // Written only by the submitFeedback callable; read by admins via the
+    // Admin SDK (scripts/listFeedback.ts).
+    match /feedback/{feedbackId} {
+      allow read, write: if false;
+    }
+
     // ─── App Config ─────────────────────────────────────
     // `config/app` holds the minimum supported app versions; `config/sports`
     // holds the sport catalog (live vs soon, categories). Readable before

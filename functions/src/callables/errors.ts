@@ -33,6 +33,7 @@ export type FailReason =
   | "NOT_FINISHED"
   | "PHOTO_REJECTED"
   | "PHOTO_CHECK_FAILED"
+  | "RATE_LIMITED"
   | "INVALID_ARGUMENT";
 
 /** Throws `HttpsError(code, message, { reason })`. */
