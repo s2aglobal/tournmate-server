@@ -367,6 +367,9 @@ for (let n = 2; n <= 12; n++) {
     ["guests", [
       { batting: [bat(A, "guest:Ravi", 77, 50, false)], bowling: [bowl(B, "guest:Sam", 24, 18, 3), bowl(B, "Q2", 24, 18, 3)] },
     ], [potm(A, "guest:Ravi")]],
+    ["no wickets", [
+      { batting: [bat(A, "P1", 30, 20), bat(B, "Q1", 25, 24)], bowling: [bowl(A, "Max", 24, 24, 0), bowl(B, "Q2", 24, 40, 0)] },
+    ], []],
   ];
   for (const [name, stats, picks] of cases) {
     const a = seriesAwards(stats, picks);
