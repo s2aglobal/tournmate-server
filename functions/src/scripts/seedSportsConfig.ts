@@ -26,6 +26,14 @@
  * Repeat for several sports. Implies --force.
  *   node lib/scripts/seedSportsConfig.js --project tournmate-dev --gated cricket=1.8/1.1
  *
+ * Point-by-point live scoring (`liveScoring`, badminton only for now):
+ * `--live-scoring <sports>` switches it on for exactly those sports
+ * (`none` = off for all). On its own it updates only `liveScoring` and keeps
+ * the rest of the doc; with --force / --live / --gated it is part of the full
+ * write. A full write without it keeps the existing `liveScoring`.
+ *   node lib/scripts/seedSportsConfig.js --project tournmate-dev --live-scoring badminton
+ *   node lib/scripts/seedSportsConfig.js --project tournmate-dev --live-scoring none
+ *
  * Or via npm (args after `--`):
  *   npm run seed:sports-config -- --project tournmate-dev
  *
@@ -44,6 +52,7 @@ import {
   SportMinAppVersion,
 } from "../config/sportsCatalog";
 import type { SportType } from "../types";
+import { RACKET_SPORTS } from "../services/racketLive";
 
 interface Args {
   projectId?: string;
@@ -51,6 +60,7 @@ interface Args {
   dryRun: boolean;
   live?: SportType[];
   gated: Partial<Record<SportType, SportMinAppVersion>>;
+  liveScoring?: Partial<Record<SportType, boolean>>;
 }
 
 const VERSION = /^\d+(\.\d+){0,2}$/;
@@ -78,12 +88,25 @@ function parseLive(value: string | undefined): SportType[] {
   return ids as SportType[];
 }
 
+function parseLiveScoring(value: string | undefined): Partial<Record<SportType, boolean>> {
+  if (value === "none") return {};
+  const ids = (value ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+  const unsupported = ids.filter((id) => !(RACKET_SPORTS as readonly string[]).includes(id));
+  if (ids.length === 0 || unsupported.length > 0) {
+    console.error(`--live-scoring needs sports with live scoring (${RACKET_SPORTS.join(", ")}) or "none"` +
+      `${unsupported.length ? `; not supported: ${unsupported.join(", ")}` : ""}`);
+    process.exit(1);
+  }
+  return Object.fromEntries(ids.map((id) => [id, true]));
+}
+
 function parseArgs(argv: string[]): Args {
   let projectId: string | undefined;
   let force = false;
   let dryRun = false;
   let live: SportType[] | undefined;
   const gated: Partial<Record<SportType, SportMinAppVersion>> = {};
+  let liveScoring: Partial<Record<SportType, boolean>> | undefined;
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === "--force") force = true;
@@ -94,17 +117,19 @@ function parseArgs(argv: string[]): Args {
     else if (arg.startsWith("--live=")) { live = parseLive(arg.slice("--live=".length)); force = true; }
     else if (arg === "--gated") { const [s, v] = parseGated(argv[++i]); gated[s] = v; force = true; }
     else if (arg.startsWith("--gated=")) { const [s, v] = parseGated(arg.slice("--gated=".length)); gated[s] = v; force = true; }
+    else if (arg === "--live-scoring") liveScoring = parseLiveScoring(argv[++i]);
+    else if (arg.startsWith("--live-scoring=")) liveScoring = parseLiveScoring(arg.slice("--live-scoring=".length));
     else {
       console.error(`Unknown argument: ${arg}`);
       process.exit(1);
     }
   }
   projectId = projectId || process.env.GOOGLE_CLOUD_PROJECT || process.env.GCLOUD_PROJECT;
-  return { projectId, force, dryRun, live, gated };
+  return { projectId, force, dryRun, live, gated, liveScoring };
 }
 
 async function main(): Promise<void> {
-  const { projectId, force, dryRun, live, gated } = parseArgs(process.argv.slice(2));
+  const { projectId, force, dryRun, live, gated, liveScoring } = parseArgs(process.argv.slice(2));
   const config: SportsConfig = { ...DEFAULT_SPORTS_CONFIG, ...(live ? { live } : {}) };
   if (Object.keys(gated).length > 0) {
     const both = Object.keys(gated).filter((s) => config.live.includes(s as SportType));
@@ -127,8 +152,12 @@ async function main(): Promise<void> {
   console.log(`Project: ${projectId}${emulator ? ` (emulator ${emulator})` : ""}`);
   console.log(`Target:  ${target}${force ? " (--force)" : ""}${dryRun ? " (--dry-run)" : ""}`);
 
+  // --live-scoring alone: update only that field (the doc is created from the default if missing).
+  const onlyLiveScoring = liveScoring !== undefined && !force;
+  if (liveScoring !== undefined) config.liveScoring = liveScoring;
+
   if (dryRun) {
-    console.log(JSON.stringify(config, null, 2));
+    console.log(onlyLiveScoring ? JSON.stringify({ liveScoring }, null, 2) : JSON.stringify(config, null, 2));
     return;
   }
 
@@ -137,14 +166,25 @@ async function main(): Promise<void> {
 
   const written = await getFirestore().runTransaction(async (tx) => {
     const snap = await tx.get(ref);
+    if (onlyLiveScoring) {
+      if (snap.exists) tx.update(ref, { liveScoring });
+      else tx.set(ref, config);
+      return true;
+    }
     if (snap.exists && !force) return false;
+    // A full write keeps the live-scoring switch unless --live-scoring was given.
+    const existing = snap.exists ? snap.get("liveScoring") : undefined;
+    if (liveScoring === undefined && existing && typeof existing === "object") config.liveScoring = existing;
     tx.set(ref, config);
     return true;
   });
 
-  if (written) {
+  if (written && onlyLiveScoring) {
+    console.log(`Updated ${target}: liveScoring = ${JSON.stringify(liveScoring)}`);
+  } else if (written) {
     const gatedText = config.liveMinAppVersion ? `; gated = ${JSON.stringify(config.liveMinAppVersion)}` : "";
-    console.log(`Wrote ${target}: live = ${config.live.join(", ")}${gatedText}`);
+    const scoringText = config.liveScoring ? `; liveScoring = ${JSON.stringify(config.liveScoring)}` : "";
+    console.log(`Wrote ${target}: live = ${config.live.join(", ")}${gatedText}${scoringText}`);
   } else {
     console.log(`${target} already exists; left unchanged. Pass --force to overwrite.`);
   }
