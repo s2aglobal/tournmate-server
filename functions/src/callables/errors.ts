@@ -3,7 +3,8 @@ import { HttpsError, FunctionsErrorCode } from "firebase-functions/v2/https";
 /**
  * Machine-readable reasons sent in `HttpsError.details.reason`. Apps branch
  * on these; `message` is user-facing and shown as-is. Shared specs:
- * server-authority-spec.md, profile-photos-spec.md, cricket-live-contract.md.
+ * server-authority-spec.md, profile-photos-spec.md, cricket-live-contract.md,
+ * racket-live-contract.md.
  */
 export type FailReason =
   | "UNAUTHENTICATED"
@@ -40,6 +41,8 @@ export type FailReason =
   | "INVALID_BALL"
   | "INNINGS_OVER"
   | "MATCH_FINISHED"
+  | "INVALID_POINT"
+  | "LIVE_SCORING_DISABLED"
   | "INVALID_ARGUMENT";
 
 /** Throws `HttpsError(code, message, { reason })`. */
