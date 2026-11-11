@@ -21,6 +21,8 @@ tools/rules-test/run.sh
 
 `cricket_live.py` covers cricket live scoring: `matches.live` / `matches.lineups` are never client-written (create or update); `matches/{id}/balls/*` and `matches/{id}/cricketLive/*` are readable by anyone and never client-written; while `live.status` isn't `finished` no client may update the match (older apps can't enter a score mid-live), after it they confirm as usual. The callables are checked by `npm run test:emulator-cricket-live` and the reducer by `npm run check:cricket-live` in `functions/`.
 
+`racket_live.py` covers racket live scoring (badminton): `matches.live` is never client-written; `matches/{id}/points/*` and `matches/{id}/racketLive/*` are readable by anyone and never client-written; while `live.status` is `inProgress` or `ended` no client may update the match, after `finished` older apps confirm as usual. The callables are checked by `npm run test:emulator-racket-live` and the reducer by `npm run check:racket-live` in `functions/`.
+
 `phase0.py` (stdlib Python, one PASS/FAIL line per case) covers the Phase 0 server-authority rules, using the write shapes of the older apps (iOS 1.7, Android 1.0) so their legitimate flows are proven to pass:
 - `players.genderRaw` only goes from missing/`preferNotToSay` to `male`/`female`; full-profile writes with an unchanged gender (and the old apps writing back `preferNotToSay` for a missing value) still pass; web profile create/update unaffected;
 - matches: only the organizer creates (incl. 40-match batches) and deletes; participants still submit/confirm scores; `eloApplied` is never client-written;
