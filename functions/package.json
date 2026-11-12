@@ -13,6 +13,8 @@
     "seed:test-users": "npm run build && node lib/scripts/seedTestUsers.js",
     "seed:sports-config": "npm run build && node lib/scripts/seedSportsConfig.js",
     "seed:qa-cricket": "npm run build && node lib/scripts/seedQaCricket.js",
+    "seed:qa-badminton-live": "npm run build && node lib/scripts/seedQaBadmintonLive.js",
+    "test:emulator-qa-badminton-live": "npm run build && cd .. && firebase emulators:exec --only firestore,auth,functions --project demo-tournmate \"node functions/lib/scripts/emulatorQaBadmintonLiveChecks.js\"",
     "backfill:tournament-finished": "npm run build && node lib/scripts/backfillTournamentFinished.js",
     "backfill:registration-counts": "npm run build && node lib/scripts/backfillRegistrationCounts.js",
     "check:scoring": "npm run build && node lib/scripts/checkScoring.js",
