@@ -18,6 +18,7 @@ import {
 } from "../services/cricketLive";
 import { RegistrationDoc, parseSportType } from "../types";
 import { notifyScoreSubmitted, safely } from "../services/matchNotifications";
+import { isRacketMatch, stopRacketLive } from "./racketLive";
 
 /**
  * Cricket live scoring callables (contract: cricket-live-contract.md).
@@ -616,13 +617,19 @@ export const abandonMatch = onCall(CALLABLE_OPTS, async (req) => {
 /**
  * stopLiveScoring({ matchId }) → { ok: true }. Organizer only: drops the live
  * session (live summary + event log; balls are kept, marked undone) so the
- * result can be entered by hand.
+ * result can be entered by hand. Racket matches: `stopRacketLive` (points
+ * kept, marked undone).
  */
 export const stopLiveScoring = onCall(CALLABLE_OPTS, async (req) => {
   const uid = requireUid(req);
   const d = dataOf(req);
   const db = getFirestore();
   const matchId = await resolveDocId(db, "matches", requireMatchId(d));
+  // Racket live scoring (callables/racketLive.ts) shares this callable.
+  if (await isRacketMatch(db, matchId)) {
+    await stopRacketLive(db, matchId, uid);
+    return { ok: true };
+  }
   await db.runTransaction(async (tx) => {
     const c = await open(db, tx, matchId, uid);
     if (!isOrganizer(c.l, uid)) fail("permission-denied", "NOT_SCORER", "Only the organizer can stop live scoring.");

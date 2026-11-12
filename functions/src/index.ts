@@ -67,6 +67,7 @@ export {
   setLineup, startScoring, setToss, startInnings, recordBall, undoBall, setRevisedTarget, endInnings, abandonMatch,
   finishLiveMatch, stopLiveScoring,
 } from "./callables/cricketLive";
+export { startRacketScoring, recordPoint, undoPoint, setServer, finishRacketMatch } from "./callables/racketLive";
 
 // ─── Scheduled Jobs ─────────────────────────────────────
 export { hourlyCleanup, dailyReminders, spamCleanup } from "./triggers/scheduledJobs";

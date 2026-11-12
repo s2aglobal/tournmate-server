@@ -158,7 +158,7 @@ function hasUidLists(match: MatchDoc): boolean {
  * them; otherwise the registrations' player, partner and roster ids against
  * the caller's player profiles (ids in any case).
  */
-function sideOf(l: Loaded, uid: string, playerIds: Set<string>): Side | null {
+export function sideOf(l: Loaded, uid: string, playerIds: Set<string>): Side | null {
   if (hasUidLists(l.match)) {
     if (l.match.teamAUids?.includes(uid)) return "A";
     if (l.match.teamBUids?.includes(uid)) return "B";
@@ -375,23 +375,41 @@ function validateSimple(a: unknown, b: unknown, l: Loaded): void {
   if (issue) fail("invalid-argument", "INVALID_SCORE", issue.message);
 }
 
+/**
+ * Validates a game score (set scores or a simple score) and applies its
+ * fields as `submitScore` does. `final` = organizer (finished at once); a
+ * participant's score is stored as games and waits for the other side.
+ * Also used by racket live scoring's finish (callables/racketLive.ts).
+ */
+export function applyGames(p: Patch, l: Loaded, score: Extract<Score, { kind: "sets" | "simple" }>, uid: string, final: boolean): Patch {
+  if (final) {
+    if (score.kind === "simple") {
+      validateSimple(score.scoreA, score.scoreB, l);
+      return applyFinalScore(p, score.scoreA, score.scoreB, l.match);
+    }
+    validateSets(score.sets, l);
+    // Submit, then confirm with the submitted scores and winner.
+    return applySetScores(p, score.sets, l.match)
+      .set("submittedBy", uid)
+      .set("confirmedBy", uid)
+      .set("statusRaw", "finished");
+  }
+  let sets: SetScore[];
+  if (score.kind === "simple") {
+    validateSimple(score.scoreA, score.scoreB, l);
+    sets = [{ teamAPoints: score.scoreA, teamBPoints: score.scoreB }];
+  } else {
+    validateSets(score.sets, l);
+    sets = score.sets;
+  }
+  return applySetScores(p, sets, l.match).set("submittedBy", uid).set("statusRaw", "scoreSubmitted");
+}
+
 /** Organizer's final score (`finalizeMatch`, `submitAndConfirmSetScores`, cricket `final`). */
 async function organizerFinal(db: Firestore, tx: Transaction, l: Loaded, score: Score, uid: string): Promise<Patch> {
   const p = new Patch(l.match);
-  switch (score.kind) {
-    case "cricket":
-      return applyCricket(db, tx, p, l, score, uid, true);
-    case "simple":
-      validateSimple(score.scoreA, score.scoreB, l);
-      return applyFinalScore(p, score.scoreA, score.scoreB, l.match);
-    case "sets":
-      validateSets(score.sets, l);
-      // Submit, then confirm with the submitted scores and winner.
-      return applySetScores(p, score.sets, l.match)
-        .set("submittedBy", uid)
-        .set("confirmedBy", uid)
-        .set("statusRaw", "finished");
-  }
+  if (score.kind === "cricket") return applyCricket(db, tx, p, l, score, uid, true);
+  return applyGames(p, l, score, uid, true);
 }
 
 // ─── Commit ─────────────────────────────────────────────
@@ -440,7 +458,7 @@ export async function afterFinish(db: Firestore, matchId: string, c: Committed):
 /** Live statuses during which only the live scorer changes the result. */
 const LIVE_ACTIVE = ["setup", "inProgress", "inningsBreak", "ended"];
 
-/** Refuses a manual score while the match is scored live (services/cricketLive.ts). */
+/** Refuses a manual score while the match is scored live (cricket or racket live). */
 function requireNotLive(l: Loaded, uid: string): void {
   const live = (l.match as unknown as { live?: { status?: unknown } }).live;
   if (live && typeof live.status === "string" && LIVE_ACTIVE.includes(live.status)) {
@@ -484,15 +502,7 @@ export const submitScore = onCall(OPTIONS, async (req) => {
     if (score.kind === "cricket") {
       await applyCricket(db, tx, p, l, score, uid, false);
     } else {
-      let sets: SetScore[];
-      if (score.kind === "simple") {
-        validateSimple(score.scoreA, score.scoreB, l);
-        sets = [{ teamAPoints: score.scoreA, teamBPoints: score.scoreB }];
-      } else {
-        validateSets(score.sets, l);
-        sets = score.sets;
-      }
-      applySetScores(p, sets, l.match).set("submittedBy", uid).set("statusRaw", "scoreSubmitted");
+      applyGames(p, l, score, uid, false);
     }
     return commit(db, tx, matchId, l, p);
   });

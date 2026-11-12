@@ -1,0 +1,1142 @@
+RLIVE straight21 config {"firstServer":"A","format":"sets","scoring":{"gamesPerMatch":3,"pointCap":30,"pointsToWin":21,"winBy":2},"sport":"badminton"}
+RLIVE straight21 event {"id":"p1","type":"point","winner":"A"}
+RLIVE straight21 => st=inProgress games=[] cur=1-0 won=0-0 srv=AL sw=0 game=1
+RLIVE straight21 event {"id":"p2","type":"point","winner":"B"}
+RLIVE straight21 => st=inProgress games=[] cur=1-1 won=0-0 srv=BL sw=0 game=1
+RLIVE straight21 event {"id":"p3","type":"point","winner":"A"}
+RLIVE straight21 => st=inProgress games=[] cur=2-1 won=0-0 srv=AR sw=0 game=1
+RLIVE straight21 event {"id":"p4","type":"point","winner":"B"}
+RLIVE straight21 => st=inProgress games=[] cur=2-2 won=0-0 srv=BR sw=0 game=1
+RLIVE straight21 event {"id":"p5","type":"point","winner":"A"}
+RLIVE straight21 => st=inProgress games=[] cur=3-2 won=0-0 srv=AL sw=0 game=1
+RLIVE straight21 event {"id":"p6","type":"point","winner":"B"}
+RLIVE straight21 => st=inProgress games=[] cur=3-3 won=0-0 srv=BL sw=0 game=1
+RLIVE straight21 event {"id":"p7","type":"point","winner":"A"}
+RLIVE straight21 => st=inProgress games=[] cur=4-3 won=0-0 srv=AR sw=0 game=1
+RLIVE straight21 event {"id":"p8","type":"point","winner":"B"}
+RLIVE straight21 => st=inProgress games=[] cur=4-4 won=0-0 srv=BR sw=0 game=1
+RLIVE straight21 event {"id":"p9","type":"point","winner":"A"}
+RLIVE straight21 => st=inProgress games=[] cur=5-4 won=0-0 srv=AL sw=0 game=1
+RLIVE straight21 event {"id":"p10","type":"point","winner":"B"}
+RLIVE straight21 => st=inProgress games=[] cur=5-5 won=0-0 srv=BL sw=0 game=1
+RLIVE straight21 event {"id":"p11","type":"point","winner":"A"}
+RLIVE straight21 => st=inProgress games=[] cur=6-5 won=0-0 srv=AR sw=0 game=1
+RLIVE straight21 event {"id":"p12","type":"point","winner":"B"}
+RLIVE straight21 => st=inProgress games=[] cur=6-6 won=0-0 srv=BR sw=0 game=1
+RLIVE straight21 event {"id":"p13","type":"point","winner":"A"}
+RLIVE straight21 => st=inProgress games=[] cur=7-6 won=0-0 srv=AL sw=0 game=1
+RLIVE straight21 event {"id":"p14","type":"point","winner":"B"}
+RLIVE straight21 => st=inProgress games=[] cur=7-7 won=0-0 srv=BL sw=0 game=1
+RLIVE straight21 event {"id":"p15","type":"point","winner":"A"}
+RLIVE straight21 => st=inProgress games=[] cur=8-7 won=0-0 srv=AR sw=0 game=1
+RLIVE straight21 event {"id":"p16","type":"point","winner":"B"}
+RLIVE straight21 => st=inProgress games=[] cur=8-8 won=0-0 srv=BR sw=0 game=1
+RLIVE straight21 event {"id":"p17","type":"point","winner":"A"}
+RLIVE straight21 => st=inProgress games=[] cur=9-8 won=0-0 srv=AL sw=0 game=1
+RLIVE straight21 event {"id":"p18","type":"point","winner":"B"}
+RLIVE straight21 => st=inProgress games=[] cur=9-9 won=0-0 srv=BL sw=0 game=1
+RLIVE straight21 event {"id":"p19","type":"point","winner":"A"}
+RLIVE straight21 => st=inProgress games=[] cur=10-9 won=0-0 srv=AR sw=0 game=1
+RLIVE straight21 event {"id":"p20","type":"point","winner":"B"}
+RLIVE straight21 => st=inProgress games=[] cur=10-10 won=0-0 srv=BR sw=0 game=1
+RLIVE straight21 event {"id":"p21","type":"point","winner":"A"}
+RLIVE straight21 => st=inProgress games=[] cur=11-10 won=0-0 srv=AL sw=0 game=1
+RLIVE straight21 event {"id":"p22","type":"point","winner":"B"}
+RLIVE straight21 => st=inProgress games=[] cur=11-11 won=0-0 srv=BL sw=0 game=1
+RLIVE straight21 event {"id":"p23","type":"point","winner":"A"}
+RLIVE straight21 => st=inProgress games=[] cur=12-11 won=0-0 srv=AR sw=0 game=1
+RLIVE straight21 event {"id":"p24","type":"point","winner":"B"}
+RLIVE straight21 => st=inProgress games=[] cur=12-12 won=0-0 srv=BR sw=0 game=1
+RLIVE straight21 event {"id":"p25","type":"point","winner":"A"}
+RLIVE straight21 => st=inProgress games=[] cur=13-12 won=0-0 srv=AL sw=0 game=1
+RLIVE straight21 event {"id":"p26","type":"point","winner":"B"}
+RLIVE straight21 => st=inProgress games=[] cur=13-13 won=0-0 srv=BL sw=0 game=1
+RLIVE straight21 event {"id":"p27","type":"point","winner":"A"}
+RLIVE straight21 => st=inProgress games=[] cur=14-13 won=0-0 srv=AR sw=0 game=1
+RLIVE straight21 event {"id":"p28","type":"point","winner":"B"}
+RLIVE straight21 => st=inProgress games=[] cur=14-14 won=0-0 srv=BR sw=0 game=1
+RLIVE straight21 event {"id":"p29","type":"point","winner":"A"}
+RLIVE straight21 => st=inProgress games=[] cur=15-14 won=0-0 srv=AL sw=0 game=1
+RLIVE straight21 event {"id":"p30","type":"point","winner":"B"}
+RLIVE straight21 => st=inProgress games=[] cur=15-15 won=0-0 srv=BL sw=0 game=1
+RLIVE straight21 event {"id":"p31","type":"point","winner":"A"}
+RLIVE straight21 => st=inProgress games=[] cur=16-15 won=0-0 srv=AR sw=0 game=1
+RLIVE straight21 event {"id":"p32","type":"point","winner":"B"}
+RLIVE straight21 => st=inProgress games=[] cur=16-16 won=0-0 srv=BR sw=0 game=1
+RLIVE straight21 event {"id":"p33","type":"point","winner":"A"}
+RLIVE straight21 => st=inProgress games=[] cur=17-16 won=0-0 srv=AL sw=0 game=1
+RLIVE straight21 event {"id":"p34","type":"point","winner":"B"}
+RLIVE straight21 => st=inProgress games=[] cur=17-17 won=0-0 srv=BL sw=0 game=1
+RLIVE straight21 event {"id":"p35","type":"point","winner":"A"}
+RLIVE straight21 => st=inProgress games=[] cur=18-17 won=0-0 srv=AR sw=0 game=1
+RLIVE straight21 event {"id":"p36","type":"point","winner":"B"}
+RLIVE straight21 => st=inProgress games=[] cur=18-18 won=0-0 srv=BR sw=0 game=1
+RLIVE straight21 event {"id":"p37","type":"point","winner":"A"}
+RLIVE straight21 => st=inProgress games=[] cur=19-18 won=0-0 srv=AL sw=0 game=1
+RLIVE straight21 event {"id":"p38","type":"point","winner":"B"}
+RLIVE straight21 => st=inProgress games=[] cur=19-19 won=0-0 srv=BL sw=0 game=1
+RLIVE straight21 event {"id":"p39","type":"point","winner":"A"}
+RLIVE straight21 => st=inProgress games=[] cur=20-19 won=0-0 srv=AR sw=0 game=1
+RLIVE straight21 event {"id":"p40","type":"point","winner":"A"}
+RLIVE straight21 => st=inProgress games=[21-19] cur=0-0 won=1-0 srv=AR sw=1 game=2
+RLIVE straight21 event {"id":"p41","type":"point","winner":"A"}
+RLIVE straight21 => st=inProgress games=[21-19] cur=1-0 won=1-0 srv=AL sw=0 game=2
+RLIVE straight21 event {"id":"p42","type":"point","winner":"B"}
+RLIVE straight21 => st=inProgress games=[21-19] cur=1-1 won=1-0 srv=BL sw=0 game=2
+RLIVE straight21 event {"id":"p43","type":"point","winner":"A"}
+RLIVE straight21 => st=inProgress games=[21-19] cur=2-1 won=1-0 srv=AR sw=0 game=2
+RLIVE straight21 event {"id":"p44","type":"point","winner":"B"}
+RLIVE straight21 => st=inProgress games=[21-19] cur=2-2 won=1-0 srv=BR sw=0 game=2
+RLIVE straight21 event {"id":"p45","type":"point","winner":"A"}
+RLIVE straight21 => st=inProgress games=[21-19] cur=3-2 won=1-0 srv=AL sw=0 game=2
+RLIVE straight21 event {"id":"p46","type":"point","winner":"B"}
+RLIVE straight21 => st=inProgress games=[21-19] cur=3-3 won=1-0 srv=BL sw=0 game=2
+RLIVE straight21 event {"id":"p47","type":"point","winner":"A"}
+RLIVE straight21 => st=inProgress games=[21-19] cur=4-3 won=1-0 srv=AR sw=0 game=2
+RLIVE straight21 event {"id":"p48","type":"point","winner":"B"}
+RLIVE straight21 => st=inProgress games=[21-19] cur=4-4 won=1-0 srv=BR sw=0 game=2
+RLIVE straight21 event {"id":"p49","type":"point","winner":"A"}
+RLIVE straight21 => st=inProgress games=[21-19] cur=5-4 won=1-0 srv=AL sw=0 game=2
+RLIVE straight21 event {"id":"p50","type":"point","winner":"B"}
+RLIVE straight21 => st=inProgress games=[21-19] cur=5-5 won=1-0 srv=BL sw=0 game=2
+RLIVE straight21 event {"id":"p51","type":"point","winner":"A"}
+RLIVE straight21 => st=inProgress games=[21-19] cur=6-5 won=1-0 srv=AR sw=0 game=2
+RLIVE straight21 event {"id":"p52","type":"point","winner":"B"}
+RLIVE straight21 => st=inProgress games=[21-19] cur=6-6 won=1-0 srv=BR sw=0 game=2
+RLIVE straight21 event {"id":"p53","type":"point","winner":"A"}
+RLIVE straight21 => st=inProgress games=[21-19] cur=7-6 won=1-0 srv=AL sw=0 game=2
+RLIVE straight21 event {"id":"p54","type":"point","winner":"B"}
+RLIVE straight21 => st=inProgress games=[21-19] cur=7-7 won=1-0 srv=BL sw=0 game=2
+RLIVE straight21 event {"id":"p55","type":"point","winner":"A"}
+RLIVE straight21 => st=inProgress games=[21-19] cur=8-7 won=1-0 srv=AR sw=0 game=2
+RLIVE straight21 event {"id":"p56","type":"point","winner":"B"}
+RLIVE straight21 => st=inProgress games=[21-19] cur=8-8 won=1-0 srv=BR sw=0 game=2
+RLIVE straight21 event {"id":"p57","type":"point","winner":"A"}
+RLIVE straight21 => st=inProgress games=[21-19] cur=9-8 won=1-0 srv=AL sw=0 game=2
+RLIVE straight21 event {"id":"p58","type":"point","winner":"B"}
+RLIVE straight21 => st=inProgress games=[21-19] cur=9-9 won=1-0 srv=BL sw=0 game=2
+RLIVE straight21 event {"id":"p59","type":"point","winner":"A"}
+RLIVE straight21 => st=inProgress games=[21-19] cur=10-9 won=1-0 srv=AR sw=0 game=2
+RLIVE straight21 event {"id":"p60","type":"point","winner":"B"}
+RLIVE straight21 => st=inProgress games=[21-19] cur=10-10 won=1-0 srv=BR sw=0 game=2
+RLIVE straight21 event {"id":"p61","type":"point","winner":"A"}
+RLIVE straight21 => st=inProgress games=[21-19] cur=11-10 won=1-0 srv=AL sw=0 game=2
+RLIVE straight21 event {"id":"p62","type":"point","winner":"B"}
+RLIVE straight21 => st=inProgress games=[21-19] cur=11-11 won=1-0 srv=BL sw=0 game=2
+RLIVE straight21 event {"id":"p63","type":"point","winner":"A"}
+RLIVE straight21 => st=inProgress games=[21-19] cur=12-11 won=1-0 srv=AR sw=0 game=2
+RLIVE straight21 event {"id":"p64","type":"point","winner":"B"}
+RLIVE straight21 => st=inProgress games=[21-19] cur=12-12 won=1-0 srv=BR sw=0 game=2
+RLIVE straight21 event {"id":"p65","type":"point","winner":"A"}
+RLIVE straight21 => st=inProgress games=[21-19] cur=13-12 won=1-0 srv=AL sw=0 game=2
+RLIVE straight21 event {"id":"p66","type":"point","winner":"B"}
+RLIVE straight21 => st=inProgress games=[21-19] cur=13-13 won=1-0 srv=BL sw=0 game=2
+RLIVE straight21 event {"id":"p67","type":"point","winner":"A"}
+RLIVE straight21 => st=inProgress games=[21-19] cur=14-13 won=1-0 srv=AR sw=0 game=2
+RLIVE straight21 event {"id":"p68","type":"point","winner":"B"}
+RLIVE straight21 => st=inProgress games=[21-19] cur=14-14 won=1-0 srv=BR sw=0 game=2
+RLIVE straight21 event {"id":"p69","type":"point","winner":"A"}
+RLIVE straight21 => st=inProgress games=[21-19] cur=15-14 won=1-0 srv=AL sw=0 game=2
+RLIVE straight21 event {"id":"p70","type":"point","winner":"B"}
+RLIVE straight21 => st=inProgress games=[21-19] cur=15-15 won=1-0 srv=BL sw=0 game=2
+RLIVE straight21 event {"id":"p71","type":"point","winner":"A"}
+RLIVE straight21 => st=inProgress games=[21-19] cur=16-15 won=1-0 srv=AR sw=0 game=2
+RLIVE straight21 event {"id":"p72","type":"point","winner":"A"}
+RLIVE straight21 => st=inProgress games=[21-19] cur=17-15 won=1-0 srv=AL sw=0 game=2
+RLIVE straight21 event {"id":"p73","type":"point","winner":"A"}
+RLIVE straight21 => st=inProgress games=[21-19] cur=18-15 won=1-0 srv=AR sw=0 game=2
+RLIVE straight21 event {"id":"p74","type":"point","winner":"A"}
+RLIVE straight21 => st=inProgress games=[21-19] cur=19-15 won=1-0 srv=AL sw=0 game=2
+RLIVE straight21 event {"id":"p75","type":"point","winner":"A"}
+RLIVE straight21 => st=inProgress games=[21-19] cur=20-15 won=1-0 srv=AR sw=0 game=2
+RLIVE straight21 event {"id":"p76","type":"point","winner":"A"}
+RLIVE straight21 => st=ended games=[21-19,21-15] cur=0-0 won=2-0 srv=AR sw=0 game=2
+RLIVE straight21 event {"id":"p77","type":"point","winner":"B"}
+RLIVE straight21 !! INVALID_POINT The match is over. Finish it, or undo the last point.
+RLIVE straight21 event {"id":"s1","side":"B","type":"setServer"}
+RLIVE straight21 !! INVALID_POINT The match is over. Finish it, or undo the last point.
+RLIVE straight21 live {"current":{"a":0,"b":0},"games":[{"a":21,"b":19},{"a":21,"b":15}],"gamesWon":{"a":2,"b":0},"server":{"court":"R","side":"A"},"status":"ended","switchEnds":false}
+RLIVE straight21 result {"kind":"sets","sets":[{"teamAPoints":21,"teamBPoints":19},{"teamAPoints":21,"teamBPoints":15}]}
+RLIVE deuceDecider config {"firstServer":"A","format":"sets","scoring":{"gamesPerMatch":3,"pointCap":30,"pointsToWin":21,"winBy":2},"sport":"badminton"}
+RLIVE deuceDecider event {"id":"p78","type":"point","winner":"A"}
+RLIVE deuceDecider => st=inProgress games=[] cur=1-0 won=0-0 srv=AL sw=0 game=1
+RLIVE deuceDecider event {"id":"p79","type":"point","winner":"B"}
+RLIVE deuceDecider => st=inProgress games=[] cur=1-1 won=0-0 srv=BL sw=0 game=1
+RLIVE deuceDecider event {"id":"p80","type":"point","winner":"A"}
+RLIVE deuceDecider => st=inProgress games=[] cur=2-1 won=0-0 srv=AR sw=0 game=1
+RLIVE deuceDecider event {"id":"p81","type":"point","winner":"B"}
+RLIVE deuceDecider => st=inProgress games=[] cur=2-2 won=0-0 srv=BR sw=0 game=1
+RLIVE deuceDecider event {"id":"p82","type":"point","winner":"A"}
+RLIVE deuceDecider => st=inProgress games=[] cur=3-2 won=0-0 srv=AL sw=0 game=1
+RLIVE deuceDecider event {"id":"p83","type":"point","winner":"B"}
+RLIVE deuceDecider => st=inProgress games=[] cur=3-3 won=0-0 srv=BL sw=0 game=1
+RLIVE deuceDecider event {"id":"p84","type":"point","winner":"A"}
+RLIVE deuceDecider => st=inProgress games=[] cur=4-3 won=0-0 srv=AR sw=0 game=1
+RLIVE deuceDecider event {"id":"p85","type":"point","winner":"B"}
+RLIVE deuceDecider => st=inProgress games=[] cur=4-4 won=0-0 srv=BR sw=0 game=1
+RLIVE deuceDecider event {"id":"p86","type":"point","winner":"A"}
+RLIVE deuceDecider => st=inProgress games=[] cur=5-4 won=0-0 srv=AL sw=0 game=1
+RLIVE deuceDecider event {"id":"p87","type":"point","winner":"B"}
+RLIVE deuceDecider => st=inProgress games=[] cur=5-5 won=0-0 srv=BL sw=0 game=1
+RLIVE deuceDecider event {"id":"p88","type":"point","winner":"A"}
+RLIVE deuceDecider => st=inProgress games=[] cur=6-5 won=0-0 srv=AR sw=0 game=1
+RLIVE deuceDecider event {"id":"p89","type":"point","winner":"B"}
+RLIVE deuceDecider => st=inProgress games=[] cur=6-6 won=0-0 srv=BR sw=0 game=1
+RLIVE deuceDecider event {"id":"p90","type":"point","winner":"A"}
+RLIVE deuceDecider => st=inProgress games=[] cur=7-6 won=0-0 srv=AL sw=0 game=1
+RLIVE deuceDecider event {"id":"p91","type":"point","winner":"B"}
+RLIVE deuceDecider => st=inProgress games=[] cur=7-7 won=0-0 srv=BL sw=0 game=1
+RLIVE deuceDecider event {"id":"p92","type":"point","winner":"A"}
+RLIVE deuceDecider => st=inProgress games=[] cur=8-7 won=0-0 srv=AR sw=0 game=1
+RLIVE deuceDecider event {"id":"p93","type":"point","winner":"B"}
+RLIVE deuceDecider => st=inProgress games=[] cur=8-8 won=0-0 srv=BR sw=0 game=1
+RLIVE deuceDecider event {"id":"p94","type":"point","winner":"A"}
+RLIVE deuceDecider => st=inProgress games=[] cur=9-8 won=0-0 srv=AL sw=0 game=1
+RLIVE deuceDecider event {"id":"p95","type":"point","winner":"B"}
+RLIVE deuceDecider => st=inProgress games=[] cur=9-9 won=0-0 srv=BL sw=0 game=1
+RLIVE deuceDecider event {"id":"p96","type":"point","winner":"A"}
+RLIVE deuceDecider => st=inProgress games=[] cur=10-9 won=0-0 srv=AR sw=0 game=1
+RLIVE deuceDecider event {"id":"p97","type":"point","winner":"B"}
+RLIVE deuceDecider => st=inProgress games=[] cur=10-10 won=0-0 srv=BR sw=0 game=1
+RLIVE deuceDecider event {"id":"p98","type":"point","winner":"A"}
+RLIVE deuceDecider => st=inProgress games=[] cur=11-10 won=0-0 srv=AL sw=0 game=1
+RLIVE deuceDecider event {"id":"p99","type":"point","winner":"B"}
+RLIVE deuceDecider => st=inProgress games=[] cur=11-11 won=0-0 srv=BL sw=0 game=1
+RLIVE deuceDecider event {"id":"p100","type":"point","winner":"A"}
+RLIVE deuceDecider => st=inProgress games=[] cur=12-11 won=0-0 srv=AR sw=0 game=1
+RLIVE deuceDecider event {"id":"p101","type":"point","winner":"B"}
+RLIVE deuceDecider => st=inProgress games=[] cur=12-12 won=0-0 srv=BR sw=0 game=1
+RLIVE deuceDecider event {"id":"p102","type":"point","winner":"A"}
+RLIVE deuceDecider => st=inProgress games=[] cur=13-12 won=0-0 srv=AL sw=0 game=1
+RLIVE deuceDecider event {"id":"p103","type":"point","winner":"B"}
+RLIVE deuceDecider => st=inProgress games=[] cur=13-13 won=0-0 srv=BL sw=0 game=1
+RLIVE deuceDecider event {"id":"p104","type":"point","winner":"A"}
+RLIVE deuceDecider => st=inProgress games=[] cur=14-13 won=0-0 srv=AR sw=0 game=1
+RLIVE deuceDecider event {"id":"p105","type":"point","winner":"B"}
+RLIVE deuceDecider => st=inProgress games=[] cur=14-14 won=0-0 srv=BR sw=0 game=1
+RLIVE deuceDecider event {"id":"p106","type":"point","winner":"A"}
+RLIVE deuceDecider => st=inProgress games=[] cur=15-14 won=0-0 srv=AL sw=0 game=1
+RLIVE deuceDecider event {"id":"p107","type":"point","winner":"B"}
+RLIVE deuceDecider => st=inProgress games=[] cur=15-15 won=0-0 srv=BL sw=0 game=1
+RLIVE deuceDecider event {"id":"p108","type":"point","winner":"A"}
+RLIVE deuceDecider => st=inProgress games=[] cur=16-15 won=0-0 srv=AR sw=0 game=1
+RLIVE deuceDecider event {"id":"p109","type":"point","winner":"B"}
+RLIVE deuceDecider => st=inProgress games=[] cur=16-16 won=0-0 srv=BR sw=0 game=1
+RLIVE deuceDecider event {"id":"p110","type":"point","winner":"A"}
+RLIVE deuceDecider => st=inProgress games=[] cur=17-16 won=0-0 srv=AL sw=0 game=1
+RLIVE deuceDecider event {"id":"p111","type":"point","winner":"B"}
+RLIVE deuceDecider => st=inProgress games=[] cur=17-17 won=0-0 srv=BL sw=0 game=1
+RLIVE deuceDecider event {"id":"p112","type":"point","winner":"A"}
+RLIVE deuceDecider => st=inProgress games=[] cur=18-17 won=0-0 srv=AR sw=0 game=1
+RLIVE deuceDecider event {"id":"p113","type":"point","winner":"B"}
+RLIVE deuceDecider => st=inProgress games=[] cur=18-18 won=0-0 srv=BR sw=0 game=1
+RLIVE deuceDecider event {"id":"p114","type":"point","winner":"A"}
+RLIVE deuceDecider => st=inProgress games=[] cur=19-18 won=0-0 srv=AL sw=0 game=1
+RLIVE deuceDecider event {"id":"p115","type":"point","winner":"B"}
+RLIVE deuceDecider => st=inProgress games=[] cur=19-19 won=0-0 srv=BL sw=0 game=1
+RLIVE deuceDecider event {"id":"p116","type":"point","winner":"A"}
+RLIVE deuceDecider => st=inProgress games=[] cur=20-19 won=0-0 srv=AR sw=0 game=1
+RLIVE deuceDecider event {"id":"p117","type":"point","winner":"B"}
+RLIVE deuceDecider => st=inProgress games=[] cur=20-20 won=0-0 srv=BR sw=0 game=1
+RLIVE deuceDecider event {"id":"p118","type":"point","winner":"A"}
+RLIVE deuceDecider => st=inProgress games=[] cur=21-20 won=0-0 srv=AL sw=0 game=1
+RLIVE deuceDecider event {"id":"p119","type":"point","winner":"A"}
+RLIVE deuceDecider => st=inProgress games=[22-20] cur=0-0 won=1-0 srv=AR sw=1 game=2
+RLIVE deuceDecider event {"id":"p120","type":"point","winner":"A"}
+RLIVE deuceDecider => st=inProgress games=[22-20] cur=1-0 won=1-0 srv=AL sw=0 game=2
+RLIVE deuceDecider event {"id":"p121","type":"point","winner":"B"}
+RLIVE deuceDecider => st=inProgress games=[22-20] cur=1-1 won=1-0 srv=BL sw=0 game=2
+RLIVE deuceDecider event {"id":"p122","type":"point","winner":"A"}
+RLIVE deuceDecider => st=inProgress games=[22-20] cur=2-1 won=1-0 srv=AR sw=0 game=2
+RLIVE deuceDecider event {"id":"p123","type":"point","winner":"B"}
+RLIVE deuceDecider => st=inProgress games=[22-20] cur=2-2 won=1-0 srv=BR sw=0 game=2
+RLIVE deuceDecider event {"id":"p124","type":"point","winner":"A"}
+RLIVE deuceDecider => st=inProgress games=[22-20] cur=3-2 won=1-0 srv=AL sw=0 game=2
+RLIVE deuceDecider event {"id":"p125","type":"point","winner":"B"}
+RLIVE deuceDecider => st=inProgress games=[22-20] cur=3-3 won=1-0 srv=BL sw=0 game=2
+RLIVE deuceDecider event {"id":"p126","type":"point","winner":"A"}
+RLIVE deuceDecider => st=inProgress games=[22-20] cur=4-3 won=1-0 srv=AR sw=0 game=2
+RLIVE deuceDecider event {"id":"p127","type":"point","winner":"B"}
+RLIVE deuceDecider => st=inProgress games=[22-20] cur=4-4 won=1-0 srv=BR sw=0 game=2
+RLIVE deuceDecider event {"id":"p128","type":"point","winner":"A"}
+RLIVE deuceDecider => st=inProgress games=[22-20] cur=5-4 won=1-0 srv=AL sw=0 game=2
+RLIVE deuceDecider event {"id":"p129","type":"point","winner":"B"}
+RLIVE deuceDecider => st=inProgress games=[22-20] cur=5-5 won=1-0 srv=BL sw=0 game=2
+RLIVE deuceDecider event {"id":"p130","type":"point","winner":"A"}
+RLIVE deuceDecider => st=inProgress games=[22-20] cur=6-5 won=1-0 srv=AR sw=0 game=2
+RLIVE deuceDecider event {"id":"p131","type":"point","winner":"B"}
+RLIVE deuceDecider => st=inProgress games=[22-20] cur=6-6 won=1-0 srv=BR sw=0 game=2
+RLIVE deuceDecider event {"id":"p132","type":"point","winner":"A"}
+RLIVE deuceDecider => st=inProgress games=[22-20] cur=7-6 won=1-0 srv=AL sw=0 game=2
+RLIVE deuceDecider event {"id":"p133","type":"point","winner":"B"}
+RLIVE deuceDecider => st=inProgress games=[22-20] cur=7-7 won=1-0 srv=BL sw=0 game=2
+RLIVE deuceDecider event {"id":"p134","type":"point","winner":"A"}
+RLIVE deuceDecider => st=inProgress games=[22-20] cur=8-7 won=1-0 srv=AR sw=0 game=2
+RLIVE deuceDecider event {"id":"p135","type":"point","winner":"B"}
+RLIVE deuceDecider => st=inProgress games=[22-20] cur=8-8 won=1-0 srv=BR sw=0 game=2
+RLIVE deuceDecider event {"id":"p136","type":"point","winner":"A"}
+RLIVE deuceDecider => st=inProgress games=[22-20] cur=9-8 won=1-0 srv=AL sw=0 game=2
+RLIVE deuceDecider event {"id":"p137","type":"point","winner":"B"}
+RLIVE deuceDecider => st=inProgress games=[22-20] cur=9-9 won=1-0 srv=BL sw=0 game=2
+RLIVE deuceDecider event {"id":"p138","type":"point","winner":"A"}
+RLIVE deuceDecider => st=inProgress games=[22-20] cur=10-9 won=1-0 srv=AR sw=0 game=2
+RLIVE deuceDecider event {"id":"p139","type":"point","winner":"B"}
+RLIVE deuceDecider => st=inProgress games=[22-20] cur=10-10 won=1-0 srv=BR sw=0 game=2
+RLIVE deuceDecider event {"id":"p140","type":"point","winner":"B"}
+RLIVE deuceDecider => st=inProgress games=[22-20] cur=10-11 won=1-0 srv=BL sw=0 game=2
+RLIVE deuceDecider event {"id":"p141","type":"point","winner":"B"}
+RLIVE deuceDecider => st=inProgress games=[22-20] cur=10-12 won=1-0 srv=BR sw=0 game=2
+RLIVE deuceDecider event {"id":"p142","type":"point","winner":"B"}
+RLIVE deuceDecider => st=inProgress games=[22-20] cur=10-13 won=1-0 srv=BL sw=0 game=2
+RLIVE deuceDecider event {"id":"p143","type":"point","winner":"B"}
+RLIVE deuceDecider => st=inProgress games=[22-20] cur=10-14 won=1-0 srv=BR sw=0 game=2
+RLIVE deuceDecider event {"id":"p144","type":"point","winner":"B"}
+RLIVE deuceDecider => st=inProgress games=[22-20] cur=10-15 won=1-0 srv=BL sw=0 game=2
+RLIVE deuceDecider event {"id":"p145","type":"point","winner":"B"}
+RLIVE deuceDecider => st=inProgress games=[22-20] cur=10-16 won=1-0 srv=BR sw=0 game=2
+RLIVE deuceDecider event {"id":"p146","type":"point","winner":"B"}
+RLIVE deuceDecider => st=inProgress games=[22-20] cur=10-17 won=1-0 srv=BL sw=0 game=2
+RLIVE deuceDecider event {"id":"p147","type":"point","winner":"B"}
+RLIVE deuceDecider => st=inProgress games=[22-20] cur=10-18 won=1-0 srv=BR sw=0 game=2
+RLIVE deuceDecider event {"id":"p148","type":"point","winner":"B"}
+RLIVE deuceDecider => st=inProgress games=[22-20] cur=10-19 won=1-0 srv=BL sw=0 game=2
+RLIVE deuceDecider event {"id":"p149","type":"point","winner":"B"}
+RLIVE deuceDecider => st=inProgress games=[22-20] cur=10-20 won=1-0 srv=BR sw=0 game=2
+RLIVE deuceDecider event {"id":"p150","type":"point","winner":"B"}
+RLIVE deuceDecider => st=inProgress games=[22-20,10-21] cur=0-0 won=1-1 srv=BR sw=1 game=3
+RLIVE deuceDecider event {"id":"p151","type":"point","winner":"A"}
+RLIVE deuceDecider => st=inProgress games=[22-20,10-21] cur=1-0 won=1-1 srv=AL sw=0 game=3
+RLIVE deuceDecider event {"id":"p152","type":"point","winner":"B"}
+RLIVE deuceDecider => st=inProgress games=[22-20,10-21] cur=1-1 won=1-1 srv=BL sw=0 game=3
+RLIVE deuceDecider event {"id":"p153","type":"point","winner":"A"}
+RLIVE deuceDecider => st=inProgress games=[22-20,10-21] cur=2-1 won=1-1 srv=AR sw=0 game=3
+RLIVE deuceDecider event {"id":"p154","type":"point","winner":"B"}
+RLIVE deuceDecider => st=inProgress games=[22-20,10-21] cur=2-2 won=1-1 srv=BR sw=0 game=3
+RLIVE deuceDecider event {"id":"p155","type":"point","winner":"A"}
+RLIVE deuceDecider => st=inProgress games=[22-20,10-21] cur=3-2 won=1-1 srv=AL sw=0 game=3
+RLIVE deuceDecider event {"id":"p156","type":"point","winner":"B"}
+RLIVE deuceDecider => st=inProgress games=[22-20,10-21] cur=3-3 won=1-1 srv=BL sw=0 game=3
+RLIVE deuceDecider event {"id":"p157","type":"point","winner":"A"}
+RLIVE deuceDecider => st=inProgress games=[22-20,10-21] cur=4-3 won=1-1 srv=AR sw=0 game=3
+RLIVE deuceDecider event {"id":"p158","type":"point","winner":"B"}
+RLIVE deuceDecider => st=inProgress games=[22-20,10-21] cur=4-4 won=1-1 srv=BR sw=0 game=3
+RLIVE deuceDecider event {"id":"p159","type":"point","winner":"A"}
+RLIVE deuceDecider => st=inProgress games=[22-20,10-21] cur=5-4 won=1-1 srv=AL sw=0 game=3
+RLIVE deuceDecider event {"id":"p160","type":"point","winner":"B"}
+RLIVE deuceDecider => st=inProgress games=[22-20,10-21] cur=5-5 won=1-1 srv=BL sw=0 game=3
+RLIVE deuceDecider event {"id":"p161","type":"point","winner":"A"}
+RLIVE deuceDecider => st=inProgress games=[22-20,10-21] cur=6-5 won=1-1 srv=AR sw=0 game=3
+RLIVE deuceDecider event {"id":"p162","type":"point","winner":"B"}
+RLIVE deuceDecider => st=inProgress games=[22-20,10-21] cur=6-6 won=1-1 srv=BR sw=0 game=3
+RLIVE deuceDecider event {"id":"p163","type":"point","winner":"A"}
+RLIVE deuceDecider => st=inProgress games=[22-20,10-21] cur=7-6 won=1-1 srv=AL sw=0 game=3
+RLIVE deuceDecider event {"id":"p164","type":"point","winner":"B"}
+RLIVE deuceDecider => st=inProgress games=[22-20,10-21] cur=7-7 won=1-1 srv=BL sw=0 game=3
+RLIVE deuceDecider event {"id":"p165","type":"point","winner":"A"}
+RLIVE deuceDecider => st=inProgress games=[22-20,10-21] cur=8-7 won=1-1 srv=AR sw=0 game=3
+RLIVE deuceDecider event {"id":"p166","type":"point","winner":"B"}
+RLIVE deuceDecider => st=inProgress games=[22-20,10-21] cur=8-8 won=1-1 srv=BR sw=0 game=3
+RLIVE deuceDecider event {"id":"p167","type":"point","winner":"A"}
+RLIVE deuceDecider => st=inProgress games=[22-20,10-21] cur=9-8 won=1-1 srv=AL sw=0 game=3
+RLIVE deuceDecider event {"id":"p168","type":"point","winner":"B"}
+RLIVE deuceDecider => st=inProgress games=[22-20,10-21] cur=9-9 won=1-1 srv=BL sw=0 game=3
+RLIVE deuceDecider event {"id":"p169","type":"point","winner":"A"}
+RLIVE deuceDecider => st=inProgress games=[22-20,10-21] cur=10-9 won=1-1 srv=AR sw=0 game=3
+RLIVE deuceDecider event {"id":"p170","type":"point","winner":"B"}
+RLIVE deuceDecider => st=inProgress games=[22-20,10-21] cur=10-10 won=1-1 srv=BR sw=0 game=3
+RLIVE deuceDecider event {"id":"p171","type":"point","winner":"B"}
+RLIVE deuceDecider => st=inProgress games=[22-20,10-21] cur=10-11 won=1-1 srv=BL sw=1 game=3
+RLIVE deuceDecider event {"id":"p172","type":"point","winner":"A"}
+RLIVE deuceDecider => st=inProgress games=[22-20,10-21] cur=11-11 won=1-1 srv=AL sw=0 game=3
+RLIVE deuceDecider event {"id":"p173","type":"point","winner":"A"}
+RLIVE deuceDecider => st=inProgress games=[22-20,10-21] cur=12-11 won=1-1 srv=AR sw=0 game=3
+RLIVE deuceDecider event {"id":"p174","type":"point","winner":"A"}
+RLIVE deuceDecider => st=inProgress games=[22-20,10-21] cur=13-11 won=1-1 srv=AL sw=0 game=3
+RLIVE deuceDecider event {"id":"p175","type":"point","winner":"A"}
+RLIVE deuceDecider => st=inProgress games=[22-20,10-21] cur=14-11 won=1-1 srv=AR sw=0 game=3
+RLIVE deuceDecider event {"id":"p176","type":"point","winner":"A"}
+RLIVE deuceDecider => st=inProgress games=[22-20,10-21] cur=15-11 won=1-1 srv=AL sw=0 game=3
+RLIVE deuceDecider event {"id":"p177","type":"point","winner":"A"}
+RLIVE deuceDecider => st=inProgress games=[22-20,10-21] cur=16-11 won=1-1 srv=AR sw=0 game=3
+RLIVE deuceDecider event {"id":"p178","type":"point","winner":"A"}
+RLIVE deuceDecider => st=inProgress games=[22-20,10-21] cur=17-11 won=1-1 srv=AL sw=0 game=3
+RLIVE deuceDecider event {"id":"p179","type":"point","winner":"A"}
+RLIVE deuceDecider => st=inProgress games=[22-20,10-21] cur=18-11 won=1-1 srv=AR sw=0 game=3
+RLIVE deuceDecider event {"id":"p180","type":"point","winner":"A"}
+RLIVE deuceDecider => st=inProgress games=[22-20,10-21] cur=19-11 won=1-1 srv=AL sw=0 game=3
+RLIVE deuceDecider event {"id":"p181","type":"point","winner":"A"}
+RLIVE deuceDecider => st=inProgress games=[22-20,10-21] cur=20-11 won=1-1 srv=AR sw=0 game=3
+RLIVE deuceDecider event {"id":"p182","type":"point","winner":"B"}
+RLIVE deuceDecider => st=inProgress games=[22-20,10-21] cur=20-12 won=1-1 srv=BR sw=0 game=3
+RLIVE deuceDecider event {"id":"p183","type":"point","winner":"A"}
+RLIVE deuceDecider => st=ended games=[22-20,10-21,21-12] cur=0-0 won=2-1 srv=AR sw=0 game=3
+RLIVE deuceDecider event {"id":"p184","type":"point","winner":"B"}
+RLIVE deuceDecider !! INVALID_POINT The match is over. Finish it, or undo the last point.
+RLIVE deuceDecider live {"current":{"a":0,"b":0},"games":[{"a":22,"b":20},{"a":10,"b":21},{"a":21,"b":12}],"gamesWon":{"a":2,"b":1},"server":{"court":"R","side":"A"},"status":"ended","switchEnds":false}
+RLIVE deuceDecider result {"kind":"sets","sets":[{"teamAPoints":22,"teamBPoints":20},{"teamAPoints":10,"teamBPoints":21},{"teamAPoints":21,"teamBPoints":12}]}
+RLIVE cap30 config {"firstServer":"A","format":"sets","scoring":{"gamesPerMatch":1,"pointCap":30,"pointsToWin":21,"winBy":2},"sport":"badminton"}
+RLIVE cap30 event {"id":"p185","type":"point","winner":"A"}
+RLIVE cap30 => st=inProgress games=[] cur=1-0 won=0-0 srv=AL sw=0 game=1
+RLIVE cap30 event {"id":"p186","type":"point","winner":"B"}
+RLIVE cap30 => st=inProgress games=[] cur=1-1 won=0-0 srv=BL sw=0 game=1
+RLIVE cap30 event {"id":"p187","type":"point","winner":"A"}
+RLIVE cap30 => st=inProgress games=[] cur=2-1 won=0-0 srv=AR sw=0 game=1
+RLIVE cap30 event {"id":"p188","type":"point","winner":"B"}
+RLIVE cap30 => st=inProgress games=[] cur=2-2 won=0-0 srv=BR sw=0 game=1
+RLIVE cap30 event {"id":"p189","type":"point","winner":"A"}
+RLIVE cap30 => st=inProgress games=[] cur=3-2 won=0-0 srv=AL sw=0 game=1
+RLIVE cap30 event {"id":"p190","type":"point","winner":"B"}
+RLIVE cap30 => st=inProgress games=[] cur=3-3 won=0-0 srv=BL sw=0 game=1
+RLIVE cap30 event {"id":"p191","type":"point","winner":"A"}
+RLIVE cap30 => st=inProgress games=[] cur=4-3 won=0-0 srv=AR sw=0 game=1
+RLIVE cap30 event {"id":"p192","type":"point","winner":"B"}
+RLIVE cap30 => st=inProgress games=[] cur=4-4 won=0-0 srv=BR sw=0 game=1
+RLIVE cap30 event {"id":"p193","type":"point","winner":"A"}
+RLIVE cap30 => st=inProgress games=[] cur=5-4 won=0-0 srv=AL sw=0 game=1
+RLIVE cap30 event {"id":"p194","type":"point","winner":"B"}
+RLIVE cap30 => st=inProgress games=[] cur=5-5 won=0-0 srv=BL sw=0 game=1
+RLIVE cap30 event {"id":"p195","type":"point","winner":"A"}
+RLIVE cap30 => st=inProgress games=[] cur=6-5 won=0-0 srv=AR sw=0 game=1
+RLIVE cap30 event {"id":"p196","type":"point","winner":"B"}
+RLIVE cap30 => st=inProgress games=[] cur=6-6 won=0-0 srv=BR sw=0 game=1
+RLIVE cap30 event {"id":"p197","type":"point","winner":"A"}
+RLIVE cap30 => st=inProgress games=[] cur=7-6 won=0-0 srv=AL sw=0 game=1
+RLIVE cap30 event {"id":"p198","type":"point","winner":"B"}
+RLIVE cap30 => st=inProgress games=[] cur=7-7 won=0-0 srv=BL sw=0 game=1
+RLIVE cap30 event {"id":"p199","type":"point","winner":"A"}
+RLIVE cap30 => st=inProgress games=[] cur=8-7 won=0-0 srv=AR sw=0 game=1
+RLIVE cap30 event {"id":"p200","type":"point","winner":"B"}
+RLIVE cap30 => st=inProgress games=[] cur=8-8 won=0-0 srv=BR sw=0 game=1
+RLIVE cap30 event {"id":"p201","type":"point","winner":"A"}
+RLIVE cap30 => st=inProgress games=[] cur=9-8 won=0-0 srv=AL sw=0 game=1
+RLIVE cap30 event {"id":"p202","type":"point","winner":"B"}
+RLIVE cap30 => st=inProgress games=[] cur=9-9 won=0-0 srv=BL sw=0 game=1
+RLIVE cap30 event {"id":"p203","type":"point","winner":"A"}
+RLIVE cap30 => st=inProgress games=[] cur=10-9 won=0-0 srv=AR sw=0 game=1
+RLIVE cap30 event {"id":"p204","type":"point","winner":"B"}
+RLIVE cap30 => st=inProgress games=[] cur=10-10 won=0-0 srv=BR sw=0 game=1
+RLIVE cap30 event {"id":"p205","type":"point","winner":"A"}
+RLIVE cap30 => st=inProgress games=[] cur=11-10 won=0-0 srv=AL sw=1 game=1
+RLIVE cap30 event {"id":"p206","type":"point","winner":"B"}
+RLIVE cap30 => st=inProgress games=[] cur=11-11 won=0-0 srv=BL sw=0 game=1
+RLIVE cap30 event {"id":"p207","type":"point","winner":"A"}
+RLIVE cap30 => st=inProgress games=[] cur=12-11 won=0-0 srv=AR sw=0 game=1
+RLIVE cap30 event {"id":"p208","type":"point","winner":"B"}
+RLIVE cap30 => st=inProgress games=[] cur=12-12 won=0-0 srv=BR sw=0 game=1
+RLIVE cap30 event {"id":"p209","type":"point","winner":"A"}
+RLIVE cap30 => st=inProgress games=[] cur=13-12 won=0-0 srv=AL sw=0 game=1
+RLIVE cap30 event {"id":"p210","type":"point","winner":"B"}
+RLIVE cap30 => st=inProgress games=[] cur=13-13 won=0-0 srv=BL sw=0 game=1
+RLIVE cap30 event {"id":"p211","type":"point","winner":"A"}
+RLIVE cap30 => st=inProgress games=[] cur=14-13 won=0-0 srv=AR sw=0 game=1
+RLIVE cap30 event {"id":"p212","type":"point","winner":"B"}
+RLIVE cap30 => st=inProgress games=[] cur=14-14 won=0-0 srv=BR sw=0 game=1
+RLIVE cap30 event {"id":"p213","type":"point","winner":"A"}
+RLIVE cap30 => st=inProgress games=[] cur=15-14 won=0-0 srv=AL sw=0 game=1
+RLIVE cap30 event {"id":"p214","type":"point","winner":"B"}
+RLIVE cap30 => st=inProgress games=[] cur=15-15 won=0-0 srv=BL sw=0 game=1
+RLIVE cap30 event {"id":"p215","type":"point","winner":"A"}
+RLIVE cap30 => st=inProgress games=[] cur=16-15 won=0-0 srv=AR sw=0 game=1
+RLIVE cap30 event {"id":"p216","type":"point","winner":"B"}
+RLIVE cap30 => st=inProgress games=[] cur=16-16 won=0-0 srv=BR sw=0 game=1
+RLIVE cap30 event {"id":"p217","type":"point","winner":"A"}
+RLIVE cap30 => st=inProgress games=[] cur=17-16 won=0-0 srv=AL sw=0 game=1
+RLIVE cap30 event {"id":"p218","type":"point","winner":"B"}
+RLIVE cap30 => st=inProgress games=[] cur=17-17 won=0-0 srv=BL sw=0 game=1
+RLIVE cap30 event {"id":"p219","type":"point","winner":"A"}
+RLIVE cap30 => st=inProgress games=[] cur=18-17 won=0-0 srv=AR sw=0 game=1
+RLIVE cap30 event {"id":"p220","type":"point","winner":"B"}
+RLIVE cap30 => st=inProgress games=[] cur=18-18 won=0-0 srv=BR sw=0 game=1
+RLIVE cap30 event {"id":"p221","type":"point","winner":"A"}
+RLIVE cap30 => st=inProgress games=[] cur=19-18 won=0-0 srv=AL sw=0 game=1
+RLIVE cap30 event {"id":"p222","type":"point","winner":"B"}
+RLIVE cap30 => st=inProgress games=[] cur=19-19 won=0-0 srv=BL sw=0 game=1
+RLIVE cap30 event {"id":"p223","type":"point","winner":"A"}
+RLIVE cap30 => st=inProgress games=[] cur=20-19 won=0-0 srv=AR sw=0 game=1
+RLIVE cap30 event {"id":"p224","type":"point","winner":"B"}
+RLIVE cap30 => st=inProgress games=[] cur=20-20 won=0-0 srv=BR sw=0 game=1
+RLIVE cap30 event {"id":"p225","type":"point","winner":"A"}
+RLIVE cap30 => st=inProgress games=[] cur=21-20 won=0-0 srv=AL sw=0 game=1
+RLIVE cap30 event {"id":"p226","type":"point","winner":"B"}
+RLIVE cap30 => st=inProgress games=[] cur=21-21 won=0-0 srv=BL sw=0 game=1
+RLIVE cap30 event {"id":"p227","type":"point","winner":"A"}
+RLIVE cap30 => st=inProgress games=[] cur=22-21 won=0-0 srv=AR sw=0 game=1
+RLIVE cap30 event {"id":"p228","type":"point","winner":"B"}
+RLIVE cap30 => st=inProgress games=[] cur=22-22 won=0-0 srv=BR sw=0 game=1
+RLIVE cap30 event {"id":"p229","type":"point","winner":"A"}
+RLIVE cap30 => st=inProgress games=[] cur=23-22 won=0-0 srv=AL sw=0 game=1
+RLIVE cap30 event {"id":"p230","type":"point","winner":"B"}
+RLIVE cap30 => st=inProgress games=[] cur=23-23 won=0-0 srv=BL sw=0 game=1
+RLIVE cap30 event {"id":"p231","type":"point","winner":"A"}
+RLIVE cap30 => st=inProgress games=[] cur=24-23 won=0-0 srv=AR sw=0 game=1
+RLIVE cap30 event {"id":"p232","type":"point","winner":"B"}
+RLIVE cap30 => st=inProgress games=[] cur=24-24 won=0-0 srv=BR sw=0 game=1
+RLIVE cap30 event {"id":"p233","type":"point","winner":"A"}
+RLIVE cap30 => st=inProgress games=[] cur=25-24 won=0-0 srv=AL sw=0 game=1
+RLIVE cap30 event {"id":"p234","type":"point","winner":"B"}
+RLIVE cap30 => st=inProgress games=[] cur=25-25 won=0-0 srv=BL sw=0 game=1
+RLIVE cap30 event {"id":"p235","type":"point","winner":"A"}
+RLIVE cap30 => st=inProgress games=[] cur=26-25 won=0-0 srv=AR sw=0 game=1
+RLIVE cap30 event {"id":"p236","type":"point","winner":"B"}
+RLIVE cap30 => st=inProgress games=[] cur=26-26 won=0-0 srv=BR sw=0 game=1
+RLIVE cap30 event {"id":"p237","type":"point","winner":"A"}
+RLIVE cap30 => st=inProgress games=[] cur=27-26 won=0-0 srv=AL sw=0 game=1
+RLIVE cap30 event {"id":"p238","type":"point","winner":"B"}
+RLIVE cap30 => st=inProgress games=[] cur=27-27 won=0-0 srv=BL sw=0 game=1
+RLIVE cap30 event {"id":"p239","type":"point","winner":"A"}
+RLIVE cap30 => st=inProgress games=[] cur=28-27 won=0-0 srv=AR sw=0 game=1
+RLIVE cap30 event {"id":"p240","type":"point","winner":"B"}
+RLIVE cap30 => st=inProgress games=[] cur=28-28 won=0-0 srv=BR sw=0 game=1
+RLIVE cap30 event {"id":"p241","type":"point","winner":"A"}
+RLIVE cap30 => st=inProgress games=[] cur=29-28 won=0-0 srv=AL sw=0 game=1
+RLIVE cap30 event {"id":"p242","type":"point","winner":"B"}
+RLIVE cap30 => st=inProgress games=[] cur=29-29 won=0-0 srv=BL sw=0 game=1
+RLIVE cap30 event {"id":"p243","type":"point","winner":"A"}
+RLIVE cap30 => st=ended games=[30-29] cur=0-0 won=1-0 srv=AR sw=0 game=1
+RLIVE cap30 live {"current":{"a":0,"b":0},"games":[{"a":30,"b":29}],"gamesWon":{"a":1,"b":0},"server":{"court":"R","side":"A"},"status":"ended","switchEnds":false}
+RLIVE cap30 result {"kind":"sets","sets":[{"teamAPoints":30,"teamBPoints":29}]}
+RLIVE to15 config {"firstServer":"A","format":"sets","scoring":{"gamesPerMatch":3,"pointCap":21,"pointsToWin":15,"winBy":2},"sport":"badminton"}
+RLIVE to15 event {"id":"p244","type":"point","winner":"A"}
+RLIVE to15 => st=inProgress games=[] cur=1-0 won=0-0 srv=AL sw=0 game=1
+RLIVE to15 event {"id":"p245","type":"point","winner":"B"}
+RLIVE to15 => st=inProgress games=[] cur=1-1 won=0-0 srv=BL sw=0 game=1
+RLIVE to15 event {"id":"p246","type":"point","winner":"A"}
+RLIVE to15 => st=inProgress games=[] cur=2-1 won=0-0 srv=AR sw=0 game=1
+RLIVE to15 event {"id":"p247","type":"point","winner":"B"}
+RLIVE to15 => st=inProgress games=[] cur=2-2 won=0-0 srv=BR sw=0 game=1
+RLIVE to15 event {"id":"p248","type":"point","winner":"A"}
+RLIVE to15 => st=inProgress games=[] cur=3-2 won=0-0 srv=AL sw=0 game=1
+RLIVE to15 event {"id":"p249","type":"point","winner":"B"}
+RLIVE to15 => st=inProgress games=[] cur=3-3 won=0-0 srv=BL sw=0 game=1
+RLIVE to15 event {"id":"p250","type":"point","winner":"A"}
+RLIVE to15 => st=inProgress games=[] cur=4-3 won=0-0 srv=AR sw=0 game=1
+RLIVE to15 event {"id":"p251","type":"point","winner":"B"}
+RLIVE to15 => st=inProgress games=[] cur=4-4 won=0-0 srv=BR sw=0 game=1
+RLIVE to15 event {"id":"p252","type":"point","winner":"A"}
+RLIVE to15 => st=inProgress games=[] cur=5-4 won=0-0 srv=AL sw=0 game=1
+RLIVE to15 event {"id":"p253","type":"point","winner":"B"}
+RLIVE to15 => st=inProgress games=[] cur=5-5 won=0-0 srv=BL sw=0 game=1
+RLIVE to15 event {"id":"p254","type":"point","winner":"A"}
+RLIVE to15 => st=inProgress games=[] cur=6-5 won=0-0 srv=AR sw=0 game=1
+RLIVE to15 event {"id":"p255","type":"point","winner":"B"}
+RLIVE to15 => st=inProgress games=[] cur=6-6 won=0-0 srv=BR sw=0 game=1
+RLIVE to15 event {"id":"p256","type":"point","winner":"A"}
+RLIVE to15 => st=inProgress games=[] cur=7-6 won=0-0 srv=AL sw=0 game=1
+RLIVE to15 event {"id":"p257","type":"point","winner":"B"}
+RLIVE to15 => st=inProgress games=[] cur=7-7 won=0-0 srv=BL sw=0 game=1
+RLIVE to15 event {"id":"p258","type":"point","winner":"A"}
+RLIVE to15 => st=inProgress games=[] cur=8-7 won=0-0 srv=AR sw=0 game=1
+RLIVE to15 event {"id":"p259","type":"point","winner":"B"}
+RLIVE to15 => st=inProgress games=[] cur=8-8 won=0-0 srv=BR sw=0 game=1
+RLIVE to15 event {"id":"p260","type":"point","winner":"A"}
+RLIVE to15 => st=inProgress games=[] cur=9-8 won=0-0 srv=AL sw=0 game=1
+RLIVE to15 event {"id":"p261","type":"point","winner":"B"}
+RLIVE to15 => st=inProgress games=[] cur=9-9 won=0-0 srv=BL sw=0 game=1
+RLIVE to15 event {"id":"p262","type":"point","winner":"A"}
+RLIVE to15 => st=inProgress games=[] cur=10-9 won=0-0 srv=AR sw=0 game=1
+RLIVE to15 event {"id":"p263","type":"point","winner":"B"}
+RLIVE to15 => st=inProgress games=[] cur=10-10 won=0-0 srv=BR sw=0 game=1
+RLIVE to15 event {"id":"p264","type":"point","winner":"A"}
+RLIVE to15 => st=inProgress games=[] cur=11-10 won=0-0 srv=AL sw=0 game=1
+RLIVE to15 event {"id":"p265","type":"point","winner":"B"}
+RLIVE to15 => st=inProgress games=[] cur=11-11 won=0-0 srv=BL sw=0 game=1
+RLIVE to15 event {"id":"p266","type":"point","winner":"A"}
+RLIVE to15 => st=inProgress games=[] cur=12-11 won=0-0 srv=AR sw=0 game=1
+RLIVE to15 event {"id":"p267","type":"point","winner":"B"}
+RLIVE to15 => st=inProgress games=[] cur=12-12 won=0-0 srv=BR sw=0 game=1
+RLIVE to15 event {"id":"p268","type":"point","winner":"A"}
+RLIVE to15 => st=inProgress games=[] cur=13-12 won=0-0 srv=AL sw=0 game=1
+RLIVE to15 event {"id":"p269","type":"point","winner":"B"}
+RLIVE to15 => st=inProgress games=[] cur=13-13 won=0-0 srv=BL sw=0 game=1
+RLIVE to15 event {"id":"p270","type":"point","winner":"A"}
+RLIVE to15 => st=inProgress games=[] cur=14-13 won=0-0 srv=AR sw=0 game=1
+RLIVE to15 event {"id":"p271","type":"point","winner":"A"}
+RLIVE to15 => st=inProgress games=[15-13] cur=0-0 won=1-0 srv=AR sw=1 game=2
+RLIVE to15 event {"id":"p272","type":"point","winner":"A"}
+RLIVE to15 => st=inProgress games=[15-13] cur=1-0 won=1-0 srv=AL sw=0 game=2
+RLIVE to15 event {"id":"p273","type":"point","winner":"B"}
+RLIVE to15 => st=inProgress games=[15-13] cur=1-1 won=1-0 srv=BL sw=0 game=2
+RLIVE to15 event {"id":"p274","type":"point","winner":"A"}
+RLIVE to15 => st=inProgress games=[15-13] cur=2-1 won=1-0 srv=AR sw=0 game=2
+RLIVE to15 event {"id":"p275","type":"point","winner":"B"}
+RLIVE to15 => st=inProgress games=[15-13] cur=2-2 won=1-0 srv=BR sw=0 game=2
+RLIVE to15 event {"id":"p276","type":"point","winner":"A"}
+RLIVE to15 => st=inProgress games=[15-13] cur=3-2 won=1-0 srv=AL sw=0 game=2
+RLIVE to15 event {"id":"p277","type":"point","winner":"B"}
+RLIVE to15 => st=inProgress games=[15-13] cur=3-3 won=1-0 srv=BL sw=0 game=2
+RLIVE to15 event {"id":"p278","type":"point","winner":"A"}
+RLIVE to15 => st=inProgress games=[15-13] cur=4-3 won=1-0 srv=AR sw=0 game=2
+RLIVE to15 event {"id":"p279","type":"point","winner":"B"}
+RLIVE to15 => st=inProgress games=[15-13] cur=4-4 won=1-0 srv=BR sw=0 game=2
+RLIVE to15 event {"id":"p280","type":"point","winner":"A"}
+RLIVE to15 => st=inProgress games=[15-13] cur=5-4 won=1-0 srv=AL sw=0 game=2
+RLIVE to15 event {"id":"p281","type":"point","winner":"B"}
+RLIVE to15 => st=inProgress games=[15-13] cur=5-5 won=1-0 srv=BL sw=0 game=2
+RLIVE to15 event {"id":"p282","type":"point","winner":"A"}
+RLIVE to15 => st=inProgress games=[15-13] cur=6-5 won=1-0 srv=AR sw=0 game=2
+RLIVE to15 event {"id":"p283","type":"point","winner":"B"}
+RLIVE to15 => st=inProgress games=[15-13] cur=6-6 won=1-0 srv=BR sw=0 game=2
+RLIVE to15 event {"id":"p284","type":"point","winner":"A"}
+RLIVE to15 => st=inProgress games=[15-13] cur=7-6 won=1-0 srv=AL sw=0 game=2
+RLIVE to15 event {"id":"p285","type":"point","winner":"B"}
+RLIVE to15 => st=inProgress games=[15-13] cur=7-7 won=1-0 srv=BL sw=0 game=2
+RLIVE to15 event {"id":"p286","type":"point","winner":"A"}
+RLIVE to15 => st=inProgress games=[15-13] cur=8-7 won=1-0 srv=AR sw=0 game=2
+RLIVE to15 event {"id":"p287","type":"point","winner":"B"}
+RLIVE to15 => st=inProgress games=[15-13] cur=8-8 won=1-0 srv=BR sw=0 game=2
+RLIVE to15 event {"id":"p288","type":"point","winner":"A"}
+RLIVE to15 => st=inProgress games=[15-13] cur=9-8 won=1-0 srv=AL sw=0 game=2
+RLIVE to15 event {"id":"p289","type":"point","winner":"B"}
+RLIVE to15 => st=inProgress games=[15-13] cur=9-9 won=1-0 srv=BL sw=0 game=2
+RLIVE to15 event {"id":"p290","type":"point","winner":"A"}
+RLIVE to15 => st=inProgress games=[15-13] cur=10-9 won=1-0 srv=AR sw=0 game=2
+RLIVE to15 event {"id":"p291","type":"point","winner":"B"}
+RLIVE to15 => st=inProgress games=[15-13] cur=10-10 won=1-0 srv=BR sw=0 game=2
+RLIVE to15 event {"id":"p292","type":"point","winner":"A"}
+RLIVE to15 => st=inProgress games=[15-13] cur=11-10 won=1-0 srv=AL sw=0 game=2
+RLIVE to15 event {"id":"p293","type":"point","winner":"B"}
+RLIVE to15 => st=inProgress games=[15-13] cur=11-11 won=1-0 srv=BL sw=0 game=2
+RLIVE to15 event {"id":"p294","type":"point","winner":"A"}
+RLIVE to15 => st=inProgress games=[15-13] cur=12-11 won=1-0 srv=AR sw=0 game=2
+RLIVE to15 event {"id":"p295","type":"point","winner":"B"}
+RLIVE to15 => st=inProgress games=[15-13] cur=12-12 won=1-0 srv=BR sw=0 game=2
+RLIVE to15 event {"id":"p296","type":"point","winner":"A"}
+RLIVE to15 => st=inProgress games=[15-13] cur=13-12 won=1-0 srv=AL sw=0 game=2
+RLIVE to15 event {"id":"p297","type":"point","winner":"B"}
+RLIVE to15 => st=inProgress games=[15-13] cur=13-13 won=1-0 srv=BL sw=0 game=2
+RLIVE to15 event {"id":"p298","type":"point","winner":"A"}
+RLIVE to15 => st=inProgress games=[15-13] cur=14-13 won=1-0 srv=AR sw=0 game=2
+RLIVE to15 event {"id":"p299","type":"point","winner":"B"}
+RLIVE to15 => st=inProgress games=[15-13] cur=14-14 won=1-0 srv=BR sw=0 game=2
+RLIVE to15 event {"id":"p300","type":"point","winner":"A"}
+RLIVE to15 => st=inProgress games=[15-13] cur=15-14 won=1-0 srv=AL sw=0 game=2
+RLIVE to15 event {"id":"p301","type":"point","winner":"B"}
+RLIVE to15 => st=inProgress games=[15-13] cur=15-15 won=1-0 srv=BL sw=0 game=2
+RLIVE to15 event {"id":"p302","type":"point","winner":"A"}
+RLIVE to15 => st=inProgress games=[15-13] cur=16-15 won=1-0 srv=AR sw=0 game=2
+RLIVE to15 event {"id":"p303","type":"point","winner":"B"}
+RLIVE to15 => st=inProgress games=[15-13] cur=16-16 won=1-0 srv=BR sw=0 game=2
+RLIVE to15 event {"id":"p304","type":"point","winner":"A"}
+RLIVE to15 => st=inProgress games=[15-13] cur=17-16 won=1-0 srv=AL sw=0 game=2
+RLIVE to15 event {"id":"p305","type":"point","winner":"B"}
+RLIVE to15 => st=inProgress games=[15-13] cur=17-17 won=1-0 srv=BL sw=0 game=2
+RLIVE to15 event {"id":"p306","type":"point","winner":"A"}
+RLIVE to15 => st=inProgress games=[15-13] cur=18-17 won=1-0 srv=AR sw=0 game=2
+RLIVE to15 event {"id":"p307","type":"point","winner":"B"}
+RLIVE to15 => st=inProgress games=[15-13] cur=18-18 won=1-0 srv=BR sw=0 game=2
+RLIVE to15 event {"id":"p308","type":"point","winner":"A"}
+RLIVE to15 => st=inProgress games=[15-13] cur=19-18 won=1-0 srv=AL sw=0 game=2
+RLIVE to15 event {"id":"p309","type":"point","winner":"B"}
+RLIVE to15 => st=inProgress games=[15-13] cur=19-19 won=1-0 srv=BL sw=0 game=2
+RLIVE to15 event {"id":"p310","type":"point","winner":"A"}
+RLIVE to15 => st=inProgress games=[15-13] cur=20-19 won=1-0 srv=AR sw=0 game=2
+RLIVE to15 event {"id":"p311","type":"point","winner":"B"}
+RLIVE to15 => st=inProgress games=[15-13] cur=20-20 won=1-0 srv=BR sw=0 game=2
+RLIVE to15 event {"id":"p312","type":"point","winner":"A"}
+RLIVE to15 => st=ended games=[15-13,21-20] cur=0-0 won=2-0 srv=AR sw=0 game=2
+RLIVE to15 live {"current":{"a":0,"b":0},"games":[{"a":15,"b":13},{"a":21,"b":20}],"gamesWon":{"a":2,"b":0},"server":{"court":"R","side":"A"},"status":"ended","switchEnds":false}
+RLIVE to15 result {"kind":"sets","sets":[{"teamAPoints":15,"teamBPoints":13},{"teamAPoints":21,"teamBPoints":20}]}
+RLIVE to11bo5 config {"firstServer":"A","format":"sets","scoring":{"gamesPerMatch":5,"pointCap":15,"pointsToWin":11,"winBy":2},"sport":"badminton"}
+RLIVE to11bo5 event {"id":"p313","type":"point","winner":"A"}
+RLIVE to11bo5 => st=inProgress games=[] cur=1-0 won=0-0 srv=AL sw=0 game=1
+RLIVE to11bo5 event {"id":"p314","type":"point","winner":"B"}
+RLIVE to11bo5 => st=inProgress games=[] cur=1-1 won=0-0 srv=BL sw=0 game=1
+RLIVE to11bo5 event {"id":"p315","type":"point","winner":"A"}
+RLIVE to11bo5 => st=inProgress games=[] cur=2-1 won=0-0 srv=AR sw=0 game=1
+RLIVE to11bo5 event {"id":"p316","type":"point","winner":"B"}
+RLIVE to11bo5 => st=inProgress games=[] cur=2-2 won=0-0 srv=BR sw=0 game=1
+RLIVE to11bo5 event {"id":"p317","type":"point","winner":"A"}
+RLIVE to11bo5 => st=inProgress games=[] cur=3-2 won=0-0 srv=AL sw=0 game=1
+RLIVE to11bo5 event {"id":"p318","type":"point","winner":"B"}
+RLIVE to11bo5 => st=inProgress games=[] cur=3-3 won=0-0 srv=BL sw=0 game=1
+RLIVE to11bo5 event {"id":"p319","type":"point","winner":"A"}
+RLIVE to11bo5 => st=inProgress games=[] cur=4-3 won=0-0 srv=AR sw=0 game=1
+RLIVE to11bo5 event {"id":"p320","type":"point","winner":"B"}
+RLIVE to11bo5 => st=inProgress games=[] cur=4-4 won=0-0 srv=BR sw=0 game=1
+RLIVE to11bo5 event {"id":"p321","type":"point","winner":"A"}
+RLIVE to11bo5 => st=inProgress games=[] cur=5-4 won=0-0 srv=AL sw=0 game=1
+RLIVE to11bo5 event {"id":"p322","type":"point","winner":"B"}
+RLIVE to11bo5 => st=inProgress games=[] cur=5-5 won=0-0 srv=BL sw=0 game=1
+RLIVE to11bo5 event {"id":"p323","type":"point","winner":"A"}
+RLIVE to11bo5 => st=inProgress games=[] cur=6-5 won=0-0 srv=AR sw=0 game=1
+RLIVE to11bo5 event {"id":"p324","type":"point","winner":"B"}
+RLIVE to11bo5 => st=inProgress games=[] cur=6-6 won=0-0 srv=BR sw=0 game=1
+RLIVE to11bo5 event {"id":"p325","type":"point","winner":"A"}
+RLIVE to11bo5 => st=inProgress games=[] cur=7-6 won=0-0 srv=AL sw=0 game=1
+RLIVE to11bo5 event {"id":"p326","type":"point","winner":"B"}
+RLIVE to11bo5 => st=inProgress games=[] cur=7-7 won=0-0 srv=BL sw=0 game=1
+RLIVE to11bo5 event {"id":"p327","type":"point","winner":"A"}
+RLIVE to11bo5 => st=inProgress games=[] cur=8-7 won=0-0 srv=AR sw=0 game=1
+RLIVE to11bo5 event {"id":"p328","type":"point","winner":"A"}
+RLIVE to11bo5 => st=inProgress games=[] cur=9-7 won=0-0 srv=AL sw=0 game=1
+RLIVE to11bo5 event {"id":"p329","type":"point","winner":"A"}
+RLIVE to11bo5 => st=inProgress games=[] cur=10-7 won=0-0 srv=AR sw=0 game=1
+RLIVE to11bo5 event {"id":"p330","type":"point","winner":"A"}
+RLIVE to11bo5 => st=inProgress games=[11-7] cur=0-0 won=1-0 srv=AR sw=1 game=2
+RLIVE to11bo5 event {"id":"p331","type":"point","winner":"A"}
+RLIVE to11bo5 => st=inProgress games=[11-7] cur=1-0 won=1-0 srv=AL sw=0 game=2
+RLIVE to11bo5 event {"id":"p332","type":"point","winner":"B"}
+RLIVE to11bo5 => st=inProgress games=[11-7] cur=1-1 won=1-0 srv=BL sw=0 game=2
+RLIVE to11bo5 event {"id":"p333","type":"point","winner":"A"}
+RLIVE to11bo5 => st=inProgress games=[11-7] cur=2-1 won=1-0 srv=AR sw=0 game=2
+RLIVE to11bo5 event {"id":"p334","type":"point","winner":"B"}
+RLIVE to11bo5 => st=inProgress games=[11-7] cur=2-2 won=1-0 srv=BR sw=0 game=2
+RLIVE to11bo5 event {"id":"p335","type":"point","winner":"A"}
+RLIVE to11bo5 => st=inProgress games=[11-7] cur=3-2 won=1-0 srv=AL sw=0 game=2
+RLIVE to11bo5 event {"id":"p336","type":"point","winner":"B"}
+RLIVE to11bo5 => st=inProgress games=[11-7] cur=3-3 won=1-0 srv=BL sw=0 game=2
+RLIVE to11bo5 event {"id":"p337","type":"point","winner":"A"}
+RLIVE to11bo5 => st=inProgress games=[11-7] cur=4-3 won=1-0 srv=AR sw=0 game=2
+RLIVE to11bo5 event {"id":"p338","type":"point","winner":"B"}
+RLIVE to11bo5 => st=inProgress games=[11-7] cur=4-4 won=1-0 srv=BR sw=0 game=2
+RLIVE to11bo5 event {"id":"p339","type":"point","winner":"B"}
+RLIVE to11bo5 => st=inProgress games=[11-7] cur=4-5 won=1-0 srv=BL sw=0 game=2
+RLIVE to11bo5 event {"id":"p340","type":"point","winner":"B"}
+RLIVE to11bo5 => st=inProgress games=[11-7] cur=4-6 won=1-0 srv=BR sw=0 game=2
+RLIVE to11bo5 event {"id":"p341","type":"point","winner":"B"}
+RLIVE to11bo5 => st=inProgress games=[11-7] cur=4-7 won=1-0 srv=BL sw=0 game=2
+RLIVE to11bo5 event {"id":"p342","type":"point","winner":"B"}
+RLIVE to11bo5 => st=inProgress games=[11-7] cur=4-8 won=1-0 srv=BR sw=0 game=2
+RLIVE to11bo5 event {"id":"p343","type":"point","winner":"B"}
+RLIVE to11bo5 => st=inProgress games=[11-7] cur=4-9 won=1-0 srv=BL sw=0 game=2
+RLIVE to11bo5 event {"id":"p344","type":"point","winner":"B"}
+RLIVE to11bo5 => st=inProgress games=[11-7] cur=4-10 won=1-0 srv=BR sw=0 game=2
+RLIVE to11bo5 event {"id":"p345","type":"point","winner":"B"}
+RLIVE to11bo5 => st=inProgress games=[11-7,4-11] cur=0-0 won=1-1 srv=BR sw=1 game=3
+RLIVE to11bo5 event {"id":"p346","type":"point","winner":"A"}
+RLIVE to11bo5 => st=inProgress games=[11-7,4-11] cur=1-0 won=1-1 srv=AL sw=0 game=3
+RLIVE to11bo5 event {"id":"p347","type":"point","winner":"B"}
+RLIVE to11bo5 => st=inProgress games=[11-7,4-11] cur=1-1 won=1-1 srv=BL sw=0 game=3
+RLIVE to11bo5 event {"id":"p348","type":"point","winner":"A"}
+RLIVE to11bo5 => st=inProgress games=[11-7,4-11] cur=2-1 won=1-1 srv=AR sw=0 game=3
+RLIVE to11bo5 event {"id":"p349","type":"point","winner":"B"}
+RLIVE to11bo5 => st=inProgress games=[11-7,4-11] cur=2-2 won=1-1 srv=BR sw=0 game=3
+RLIVE to11bo5 event {"id":"p350","type":"point","winner":"A"}
+RLIVE to11bo5 => st=inProgress games=[11-7,4-11] cur=3-2 won=1-1 srv=AL sw=0 game=3
+RLIVE to11bo5 event {"id":"p351","type":"point","winner":"B"}
+RLIVE to11bo5 => st=inProgress games=[11-7,4-11] cur=3-3 won=1-1 srv=BL sw=0 game=3
+RLIVE to11bo5 event {"id":"p352","type":"point","winner":"A"}
+RLIVE to11bo5 => st=inProgress games=[11-7,4-11] cur=4-3 won=1-1 srv=AR sw=0 game=3
+RLIVE to11bo5 event {"id":"p353","type":"point","winner":"B"}
+RLIVE to11bo5 => st=inProgress games=[11-7,4-11] cur=4-4 won=1-1 srv=BR sw=0 game=3
+RLIVE to11bo5 event {"id":"p354","type":"point","winner":"A"}
+RLIVE to11bo5 => st=inProgress games=[11-7,4-11] cur=5-4 won=1-1 srv=AL sw=0 game=3
+RLIVE to11bo5 event {"id":"p355","type":"point","winner":"B"}
+RLIVE to11bo5 => st=inProgress games=[11-7,4-11] cur=5-5 won=1-1 srv=BL sw=0 game=3
+RLIVE to11bo5 event {"id":"p356","type":"point","winner":"A"}
+RLIVE to11bo5 => st=inProgress games=[11-7,4-11] cur=6-5 won=1-1 srv=AR sw=0 game=3
+RLIVE to11bo5 event {"id":"p357","type":"point","winner":"B"}
+RLIVE to11bo5 => st=inProgress games=[11-7,4-11] cur=6-6 won=1-1 srv=BR sw=0 game=3
+RLIVE to11bo5 event {"id":"p358","type":"point","winner":"A"}
+RLIVE to11bo5 => st=inProgress games=[11-7,4-11] cur=7-6 won=1-1 srv=AL sw=0 game=3
+RLIVE to11bo5 event {"id":"p359","type":"point","winner":"B"}
+RLIVE to11bo5 => st=inProgress games=[11-7,4-11] cur=7-7 won=1-1 srv=BL sw=0 game=3
+RLIVE to11bo5 event {"id":"p360","type":"point","winner":"A"}
+RLIVE to11bo5 => st=inProgress games=[11-7,4-11] cur=8-7 won=1-1 srv=AR sw=0 game=3
+RLIVE to11bo5 event {"id":"p361","type":"point","winner":"B"}
+RLIVE to11bo5 => st=inProgress games=[11-7,4-11] cur=8-8 won=1-1 srv=BR sw=0 game=3
+RLIVE to11bo5 event {"id":"p362","type":"point","winner":"A"}
+RLIVE to11bo5 => st=inProgress games=[11-7,4-11] cur=9-8 won=1-1 srv=AL sw=0 game=3
+RLIVE to11bo5 event {"id":"p363","type":"point","winner":"B"}
+RLIVE to11bo5 => st=inProgress games=[11-7,4-11] cur=9-9 won=1-1 srv=BL sw=0 game=3
+RLIVE to11bo5 event {"id":"p364","type":"point","winner":"A"}
+RLIVE to11bo5 => st=inProgress games=[11-7,4-11] cur=10-9 won=1-1 srv=AR sw=0 game=3
+RLIVE to11bo5 event {"id":"p365","type":"point","winner":"B"}
+RLIVE to11bo5 => st=inProgress games=[11-7,4-11] cur=10-10 won=1-1 srv=BR sw=0 game=3
+RLIVE to11bo5 event {"id":"p366","type":"point","winner":"A"}
+RLIVE to11bo5 => st=inProgress games=[11-7,4-11] cur=11-10 won=1-1 srv=AL sw=0 game=3
+RLIVE to11bo5 event {"id":"p367","type":"point","winner":"A"}
+RLIVE to11bo5 => st=inProgress games=[11-7,4-11,12-10] cur=0-0 won=2-1 srv=AR sw=1 game=4
+RLIVE to11bo5 event {"id":"p368","type":"point","winner":"A"}
+RLIVE to11bo5 => st=inProgress games=[11-7,4-11,12-10] cur=1-0 won=2-1 srv=AL sw=0 game=4
+RLIVE to11bo5 event {"id":"p369","type":"point","winner":"B"}
+RLIVE to11bo5 => st=inProgress games=[11-7,4-11,12-10] cur=1-1 won=2-1 srv=BL sw=0 game=4
+RLIVE to11bo5 event {"id":"p370","type":"point","winner":"A"}
+RLIVE to11bo5 => st=inProgress games=[11-7,4-11,12-10] cur=2-1 won=2-1 srv=AR sw=0 game=4
+RLIVE to11bo5 event {"id":"p371","type":"point","winner":"B"}
+RLIVE to11bo5 => st=inProgress games=[11-7,4-11,12-10] cur=2-2 won=2-1 srv=BR sw=0 game=4
+RLIVE to11bo5 event {"id":"p372","type":"point","winner":"A"}
+RLIVE to11bo5 => st=inProgress games=[11-7,4-11,12-10] cur=3-2 won=2-1 srv=AL sw=0 game=4
+RLIVE to11bo5 event {"id":"p373","type":"point","winner":"B"}
+RLIVE to11bo5 => st=inProgress games=[11-7,4-11,12-10] cur=3-3 won=2-1 srv=BL sw=0 game=4
+RLIVE to11bo5 event {"id":"p374","type":"point","winner":"A"}
+RLIVE to11bo5 => st=inProgress games=[11-7,4-11,12-10] cur=4-3 won=2-1 srv=AR sw=0 game=4
+RLIVE to11bo5 event {"id":"p375","type":"point","winner":"B"}
+RLIVE to11bo5 => st=inProgress games=[11-7,4-11,12-10] cur=4-4 won=2-1 srv=BR sw=0 game=4
+RLIVE to11bo5 event {"id":"p376","type":"point","winner":"A"}
+RLIVE to11bo5 => st=inProgress games=[11-7,4-11,12-10] cur=5-4 won=2-1 srv=AL sw=0 game=4
+RLIVE to11bo5 event {"id":"p377","type":"point","winner":"B"}
+RLIVE to11bo5 => st=inProgress games=[11-7,4-11,12-10] cur=5-5 won=2-1 srv=BL sw=0 game=4
+RLIVE to11bo5 event {"id":"p378","type":"point","winner":"A"}
+RLIVE to11bo5 => st=inProgress games=[11-7,4-11,12-10] cur=6-5 won=2-1 srv=AR sw=0 game=4
+RLIVE to11bo5 event {"id":"p379","type":"point","winner":"B"}
+RLIVE to11bo5 => st=inProgress games=[11-7,4-11,12-10] cur=6-6 won=2-1 srv=BR sw=0 game=4
+RLIVE to11bo5 event {"id":"p380","type":"point","winner":"A"}
+RLIVE to11bo5 => st=inProgress games=[11-7,4-11,12-10] cur=7-6 won=2-1 srv=AL sw=0 game=4
+RLIVE to11bo5 event {"id":"p381","type":"point","winner":"B"}
+RLIVE to11bo5 => st=inProgress games=[11-7,4-11,12-10] cur=7-7 won=2-1 srv=BL sw=0 game=4
+RLIVE to11bo5 event {"id":"p382","type":"point","winner":"A"}
+RLIVE to11bo5 => st=inProgress games=[11-7,4-11,12-10] cur=8-7 won=2-1 srv=AR sw=0 game=4
+RLIVE to11bo5 event {"id":"p383","type":"point","winner":"B"}
+RLIVE to11bo5 => st=inProgress games=[11-7,4-11,12-10] cur=8-8 won=2-1 srv=BR sw=0 game=4
+RLIVE to11bo5 event {"id":"p384","type":"point","winner":"A"}
+RLIVE to11bo5 => st=inProgress games=[11-7,4-11,12-10] cur=9-8 won=2-1 srv=AL sw=0 game=4
+RLIVE to11bo5 event {"id":"p385","type":"point","winner":"B"}
+RLIVE to11bo5 => st=inProgress games=[11-7,4-11,12-10] cur=9-9 won=2-1 srv=BL sw=0 game=4
+RLIVE to11bo5 event {"id":"p386","type":"point","winner":"B"}
+RLIVE to11bo5 => st=inProgress games=[11-7,4-11,12-10] cur=9-10 won=2-1 srv=BR sw=0 game=4
+RLIVE to11bo5 event {"id":"p387","type":"point","winner":"B"}
+RLIVE to11bo5 => st=inProgress games=[11-7,4-11,12-10,9-11] cur=0-0 won=2-2 srv=BR sw=1 game=5
+RLIVE to11bo5 event {"id":"p388","type":"point","winner":"A"}
+RLIVE to11bo5 => st=inProgress games=[11-7,4-11,12-10,9-11] cur=1-0 won=2-2 srv=AL sw=0 game=5
+RLIVE to11bo5 event {"id":"p389","type":"point","winner":"B"}
+RLIVE to11bo5 => st=inProgress games=[11-7,4-11,12-10,9-11] cur=1-1 won=2-2 srv=BL sw=0 game=5
+RLIVE to11bo5 event {"id":"p390","type":"point","winner":"A"}
+RLIVE to11bo5 => st=inProgress games=[11-7,4-11,12-10,9-11] cur=2-1 won=2-2 srv=AR sw=0 game=5
+RLIVE to11bo5 event {"id":"p391","type":"point","winner":"B"}
+RLIVE to11bo5 => st=inProgress games=[11-7,4-11,12-10,9-11] cur=2-2 won=2-2 srv=BR sw=0 game=5
+RLIVE to11bo5 event {"id":"p392","type":"point","winner":"A"}
+RLIVE to11bo5 => st=inProgress games=[11-7,4-11,12-10,9-11] cur=3-2 won=2-2 srv=AL sw=0 game=5
+RLIVE to11bo5 event {"id":"p393","type":"point","winner":"B"}
+RLIVE to11bo5 => st=inProgress games=[11-7,4-11,12-10,9-11] cur=3-3 won=2-2 srv=BL sw=0 game=5
+RLIVE to11bo5 event {"id":"p394","type":"point","winner":"A"}
+RLIVE to11bo5 => st=inProgress games=[11-7,4-11,12-10,9-11] cur=4-3 won=2-2 srv=AR sw=0 game=5
+RLIVE to11bo5 event {"id":"p395","type":"point","winner":"B"}
+RLIVE to11bo5 => st=inProgress games=[11-7,4-11,12-10,9-11] cur=4-4 won=2-2 srv=BR sw=0 game=5
+RLIVE to11bo5 event {"id":"p396","type":"point","winner":"A"}
+RLIVE to11bo5 => st=inProgress games=[11-7,4-11,12-10,9-11] cur=5-4 won=2-2 srv=AL sw=0 game=5
+RLIVE to11bo5 event {"id":"p397","type":"point","winner":"B"}
+RLIVE to11bo5 => st=inProgress games=[11-7,4-11,12-10,9-11] cur=5-5 won=2-2 srv=BL sw=0 game=5
+RLIVE to11bo5 event {"id":"p398","type":"point","winner":"A"}
+RLIVE to11bo5 => st=inProgress games=[11-7,4-11,12-10,9-11] cur=6-5 won=2-2 srv=AR sw=1 game=5
+RLIVE to11bo5 event {"id":"p399","type":"point","winner":"B"}
+RLIVE to11bo5 => st=inProgress games=[11-7,4-11,12-10,9-11] cur=6-6 won=2-2 srv=BR sw=0 game=5
+RLIVE to11bo5 event {"id":"p400","type":"point","winner":"A"}
+RLIVE to11bo5 => st=inProgress games=[11-7,4-11,12-10,9-11] cur=7-6 won=2-2 srv=AL sw=0 game=5
+RLIVE to11bo5 event {"id":"p401","type":"point","winner":"B"}
+RLIVE to11bo5 => st=inProgress games=[11-7,4-11,12-10,9-11] cur=7-7 won=2-2 srv=BL sw=0 game=5
+RLIVE to11bo5 event {"id":"p402","type":"point","winner":"A"}
+RLIVE to11bo5 => st=inProgress games=[11-7,4-11,12-10,9-11] cur=8-7 won=2-2 srv=AR sw=0 game=5
+RLIVE to11bo5 event {"id":"p403","type":"point","winner":"B"}
+RLIVE to11bo5 => st=inProgress games=[11-7,4-11,12-10,9-11] cur=8-8 won=2-2 srv=BR sw=0 game=5
+RLIVE to11bo5 event {"id":"p404","type":"point","winner":"A"}
+RLIVE to11bo5 => st=inProgress games=[11-7,4-11,12-10,9-11] cur=9-8 won=2-2 srv=AL sw=0 game=5
+RLIVE to11bo5 event {"id":"p405","type":"point","winner":"B"}
+RLIVE to11bo5 => st=inProgress games=[11-7,4-11,12-10,9-11] cur=9-9 won=2-2 srv=BL sw=0 game=5
+RLIVE to11bo5 event {"id":"p406","type":"point","winner":"A"}
+RLIVE to11bo5 => st=inProgress games=[11-7,4-11,12-10,9-11] cur=10-9 won=2-2 srv=AR sw=0 game=5
+RLIVE to11bo5 event {"id":"p407","type":"point","winner":"B"}
+RLIVE to11bo5 => st=inProgress games=[11-7,4-11,12-10,9-11] cur=10-10 won=2-2 srv=BR sw=0 game=5
+RLIVE to11bo5 event {"id":"p408","type":"point","winner":"A"}
+RLIVE to11bo5 => st=inProgress games=[11-7,4-11,12-10,9-11] cur=11-10 won=2-2 srv=AL sw=0 game=5
+RLIVE to11bo5 event {"id":"p409","type":"point","winner":"B"}
+RLIVE to11bo5 => st=inProgress games=[11-7,4-11,12-10,9-11] cur=11-11 won=2-2 srv=BL sw=0 game=5
+RLIVE to11bo5 event {"id":"p410","type":"point","winner":"A"}
+RLIVE to11bo5 => st=inProgress games=[11-7,4-11,12-10,9-11] cur=12-11 won=2-2 srv=AR sw=0 game=5
+RLIVE to11bo5 event {"id":"p411","type":"point","winner":"B"}
+RLIVE to11bo5 => st=inProgress games=[11-7,4-11,12-10,9-11] cur=12-12 won=2-2 srv=BR sw=0 game=5
+RLIVE to11bo5 event {"id":"p412","type":"point","winner":"A"}
+RLIVE to11bo5 => st=inProgress games=[11-7,4-11,12-10,9-11] cur=13-12 won=2-2 srv=AL sw=0 game=5
+RLIVE to11bo5 event {"id":"p413","type":"point","winner":"B"}
+RLIVE to11bo5 => st=inProgress games=[11-7,4-11,12-10,9-11] cur=13-13 won=2-2 srv=BL sw=0 game=5
+RLIVE to11bo5 event {"id":"p414","type":"point","winner":"A"}
+RLIVE to11bo5 => st=inProgress games=[11-7,4-11,12-10,9-11] cur=14-13 won=2-2 srv=AR sw=0 game=5
+RLIVE to11bo5 event {"id":"p415","type":"point","winner":"B"}
+RLIVE to11bo5 => st=inProgress games=[11-7,4-11,12-10,9-11] cur=14-14 won=2-2 srv=BR sw=0 game=5
+RLIVE to11bo5 event {"id":"p416","type":"point","winner":"B"}
+RLIVE to11bo5 => st=ended games=[11-7,4-11,12-10,9-11,14-15] cur=0-0 won=2-3 srv=BR sw=0 game=5
+RLIVE to11bo5 live {"current":{"a":0,"b":0},"games":[{"a":11,"b":7},{"a":4,"b":11},{"a":12,"b":10},{"a":9,"b":11},{"a":14,"b":15}],"gamesWon":{"a":2,"b":3},"server":{"court":"R","side":"B"},"status":"ended","switchEnds":false}
+RLIVE to11bo5 result {"kind":"sets","sets":[{"teamAPoints":11,"teamBPoints":7},{"teamAPoints":4,"teamBPoints":11},{"teamAPoints":12,"teamBPoints":10},{"teamAPoints":9,"teamBPoints":11},{"teamAPoints":14,"teamBPoints":15}]}
+RLIVE roundRobin config {"firstServer":"B","format":"simple","scoring":{"gamesPerMatch":1,"pointCap":30,"pointsToWin":21,"winBy":2},"sport":"badminton"}
+RLIVE roundRobin event {"id":"p417","type":"point","winner":"B"}
+RLIVE roundRobin => st=inProgress games=[] cur=0-1 won=0-0 srv=BL sw=0 game=1
+RLIVE roundRobin event {"id":"p418","type":"point","winner":"B"}
+RLIVE roundRobin => st=inProgress games=[] cur=0-2 won=0-0 srv=BR sw=0 game=1
+RLIVE roundRobin event {"id":"p419","type":"point","winner":"B"}
+RLIVE roundRobin => st=inProgress games=[] cur=0-3 won=0-0 srv=BL sw=0 game=1
+RLIVE roundRobin event {"id":"p420","type":"point","winner":"B"}
+RLIVE roundRobin => st=inProgress games=[] cur=0-4 won=0-0 srv=BR sw=0 game=1
+RLIVE roundRobin event {"id":"p421","type":"point","winner":"B"}
+RLIVE roundRobin => st=inProgress games=[] cur=0-5 won=0-0 srv=BL sw=0 game=1
+RLIVE roundRobin event {"id":"p422","type":"point","winner":"B"}
+RLIVE roundRobin => st=inProgress games=[] cur=0-6 won=0-0 srv=BR sw=0 game=1
+RLIVE roundRobin event {"id":"p423","type":"point","winner":"B"}
+RLIVE roundRobin => st=inProgress games=[] cur=0-7 won=0-0 srv=BL sw=0 game=1
+RLIVE roundRobin event {"id":"p424","type":"point","winner":"B"}
+RLIVE roundRobin => st=inProgress games=[] cur=0-8 won=0-0 srv=BR sw=0 game=1
+RLIVE roundRobin event {"id":"p425","type":"point","winner":"B"}
+RLIVE roundRobin => st=inProgress games=[] cur=0-9 won=0-0 srv=BL sw=0 game=1
+RLIVE roundRobin event {"id":"p426","type":"point","winner":"B"}
+RLIVE roundRobin => st=inProgress games=[] cur=0-10 won=0-0 srv=BR sw=0 game=1
+RLIVE roundRobin event {"id":"p427","type":"point","winner":"A"}
+RLIVE roundRobin => st=inProgress games=[] cur=1-10 won=0-0 srv=AL sw=0 game=1
+RLIVE roundRobin event {"id":"p428","type":"point","winner":"A"}
+RLIVE roundRobin => st=inProgress games=[] cur=2-10 won=0-0 srv=AR sw=0 game=1
+RLIVE roundRobin event {"id":"p429","type":"point","winner":"A"}
+RLIVE roundRobin => st=inProgress games=[] cur=3-10 won=0-0 srv=AL sw=0 game=1
+RLIVE roundRobin event {"id":"p430","type":"point","winner":"A"}
+RLIVE roundRobin => st=inProgress games=[] cur=4-10 won=0-0 srv=AR sw=0 game=1
+RLIVE roundRobin event {"id":"p431","type":"point","winner":"A"}
+RLIVE roundRobin => st=inProgress games=[] cur=5-10 won=0-0 srv=AL sw=0 game=1
+RLIVE roundRobin event {"id":"p432","type":"point","winner":"A"}
+RLIVE roundRobin => st=inProgress games=[] cur=6-10 won=0-0 srv=AR sw=0 game=1
+RLIVE roundRobin event {"id":"p433","type":"point","winner":"A"}
+RLIVE roundRobin => st=inProgress games=[] cur=7-10 won=0-0 srv=AL sw=0 game=1
+RLIVE roundRobin event {"id":"p434","type":"point","winner":"A"}
+RLIVE roundRobin => st=inProgress games=[] cur=8-10 won=0-0 srv=AR sw=0 game=1
+RLIVE roundRobin event {"id":"p435","type":"point","winner":"A"}
+RLIVE roundRobin => st=inProgress games=[] cur=9-10 won=0-0 srv=AL sw=0 game=1
+RLIVE roundRobin event {"id":"p436","type":"point","winner":"A"}
+RLIVE roundRobin => st=inProgress games=[] cur=10-10 won=0-0 srv=AR sw=0 game=1
+RLIVE roundRobin event {"id":"p437","type":"point","winner":"A"}
+RLIVE roundRobin => st=inProgress games=[] cur=11-10 won=0-0 srv=AL sw=1 game=1
+RLIVE roundRobin event {"id":"p438","type":"point","winner":"B"}
+RLIVE roundRobin => st=inProgress games=[] cur=11-11 won=0-0 srv=BL sw=0 game=1
+RLIVE roundRobin event {"id":"p439","type":"point","winner":"B"}
+RLIVE roundRobin => st=inProgress games=[] cur=11-12 won=0-0 srv=BR sw=0 game=1
+RLIVE roundRobin event {"id":"p440","type":"point","winner":"B"}
+RLIVE roundRobin => st=inProgress games=[] cur=11-13 won=0-0 srv=BL sw=0 game=1
+RLIVE roundRobin event {"id":"p441","type":"point","winner":"B"}
+RLIVE roundRobin => st=inProgress games=[] cur=11-14 won=0-0 srv=BR sw=0 game=1
+RLIVE roundRobin event {"id":"p442","type":"point","winner":"B"}
+RLIVE roundRobin => st=inProgress games=[] cur=11-15 won=0-0 srv=BL sw=0 game=1
+RLIVE roundRobin event {"id":"p443","type":"point","winner":"B"}
+RLIVE roundRobin => st=inProgress games=[] cur=11-16 won=0-0 srv=BR sw=0 game=1
+RLIVE roundRobin event {"id":"p444","type":"point","winner":"B"}
+RLIVE roundRobin => st=inProgress games=[] cur=11-17 won=0-0 srv=BL sw=0 game=1
+RLIVE roundRobin event {"id":"p445","type":"point","winner":"B"}
+RLIVE roundRobin => st=inProgress games=[] cur=11-18 won=0-0 srv=BR sw=0 game=1
+RLIVE roundRobin event {"id":"p446","type":"point","winner":"B"}
+RLIVE roundRobin => st=inProgress games=[] cur=11-19 won=0-0 srv=BL sw=0 game=1
+RLIVE roundRobin event {"id":"p447","type":"point","winner":"B"}
+RLIVE roundRobin => st=inProgress games=[] cur=11-20 won=0-0 srv=BR sw=0 game=1
+RLIVE roundRobin event {"id":"p448","type":"point","winner":"B"}
+RLIVE roundRobin => st=ended games=[11-21] cur=0-0 won=0-1 srv=BR sw=0 game=1
+RLIVE roundRobin live {"current":{"a":0,"b":0},"games":[{"a":11,"b":21}],"gamesWon":{"a":0,"b":1},"server":{"court":"R","side":"B"},"status":"ended","switchEnds":false}
+RLIVE roundRobin result {"kind":"simple","scoreA":11,"scoreB":21}
+RLIVE undoBoundary config {"firstServer":"A","format":"sets","scoring":{"gamesPerMatch":3,"pointCap":30,"pointsToWin":21,"winBy":2},"sport":"badminton"}
+RLIVE undoBoundary event {"id":"p449","type":"point","winner":"A"}
+RLIVE undoBoundary => st=inProgress games=[] cur=1-0 won=0-0 srv=AL sw=0 game=1
+RLIVE undoBoundary event {"id":"p450","type":"point","winner":"B"}
+RLIVE undoBoundary => st=inProgress games=[] cur=1-1 won=0-0 srv=BL sw=0 game=1
+RLIVE undoBoundary event {"id":"p451","type":"point","winner":"A"}
+RLIVE undoBoundary => st=inProgress games=[] cur=2-1 won=0-0 srv=AR sw=0 game=1
+RLIVE undoBoundary event {"id":"p452","type":"point","winner":"B"}
+RLIVE undoBoundary => st=inProgress games=[] cur=2-2 won=0-0 srv=BR sw=0 game=1
+RLIVE undoBoundary event {"id":"p453","type":"point","winner":"A"}
+RLIVE undoBoundary => st=inProgress games=[] cur=3-2 won=0-0 srv=AL sw=0 game=1
+RLIVE undoBoundary event {"id":"p454","type":"point","winner":"B"}
+RLIVE undoBoundary => st=inProgress games=[] cur=3-3 won=0-0 srv=BL sw=0 game=1
+RLIVE undoBoundary event {"id":"p455","type":"point","winner":"A"}
+RLIVE undoBoundary => st=inProgress games=[] cur=4-3 won=0-0 srv=AR sw=0 game=1
+RLIVE undoBoundary event {"id":"p456","type":"point","winner":"B"}
+RLIVE undoBoundary => st=inProgress games=[] cur=4-4 won=0-0 srv=BR sw=0 game=1
+RLIVE undoBoundary event {"id":"p457","type":"point","winner":"A"}
+RLIVE undoBoundary => st=inProgress games=[] cur=5-4 won=0-0 srv=AL sw=0 game=1
+RLIVE undoBoundary event {"id":"p458","type":"point","winner":"B"}
+RLIVE undoBoundary => st=inProgress games=[] cur=5-5 won=0-0 srv=BL sw=0 game=1
+RLIVE undoBoundary event {"id":"p459","type":"point","winner":"A"}
+RLIVE undoBoundary => st=inProgress games=[] cur=6-5 won=0-0 srv=AR sw=0 game=1
+RLIVE undoBoundary event {"id":"p460","type":"point","winner":"A"}
+RLIVE undoBoundary => st=inProgress games=[] cur=7-5 won=0-0 srv=AL sw=0 game=1
+RLIVE undoBoundary event {"id":"p461","type":"point","winner":"A"}
+RLIVE undoBoundary => st=inProgress games=[] cur=8-5 won=0-0 srv=AR sw=0 game=1
+RLIVE undoBoundary event {"id":"p462","type":"point","winner":"A"}
+RLIVE undoBoundary => st=inProgress games=[] cur=9-5 won=0-0 srv=AL sw=0 game=1
+RLIVE undoBoundary event {"id":"p463","type":"point","winner":"A"}
+RLIVE undoBoundary => st=inProgress games=[] cur=10-5 won=0-0 srv=AR sw=0 game=1
+RLIVE undoBoundary event {"id":"p464","type":"point","winner":"A"}
+RLIVE undoBoundary => st=inProgress games=[] cur=11-5 won=0-0 srv=AL sw=0 game=1
+RLIVE undoBoundary event {"id":"p465","type":"point","winner":"A"}
+RLIVE undoBoundary => st=inProgress games=[] cur=12-5 won=0-0 srv=AR sw=0 game=1
+RLIVE undoBoundary event {"id":"p466","type":"point","winner":"A"}
+RLIVE undoBoundary => st=inProgress games=[] cur=13-5 won=0-0 srv=AL sw=0 game=1
+RLIVE undoBoundary event {"id":"p467","type":"point","winner":"A"}
+RLIVE undoBoundary => st=inProgress games=[] cur=14-5 won=0-0 srv=AR sw=0 game=1
+RLIVE undoBoundary event {"id":"p468","type":"point","winner":"A"}
+RLIVE undoBoundary => st=inProgress games=[] cur=15-5 won=0-0 srv=AL sw=0 game=1
+RLIVE undoBoundary event {"id":"p469","type":"point","winner":"A"}
+RLIVE undoBoundary => st=inProgress games=[] cur=16-5 won=0-0 srv=AR sw=0 game=1
+RLIVE undoBoundary event {"id":"p470","type":"point","winner":"A"}
+RLIVE undoBoundary => st=inProgress games=[] cur=17-5 won=0-0 srv=AL sw=0 game=1
+RLIVE undoBoundary event {"id":"p471","type":"point","winner":"A"}
+RLIVE undoBoundary => st=inProgress games=[] cur=18-5 won=0-0 srv=AR sw=0 game=1
+RLIVE undoBoundary event {"id":"p472","type":"point","winner":"A"}
+RLIVE undoBoundary => st=inProgress games=[] cur=19-5 won=0-0 srv=AL sw=0 game=1
+RLIVE undoBoundary event {"id":"p473","type":"point","winner":"A"}
+RLIVE undoBoundary => st=inProgress games=[] cur=20-5 won=0-0 srv=AR sw=0 game=1
+RLIVE undoBoundary event {"id":"p474","type":"point","winner":"A"}
+RLIVE undoBoundary => st=inProgress games=[21-5] cur=0-0 won=1-0 srv=AR sw=1 game=2
+RLIVE undoBoundary undo
+RLIVE undoBoundary => st=inProgress games=[] cur=20-5 won=0-0 srv=AR sw=0 game=1
+RLIVE undoBoundary undo
+RLIVE undoBoundary => st=inProgress games=[] cur=19-5 won=0-0 srv=AL sw=0 game=1
+RLIVE undoBoundary event {"id":"p475","type":"point","winner":"B"}
+RLIVE undoBoundary => st=inProgress games=[] cur=19-6 won=0-0 srv=BR sw=0 game=1
+RLIVE undoBoundary event {"id":"p476","type":"point","winner":"A"}
+RLIVE undoBoundary => st=inProgress games=[] cur=20-6 won=0-0 srv=AR sw=0 game=1
+RLIVE undoBoundary event {"id":"p477","type":"point","winner":"A"}
+RLIVE undoBoundary => st=inProgress games=[21-6] cur=0-0 won=1-0 srv=AR sw=1 game=2
+RLIVE undoBoundary event {"id":"p478","type":"point","winner":"A"}
+RLIVE undoBoundary => st=inProgress games=[21-6] cur=1-0 won=1-0 srv=AL sw=0 game=2
+RLIVE undoBoundary event {"id":"p479","type":"point","winner":"B"}
+RLIVE undoBoundary => st=inProgress games=[21-6] cur=1-1 won=1-0 srv=BL sw=0 game=2
+RLIVE undoBoundary undo
+RLIVE undoBoundary => st=inProgress games=[21-6] cur=1-0 won=1-0 srv=AL sw=0 game=2
+RLIVE undoBoundary undo
+RLIVE undoBoundary => st=inProgress games=[21-6] cur=0-0 won=1-0 srv=AR sw=1 game=2
+RLIVE undoBoundary undo
+RLIVE undoBoundary => st=inProgress games=[] cur=20-6 won=0-0 srv=AR sw=0 game=1
+RLIVE undoBoundary live {"current":{"a":20,"b":6},"games":[],"gamesWon":{"a":0,"b":0},"server":{"court":"R","side":"A"},"status":"inProgress","switchEnds":false}
+RLIVE undoAfterEnd config {"firstServer":"A","format":"simple","scoring":{"gamesPerMatch":1,"pointCap":15,"pointsToWin":11,"winBy":2},"sport":"badminton"}
+RLIVE undoAfterEnd event {"id":"p480","type":"point","winner":"A"}
+RLIVE undoAfterEnd => st=inProgress games=[] cur=1-0 won=0-0 srv=AL sw=0 game=1
+RLIVE undoAfterEnd event {"id":"p481","type":"point","winner":"B"}
+RLIVE undoAfterEnd => st=inProgress games=[] cur=1-1 won=0-0 srv=BL sw=0 game=1
+RLIVE undoAfterEnd event {"id":"p482","type":"point","winner":"A"}
+RLIVE undoAfterEnd => st=inProgress games=[] cur=2-1 won=0-0 srv=AR sw=0 game=1
+RLIVE undoAfterEnd event {"id":"p483","type":"point","winner":"B"}
+RLIVE undoAfterEnd => st=inProgress games=[] cur=2-2 won=0-0 srv=BR sw=0 game=1
+RLIVE undoAfterEnd event {"id":"p484","type":"point","winner":"A"}
+RLIVE undoAfterEnd => st=inProgress games=[] cur=3-2 won=0-0 srv=AL sw=0 game=1
+RLIVE undoAfterEnd event {"id":"p485","type":"point","winner":"B"}
+RLIVE undoAfterEnd => st=inProgress games=[] cur=3-3 won=0-0 srv=BL sw=0 game=1
+RLIVE undoAfterEnd event {"id":"p486","type":"point","winner":"A"}
+RLIVE undoAfterEnd => st=inProgress games=[] cur=4-3 won=0-0 srv=AR sw=0 game=1
+RLIVE undoAfterEnd event {"id":"p487","type":"point","winner":"A"}
+RLIVE undoAfterEnd => st=inProgress games=[] cur=5-3 won=0-0 srv=AL sw=0 game=1
+RLIVE undoAfterEnd event {"id":"p488","type":"point","winner":"A"}
+RLIVE undoAfterEnd => st=inProgress games=[] cur=6-3 won=0-0 srv=AR sw=1 game=1
+RLIVE undoAfterEnd event {"id":"p489","type":"point","winner":"A"}
+RLIVE undoAfterEnd => st=inProgress games=[] cur=7-3 won=0-0 srv=AL sw=0 game=1
+RLIVE undoAfterEnd event {"id":"p490","type":"point","winner":"A"}
+RLIVE undoAfterEnd => st=inProgress games=[] cur=8-3 won=0-0 srv=AR sw=0 game=1
+RLIVE undoAfterEnd event {"id":"p491","type":"point","winner":"A"}
+RLIVE undoAfterEnd => st=inProgress games=[] cur=9-3 won=0-0 srv=AL sw=0 game=1
+RLIVE undoAfterEnd event {"id":"p492","type":"point","winner":"A"}
+RLIVE undoAfterEnd => st=inProgress games=[] cur=10-3 won=0-0 srv=AR sw=0 game=1
+RLIVE undoAfterEnd event {"id":"p493","type":"point","winner":"A"}
+RLIVE undoAfterEnd => st=ended games=[11-3] cur=0-0 won=1-0 srv=AR sw=0 game=1
+RLIVE undoAfterEnd event {"id":"p494","type":"point","winner":"A"}
+RLIVE undoAfterEnd !! INVALID_POINT The match is over. Finish it, or undo the last point.
+RLIVE undoAfterEnd undo
+RLIVE undoAfterEnd => st=inProgress games=[] cur=10-3 won=0-0 srv=AR sw=0 game=1
+RLIVE undoAfterEnd event {"id":"p495","type":"point","winner":"B"}
+RLIVE undoAfterEnd => st=inProgress games=[] cur=10-4 won=0-0 srv=BR sw=0 game=1
+RLIVE undoAfterEnd event {"id":"p496","type":"point","winner":"A"}
+RLIVE undoAfterEnd => st=ended games=[11-4] cur=0-0 won=1-0 srv=AR sw=0 game=1
+RLIVE undoAfterEnd live {"current":{"a":0,"b":0},"games":[{"a":11,"b":4}],"gamesWon":{"a":1,"b":0},"server":{"court":"R","side":"A"},"status":"ended","switchEnds":false}
+RLIVE undoAfterEnd result {"kind":"simple","scoreA":11,"scoreB":4}
+RLIVE setServer config {"firstServer":"B","format":"sets","scoring":{"gamesPerMatch":3,"pointCap":30,"pointsToWin":21,"winBy":2},"sport":"badminton"}
+RLIVE setServer undo
+RLIVE setServer !! INVALID_POINT Nothing to undo.
+RLIVE setServer event {"id":"s2","side":"A","type":"setServer"}
+RLIVE setServer => st=inProgress games=[] cur=0-0 won=0-0 srv=AR sw=0 game=1
+RLIVE setServer undo
+RLIVE setServer !! INVALID_POINT Nothing to undo.
+RLIVE setServer event {"id":"p497","type":"point","winner":"A"}
+RLIVE setServer => st=inProgress games=[] cur=1-0 won=0-0 srv=AL sw=0 game=1
+RLIVE setServer event {"id":"p498","type":"point","winner":"A"}
+RLIVE setServer => st=inProgress games=[] cur=2-0 won=0-0 srv=AR sw=0 game=1
+RLIVE setServer event {"id":"p499","type":"point","winner":"B"}
+RLIVE setServer => st=inProgress games=[] cur=2-1 won=0-0 srv=BL sw=0 game=1
+RLIVE setServer event {"id":"s3","side":"A","type":"setServer"}
+RLIVE setServer => st=inProgress games=[] cur=2-1 won=0-0 srv=AR sw=0 game=1
+RLIVE setServer event {"id":"s4","side":"A","type":"setServer"}
+RLIVE setServer => st=inProgress games=[] cur=2-1 won=0-0 srv=AR sw=0 game=1
+RLIVE setServer event {"id":"p500","type":"point","winner":"A"}
+RLIVE setServer => st=inProgress games=[] cur=3-1 won=0-0 srv=AL sw=0 game=1
+RLIVE setServer undo
+RLIVE setServer => st=inProgress games=[] cur=2-1 won=0-0 srv=AR sw=0 game=1
+RLIVE setServer undo
+RLIVE setServer => st=inProgress games=[] cur=2-0 won=0-0 srv=AR sw=0 game=1
+RLIVE setServer event {"id":"bad1","type":"point","winner":"C"}
+RLIVE setServer !! INVALID_POINT That point isn't valid. Update the app and try again.
+RLIVE setServer event {"id":"bad2","side":"A","type":"serve"}
+RLIVE setServer !! INVALID_POINT That point isn't valid. Update the app and try again.
+RLIVE setServer live {"current":{"a":2,"b":0},"games":[],"gamesWon":{"a":0,"b":0},"server":{"court":"R","side":"A"},"status":"inProgress","switchEnds":false}
+RLIVE winBy1 config {"firstServer":"A","format":"sets","scoring":{"gamesPerMatch":1,"pointCap":21,"pointsToWin":21,"winBy":1},"sport":"badminton"}
+RLIVE winBy1 event {"id":"p501","type":"point","winner":"A"}
+RLIVE winBy1 => st=inProgress games=[] cur=1-0 won=0-0 srv=AL sw=0 game=1
+RLIVE winBy1 event {"id":"p502","type":"point","winner":"B"}
+RLIVE winBy1 => st=inProgress games=[] cur=1-1 won=0-0 srv=BL sw=0 game=1
+RLIVE winBy1 event {"id":"p503","type":"point","winner":"A"}
+RLIVE winBy1 => st=inProgress games=[] cur=2-1 won=0-0 srv=AR sw=0 game=1
+RLIVE winBy1 event {"id":"p504","type":"point","winner":"B"}
+RLIVE winBy1 => st=inProgress games=[] cur=2-2 won=0-0 srv=BR sw=0 game=1
+RLIVE winBy1 event {"id":"p505","type":"point","winner":"A"}
+RLIVE winBy1 => st=inProgress games=[] cur=3-2 won=0-0 srv=AL sw=0 game=1
+RLIVE winBy1 event {"id":"p506","type":"point","winner":"B"}
+RLIVE winBy1 => st=inProgress games=[] cur=3-3 won=0-0 srv=BL sw=0 game=1
+RLIVE winBy1 event {"id":"p507","type":"point","winner":"A"}
+RLIVE winBy1 => st=inProgress games=[] cur=4-3 won=0-0 srv=AR sw=0 game=1
+RLIVE winBy1 event {"id":"p508","type":"point","winner":"B"}
+RLIVE winBy1 => st=inProgress games=[] cur=4-4 won=0-0 srv=BR sw=0 game=1
+RLIVE winBy1 event {"id":"p509","type":"point","winner":"A"}
+RLIVE winBy1 => st=inProgress games=[] cur=5-4 won=0-0 srv=AL sw=0 game=1
+RLIVE winBy1 event {"id":"p510","type":"point","winner":"B"}
+RLIVE winBy1 => st=inProgress games=[] cur=5-5 won=0-0 srv=BL sw=0 game=1
+RLIVE winBy1 event {"id":"p511","type":"point","winner":"A"}
+RLIVE winBy1 => st=inProgress games=[] cur=6-5 won=0-0 srv=AR sw=0 game=1
+RLIVE winBy1 event {"id":"p512","type":"point","winner":"B"}
+RLIVE winBy1 => st=inProgress games=[] cur=6-6 won=0-0 srv=BR sw=0 game=1
+RLIVE winBy1 event {"id":"p513","type":"point","winner":"A"}
+RLIVE winBy1 => st=inProgress games=[] cur=7-6 won=0-0 srv=AL sw=0 game=1
+RLIVE winBy1 event {"id":"p514","type":"point","winner":"B"}
+RLIVE winBy1 => st=inProgress games=[] cur=7-7 won=0-0 srv=BL sw=0 game=1
+RLIVE winBy1 event {"id":"p515","type":"point","winner":"A"}
+RLIVE winBy1 => st=inProgress games=[] cur=8-7 won=0-0 srv=AR sw=0 game=1
+RLIVE winBy1 event {"id":"p516","type":"point","winner":"B"}
+RLIVE winBy1 => st=inProgress games=[] cur=8-8 won=0-0 srv=BR sw=0 game=1
+RLIVE winBy1 event {"id":"p517","type":"point","winner":"A"}
+RLIVE winBy1 => st=inProgress games=[] cur=9-8 won=0-0 srv=AL sw=0 game=1
+RLIVE winBy1 event {"id":"p518","type":"point","winner":"B"}
+RLIVE winBy1 => st=inProgress games=[] cur=9-9 won=0-0 srv=BL sw=0 game=1
+RLIVE winBy1 event {"id":"p519","type":"point","winner":"A"}
+RLIVE winBy1 => st=inProgress games=[] cur=10-9 won=0-0 srv=AR sw=0 game=1
+RLIVE winBy1 event {"id":"p520","type":"point","winner":"B"}
+RLIVE winBy1 => st=inProgress games=[] cur=10-10 won=0-0 srv=BR sw=0 game=1
+RLIVE winBy1 event {"id":"p521","type":"point","winner":"A"}
+RLIVE winBy1 => st=inProgress games=[] cur=11-10 won=0-0 srv=AL sw=1 game=1
+RLIVE winBy1 event {"id":"p522","type":"point","winner":"B"}
+RLIVE winBy1 => st=inProgress games=[] cur=11-11 won=0-0 srv=BL sw=0 game=1
+RLIVE winBy1 event {"id":"p523","type":"point","winner":"A"}
+RLIVE winBy1 => st=inProgress games=[] cur=12-11 won=0-0 srv=AR sw=0 game=1
+RLIVE winBy1 event {"id":"p524","type":"point","winner":"B"}
+RLIVE winBy1 => st=inProgress games=[] cur=12-12 won=0-0 srv=BR sw=0 game=1
+RLIVE winBy1 event {"id":"p525","type":"point","winner":"A"}
+RLIVE winBy1 => st=inProgress games=[] cur=13-12 won=0-0 srv=AL sw=0 game=1
+RLIVE winBy1 event {"id":"p526","type":"point","winner":"B"}
+RLIVE winBy1 => st=inProgress games=[] cur=13-13 won=0-0 srv=BL sw=0 game=1
+RLIVE winBy1 event {"id":"p527","type":"point","winner":"A"}
+RLIVE winBy1 => st=inProgress games=[] cur=14-13 won=0-0 srv=AR sw=0 game=1
+RLIVE winBy1 event {"id":"p528","type":"point","winner":"B"}
+RLIVE winBy1 => st=inProgress games=[] cur=14-14 won=0-0 srv=BR sw=0 game=1
+RLIVE winBy1 event {"id":"p529","type":"point","winner":"A"}
+RLIVE winBy1 => st=inProgress games=[] cur=15-14 won=0-0 srv=AL sw=0 game=1
+RLIVE winBy1 event {"id":"p530","type":"point","winner":"B"}
+RLIVE winBy1 => st=inProgress games=[] cur=15-15 won=0-0 srv=BL sw=0 game=1
+RLIVE winBy1 event {"id":"p531","type":"point","winner":"A"}
+RLIVE winBy1 => st=inProgress games=[] cur=16-15 won=0-0 srv=AR sw=0 game=1
+RLIVE winBy1 event {"id":"p532","type":"point","winner":"B"}
+RLIVE winBy1 => st=inProgress games=[] cur=16-16 won=0-0 srv=BR sw=0 game=1
+RLIVE winBy1 event {"id":"p533","type":"point","winner":"A"}
+RLIVE winBy1 => st=inProgress games=[] cur=17-16 won=0-0 srv=AL sw=0 game=1
+RLIVE winBy1 event {"id":"p534","type":"point","winner":"B"}
+RLIVE winBy1 => st=inProgress games=[] cur=17-17 won=0-0 srv=BL sw=0 game=1
+RLIVE winBy1 event {"id":"p535","type":"point","winner":"A"}
+RLIVE winBy1 => st=inProgress games=[] cur=18-17 won=0-0 srv=AR sw=0 game=1
+RLIVE winBy1 event {"id":"p536","type":"point","winner":"B"}
+RLIVE winBy1 => st=inProgress games=[] cur=18-18 won=0-0 srv=BR sw=0 game=1
+RLIVE winBy1 event {"id":"p537","type":"point","winner":"A"}
+RLIVE winBy1 => st=inProgress games=[] cur=19-18 won=0-0 srv=AL sw=0 game=1
+RLIVE winBy1 event {"id":"p538","type":"point","winner":"B"}
+RLIVE winBy1 => st=inProgress games=[] cur=19-19 won=0-0 srv=BL sw=0 game=1
+RLIVE winBy1 event {"id":"p539","type":"point","winner":"A"}
+RLIVE winBy1 => st=inProgress games=[] cur=20-19 won=0-0 srv=AR sw=0 game=1
+RLIVE winBy1 event {"id":"p540","type":"point","winner":"B"}
+RLIVE winBy1 => st=inProgress games=[] cur=20-20 won=0-0 srv=BR sw=0 game=1
+RLIVE winBy1 event {"id":"p541","type":"point","winner":"B"}
+RLIVE winBy1 => st=ended games=[20-21] cur=0-0 won=0-1 srv=BR sw=0 game=1
+RLIVE winBy1 live {"current":{"a":0,"b":0},"games":[{"a":20,"b":21}],"gamesWon":{"a":0,"b":1},"server":{"court":"R","side":"B"},"status":"ended","switchEnds":false}
+RLIVE winBy1 result {"kind":"sets","sets":[{"teamAPoints":20,"teamBPoints":21}]}

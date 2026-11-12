@@ -41,6 +41,13 @@ export interface SportsConfig {
    * Never put such a sport in `live`, which every app version reads.
    */
   liveMinAppVersion?: Partial<Record<SportType, SportMinAppVersion>>;
+  /**
+   * Point-by-point live scoring switched on per sport, e.g. `{ badminton: true }`
+   * (racket-live-contract.md). Absent or not `true` = off: the apps hide
+   * "Score live" and `startRacketScoring` refuses a new session
+   * (LIVE_SCORING_DISABLED). Not in the default, so it ships dark.
+   */
+  liveScoring?: Partial<Record<SportType, boolean>>;
   categories: SportCategory[];
 }
 
