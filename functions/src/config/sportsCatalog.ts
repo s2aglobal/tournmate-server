@@ -48,6 +48,13 @@ export interface SportsConfig {
    * (LIVE_SCORING_DISABLED). Not in the default, so it ships dark.
    */
   liveScoring?: Partial<Record<SportType, boolean>>;
+  /**
+   * Live video streaming switched on per sport, e.g. `{ badminton: true }`
+   * (live-stream-contract.md). Absent or not `true` = off: the apps hide
+   * "Go live" and `startStream` refuses a new stream
+   * (LIVE_STREAMING_DISABLED). Not in the default, so it ships dark.
+   */
+  liveStreaming?: Partial<Record<SportType, boolean>>;
   categories: SportCategory[];
 }
 

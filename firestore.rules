@@ -110,7 +110,7 @@ service cloud.firestore {
     // finished / finishedAt (match trigger + resetDraw; the apps' COMPLETED).
     function tournamentServerFields() {
       return ['registrationCount', 'autoDraw', 'deadlineReminderFor', 'drawMade', 'awards', 'awardPlayerIds',
-              'awardsNotified', 'finished', 'finishedAt'];
+              'awardsNotified', 'finished', 'finishedAt', 'liveStreams', 'liveStreamCount'];
     }
 
     // The draw of a registration's tournament hasn't been made yet (ids in
@@ -221,6 +221,9 @@ service cloud.firestore {
         && unchangedOptional('awardsNotified')
         && unchangedOptional('finished')
         && unchangedOptional('finishedAt')
+        // Live video streams (startStream / heartbeatStream / endStream) are server-only.
+        && unchangedOptional('liveStreams')
+        && unchangedOptional('liveStreamCount')
         && cricketRulesUnchangedAfterDraw()
         && sportUnchangedOrLive()
         && teamFormatForTeamSport();
@@ -317,10 +320,11 @@ service cloud.firestore {
       // Only the tournament organizer creates matches (bracket generation).
       // eloApplied (Elo is applied once, by the server), teamAUids /
       // teamBUids (participants' auth uids) and disputeReason are server-only.
-      // live / lineups (cricket and racket live scoring) are server-only too.
+      // live / lineups (cricket and racket live scoring) and stream (live video)
+      // are server-only too.
       allow create: if isAuthenticated()
         && isNonEmptyString(request.resource.data.tournamentId)
-        && !request.resource.data.keys().hasAny(['eloApplied', 'teamAUids', 'teamBUids', 'disputeReason', 'live', 'lineups'])
+        && !request.resource.data.keys().hasAny(['eloApplied', 'teamAUids', 'teamBUids', 'disputeReason', 'live', 'lineups', 'stream'])
         && isOrganizerOf(request.resource.data.tournamentId);
 
       // Authenticated users can update scores/status
@@ -339,6 +343,7 @@ service cloud.firestore {
         && unchangedOptional('disputeReason')
         && unchangedOptional('live')
         && unchangedOptional('lineups')
+        && unchangedOptional('stream')
         // While a match is scored live only the server writes it (older apps
         // can't enter or change a score until the live scorer finishes).
         && !isScoredLive();
