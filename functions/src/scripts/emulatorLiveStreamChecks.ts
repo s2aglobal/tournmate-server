@@ -4,7 +4,7 @@
  * (organizer only), input checks, one stream per match (resume / restart /
  * STREAM_ACTIVE / stale takeover), heartbeat counters and write volume,
  * idempotent end, the tournament's `liveStreams` / `liveStreamCount` with
- * concurrent streams, stale cleanup with an injected clock, orphan entries,
+ * concurrent streams, the optional court, stale cleanup with an injected clock, orphan entries,
  * and the stream ending when the match finishes (organizer submit, confirm,
  * racket live finish, older apps' direct write via the match trigger).
  * Runs the handlers directly (`.run`) against the Firestore emulator.
@@ -283,6 +283,61 @@ async function lifecycle(db: Firestore): Promise<void> {
   check("all ended: empty list, count 0", td?.liveStreamCount === 0 && Array.isArray(td?.liveStreams) && td.liveStreams.length === 0);
 }
 
+async function courts(db: Firestore): Promise<void> {
+  console.log("\n── court: stored on both docs, omitted when absent, invalid refused ──");
+  await newMatch(db, "M-CT");
+  await newMatch(db, "M-NOCT");
+  for (const [name, court] of [["0", 0], ["21", 21], ["2.5", 2.5], ["string \"3\"", "3"], ["-1", -1], ["NaN", Number.NaN]] as const) {
+    await expectFail(`court ${name} refused`, ls.startStream, P.org.uid,
+      { matchId: "M-CT", provider: "youtube", videoId: VID[0], label: "SF1", court }, "INVALID_ARGUMENT", "Pick a court from 1 to 20.",
+      "invalid-argument");
+  }
+  check("refused court: nothing written", (await m(db, "M-CT"))?.stream === undefined && ((await t(db))?.liveStreams ?? []).length === 0);
+
+  const r = await ok<{ court?: number; label: string }>("start with court 3", ls.startStream, P.org.uid,
+    { matchId: "M-CT", provider: "youtube", videoId: VID[0], label: "SF1", court: 3 });
+  let md = await m(db, "M-CT");
+  let td = await t(db);
+  let e = td?.liveStreams?.find((x: { matchId: string }) => x.matchId === "M-CT");
+  check("court returned", r?.court === 3 && r?.label === "SF1", JSON.stringify(r));
+  check("court on matches.stream", md?.stream?.court === 3 && md?.stream?.label === "SF1", JSON.stringify(md?.stream));
+  check("court on liveStreams entry", e?.court === 3 && e?.label === "SF1" && Object.keys(e).length === 8, JSON.stringify(e));
+  await ok("court 20 (upper bound) accepted", ls.startStream, P.org.uid,
+    { matchId: "M-NOCT", provider: "youtube", videoId: VID[1], court: 20 }, true);
+  check("court 20 stored", (await m(db, "M-NOCT"))?.stream?.court === 20);
+  await ok("end M-NOCT", ls.endStream, P.org.uid, { matchId: "M-NOCT" }, true);
+
+  await ok("heartbeat keeps the court", ls.heartbeatStream, P.org.uid, { matchId: "M-CT", viewers: 4 });
+  md = await m(db, "M-CT");
+  e = (await t(db))?.liveStreams?.find((x: { matchId: string }) => x.matchId === "M-CT");
+  check("court kept after heartbeat", md?.stream?.court === 3 && e?.court === 3 && e?.viewers === 4);
+  await ok("restart with a new video keeps the court", ls.startStream, P.org.uid,
+    { matchId: "M-CT", provider: "youtube", videoId: VID[2], court: 5 });
+  md = await m(db, "M-CT");
+  e = (await t(db))?.liveStreams?.find((x: { matchId: string }) => x.matchId === "M-CT");
+  check("restart keeps the first court (like label)", md?.stream?.court === 3 && e?.court === 3 && e?.videoId === VID[2]);
+  await expectFail("invalid court refused even on resume", ls.startStream, P.org.uid,
+    { matchId: "M-CT", provider: "youtube", videoId: VID[2], court: 99 }, "INVALID_ARGUMENT");
+  await ok("end with court", ls.endStream, P.org.uid, { matchId: "M-CT" }, true);
+  check("court kept on the ended stream (replay)", (await m(db, "M-CT"))?.stream?.court === 3);
+
+  await ok("new stream after end without court", ls.startStream, P.org.uid,
+    { matchId: "M-CT", provider: "youtube", videoId: VID[3], court: null });
+  md = await m(db, "M-CT");
+  td = await t(db);
+  e = td?.liveStreams?.find((x: { matchId: string }) => x.matchId === "M-CT");
+  check("court absent (null sent): no field on stream", md?.stream?.status === "live" && !("court" in (md?.stream ?? {})),
+    JSON.stringify(md?.stream));
+  check("court absent: no field on entry", !!e && !("court" in e) && Object.keys(e).length === 7, JSON.stringify(e));
+  await ok("start M-NOCT again without court", ls.startStream, P.org.uid, { matchId: "M-NOCT", provider: "youtube", videoId: VID[4] });
+  md = await m(db, "M-NOCT");
+  e = (await t(db))?.liveStreams?.find((x: { matchId: string }) => x.matchId === "M-NOCT");
+  check("court not sent: omitted on both docs", !("court" in (md?.stream ?? {})) && !!e && !("court" in e));
+  await ok("end M-CT", ls.endStream, P.org.uid, { matchId: "M-CT" }, true);
+  await ok("end M-NOCT", ls.endStream, P.org.uid, { matchId: "M-NOCT" }, true);
+  check("court section leaves no live streams", (await t(db))?.liveStreamCount === 0);
+}
+
 async function activeAndStale(db: Firestore): Promise<void> {
   console.log("\n── STREAM_ACTIVE, stale takeover, cleanup job (injected clock), orphan entries ──");
   await newMatch(db, "M-ACT");
@@ -414,6 +469,7 @@ async function main(): Promise<void> {
   await newMatch(db, "M2");
   await switchAndInput(db);
   await lifecycle(db);
+  await courts(db);
   await activeAndStale(db);
   await finishEnds(db);
   triggerFilter();

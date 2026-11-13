@@ -33,6 +33,8 @@ export interface StreamDoc {
   videoId: string;
   status: "live" | "ended";
   label: string;
+  /** Court number 1–20 chosen on Go live setup; absent when the app didn't send one. */
+  court?: number;
   byUid: string;
   byName: string;
   startedAt: Timestamp;
@@ -50,6 +52,8 @@ export interface LiveStreamEntry {
   matchId: string;
   videoId: string;
   label: string;
+  /** As stream.court (absent when not set). */
+  court?: number;
   teamAName: string;
   teamBName: string;
   viewers: number;
@@ -101,6 +105,15 @@ export function streamLabel(requested: unknown, match: MatchDoc): string {
   return "Match";
 }
 
+export const MAX_COURT = 20;
+
+/** Optional court number: undefined when absent, null when not an integer 1–MAX_COURT. */
+export function courtArg(v: unknown): number | undefined | null {
+  if (v === undefined || v === null) return undefined;
+  if (typeof v !== "number" || !Number.isInteger(v) || v < 1 || v > MAX_COURT) return null;
+  return v;
+}
+
 /** Non-negative integer from a heartbeat field (undefined when absent). */
 export function countArg(v: unknown, max: number): number | undefined | null {
   if (v === undefined || v === null) return undefined;
@@ -141,7 +154,8 @@ export function tournamentPatch(before: LiveStreamEntry[], after: LiveStreamEntr
 
 export function entryFor(matchId: string, s: StreamDoc, names: { a: string; b: string }): LiveStreamEntry {
   return {
-    matchId, videoId: s.videoId, label: s.label, teamAName: names.a, teamBName: names.b, viewers: s.viewers,
+    matchId, videoId: s.videoId, label: s.label, ...(s.court !== undefined ? { court: s.court } : {}),
+    teamAName: names.a, teamBName: names.b, viewers: s.viewers,
     startedAt: s.startedAt,
   };
 }

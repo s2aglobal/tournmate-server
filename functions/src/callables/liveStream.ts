@@ -8,7 +8,7 @@ import { playerById, playerForUid, resolveDocId } from "../services/identity";
 import { MatchDoc, RegistrationDoc, TournamentDoc, parseSportType } from "../types";
 import { SPORTS_CONFIG_COLLECTION, SPORTS_CONFIG_DOC_ID } from "../config/sportsCatalog";
 import {
-  StreamDoc, StreamProvider, countArg, endedStream, entriesOf, entryFor, isLive, isStale, isYouTubeVideoId,
+  StreamDoc, StreamProvider, countArg, courtArg, endedStream, entriesOf, entryFor, isLive, isStale, isYouTubeVideoId,
   removeEntry, streamLabel, streamOf, streamingEnabled, tournamentPatch, upsertEntry, STREAM_PROVIDERS,
 } from "../services/liveStream";
 
@@ -104,8 +104,9 @@ function durationSec(s: StreamDoc): number {
 // ─── startStream ────────────────────────────────────────
 
 /**
- * startStream({ matchId, provider: "youtube", videoId, label? }) →
- * { status: "live", streamStatus: "started" | "resumed" | "restarted", videoId }.
+ * startStream({ matchId, provider: "youtube", videoId, label?, court? }) →
+ * { status: "live", streamStatus: "started" | "resumed" | "restarted", videoId, label, court? }.
+ * `court` (integer 1–20) is stored on a new stream only, like `label`.
  * Organizer only; badminton; the match not finished; the sport switched on in
  * `config/sports.liveStreaming` (for a new stream). One live stream per match:
  * the same streamer calling again resumes (same videoId) or restarts with a
@@ -124,6 +125,8 @@ export const startStream = onCall(CALLABLE_OPTS, async (req) => {
     fail("invalid-argument", "INVALID_ARGUMENT", "That YouTube stream isn't valid. Try going live again.");
   }
   const videoId = d.videoId;
+  const court = courtArg(d.court);
+  if (court === null) fail("invalid-argument", "INVALID_ARGUMENT", "Pick a court from 1 to 20.");
 
   const result = await db.runTransaction(async (tx) => {
     const l: Loaded = await load(db, tx, matchId);
@@ -162,6 +165,7 @@ export const startStream = onCall(CALLABLE_OPTS, async (req) => {
     const me = await playerForUid(db, uid, tx);
     const stream: StreamDoc = {
       provider: provider as StreamProvider, videoId, status: "live", label: streamLabel(d.label, l.match),
+      ...(court !== undefined ? { court } : {}),
       byUid: uid, byName: me?.data.name || "The organizer", startedAt: now, lastHeartbeatAt: now,
       viewers: 0, peakViewers: 0, reconnects: 0,
     };
@@ -170,7 +174,10 @@ export const startStream = onCall(CALLABLE_OPTS, async (req) => {
     return { streamStatus: "started", stream };
   });
   logger.info(`startStream ${matchId}: ${result.streamStatus} ${result.stream.videoId}`);
-  return { status: "live", streamStatus: result.streamStatus, videoId: result.stream.videoId, label: result.stream.label };
+  return {
+    status: "live", streamStatus: result.streamStatus, videoId: result.stream.videoId, label: result.stream.label,
+    ...(result.stream.court !== undefined ? { court: result.stream.court } : {}),
+  };
 });
 
 // ─── heartbeatStream ────────────────────────────────────
