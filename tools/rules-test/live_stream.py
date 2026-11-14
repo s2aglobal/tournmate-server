@@ -82,4 +82,26 @@ expect(merge("matches/LS_DONE", "org", {**match(), "statusRaw": "finished", "str
                                         "endedAt": Ts(DATE), "endedReason": "organizer"}}), 200,
        "full-doc match write resending the unchanged stream passes")
 
+print("# tournaments: crew is server-only (Tournament crew callables)")
+CREW = {"ca1": {"role": "camera", "status": "joined", "name": "Priya", "playerId": "P1", "invitedBy": "org",
+                "invitedAt": Ts(DATE), "joinedAt": Ts(DATE), "via": "player"}}
+expect(set_doc("tournaments/LS_CREWNEW", "org", {**TOURNAMENT, "crew": CREW}), 403, "create with crew rejected")
+expect(set_doc("tournaments/LS_CREW", "org", TOURNAMENT), 200, "organizer creates tournament for crew")
+expect(merge("tournaments/LS_CREW", "org", {"crew": CREW}), 403, "organizer write of crew rejected")
+expect(merge("tournaments/LS_CREW", "ca1", {"crew": CREW}), 403, "player adding themselves to the crew rejected")
+set_doc("tournaments/LS_CREW", "owner", {**TOURNAMENT, "crew": CREW})
+expect(merge("tournaments/LS_CREW", "org", {"title": "Smash Open Crew"}), 200, "organizer edit with a crew passes")
+expect(merge("tournaments/LS_CREW", "org", {**TOURNAMENT, "title": "Smash Open Crew 2", "crew": CREW}), 200,
+       "full-doc edit resending the unchanged crew passes")
+expect(merge("tournaments/LS_CREW", "org", {"crew": {}}), 403, "organizer clearing the crew rejected")
+expect(merge("tournaments/LS_CREW", "org", {"crew": None}), 403, "organizer nulling the crew rejected")
+expect(get("tournaments/LS_CREW", None), 200, "anyone reads a tournament with a crew")
+
+print("# server-only collections (YouTube tokens, server broadcasts, crew invites)")
+for coll in ["private_youtube", "serverBroadcasts", "serverBroadcastRate", "crewInvites"]:
+    set_doc(f"{coll}/X1", "owner", {"a": 1})
+    expect(get(f"{coll}/X1", "org"), 403, f"{coll}: signed-in read rejected")
+    expect(get(f"{coll}/X1", None), 403, f"{coll}: signed-out read rejected")
+    expect(set_doc(f"{coll}/org", "org", {"a": 2}), 403, f"{coll}: client write rejected")
+
 raise SystemExit(1 if failures else 0)

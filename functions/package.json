@@ -23,6 +23,7 @@
     "check:racket-live": "npm run build && node lib/scripts/checkRacketLive.js",
     "test:emulator-racket-live": "npm run build && firebase emulators:exec --only firestore --project demo-tournmate \"node lib/scripts/emulatorRacketLiveChecks.js\"",
     "test:emulator-live-stream": "npm run build && firebase emulators:exec --only firestore --project demo-tournmate \"node lib/scripts/emulatorLiveStreamChecks.js\"",
+    "test:emulator-crew": "npm run build && firebase emulators:exec --only firestore --project demo-tournmate \"node lib/scripts/emulatorCrewChecks.js\"",
     "test:emulator-cricket-live": "npm run build && firebase emulators:exec --only firestore --project demo-tournmate \"node lib/scripts/emulatorCricketLiveChecks.js\"",
     "check:openplay": "npm run build && node lib/scripts/checkOpenPlay.js",
     "check:draw": "npm run build && node lib/scripts/checkDraw.js",

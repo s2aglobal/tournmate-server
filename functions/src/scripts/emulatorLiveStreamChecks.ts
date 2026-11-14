@@ -171,7 +171,7 @@ async function switchAndInput(db: Firestore): Promise<void> {
 
   await expectFail("signed out", ls.startStream, null, { matchId: "M-OFF", provider: "youtube", playersAgreed: true, videoId: VID[0] }, "UNAUTHENTICATED");
   await expectFail("player in the match refused", ls.startStream, P.a1.uid, { matchId: "M-OFF", provider: "youtube", playersAgreed: true, videoId: VID[0] },
-    "NOT_ORGANIZER", "Only the organizer can stream this match.", "permission-denied");
+    "NOT_ORGANIZER", "Only the organizer or the tournament's camera crew can stream this match.", "permission-denied");
   await expectFail("outsider refused", ls.startStream, P.x.uid, { matchId: "M-OFF", provider: "youtube", playersAgreed: true, videoId: VID[0] }, "NOT_ORGANIZER");
   await expectFail("bad videoId (too short)", ls.startStream, P.org.uid, { matchId: "M-OFF", provider: "youtube", playersAgreed: true, videoId: "abc" },
     "INVALID_ARGUMENT", "That YouTube stream isn't valid. Try going live again.", "invalid-argument");
