@@ -155,9 +155,19 @@ async function switchAndInput(db: Firestore): Promise<void> {
     "LIVE_STREAMING_DISABLED");
   await db.collection("config").doc("sports").update({ liveStreaming: { badminton: true, tennis: true } });
   await newMatch(db, "M-TN", TT);
-  await expectFail("tennis switched on in config: still badminton only", ls.startStream, P.org.uid,
+  await expectFail("tennis switched on in config but not in LIVE_STREAM_SPORTS: refused", ls.startStream, P.org.uid,
     { matchId: "M-TN", provider: "youtube", playersAgreed: true, videoId: VID[0] }, "LIVE_STREAMING_DISABLED");
+  check("LIVE_STREAM_SPORTS is the capability list (badminton)", svc.LIVE_STREAM_SPORTS.join(",") === "badminton");
+  // Enabling a sport is config only: add it to the list + switch it on.
+  svc.LIVE_STREAM_SPORTS.push("tennis");
+  await ok("tennis in the list + switched on: allowed (no sport branches)", ls.startStream, P.org.uid,
+    { matchId: "M-TN", provider: "youtube", playersAgreed: true, videoId: VID[0] });
+  await ok("end the tennis stream", ls.endStream, P.org.uid, { matchId: "M-TN" }, true);
   await setSwitch(db, { badminton: true });
+  await newMatch(db, "M-TN2", TT);
+  await expectFail("tennis in the list but switched off in config: refused", ls.startStream, P.org.uid,
+    { matchId: "M-TN2", provider: "youtube", playersAgreed: true, videoId: VID[1] }, "LIVE_STREAMING_DISABLED");
+  svc.LIVE_STREAM_SPORTS.pop();
 
   await expectFail("signed out", ls.startStream, null, { matchId: "M-OFF", provider: "youtube", playersAgreed: true, videoId: VID[0] }, "UNAUTHENTICATED");
   await expectFail("player in the match refused", ls.startStream, P.a1.uid, { matchId: "M-OFF", provider: "youtube", playersAgreed: true, videoId: VID[0] },

@@ -60,7 +60,7 @@ import {
 } from "../config/sportsCatalog";
 import type { SportType } from "../types";
 import { RACKET_SPORTS } from "../services/racketLive";
-import { STREAMING_SPORTS } from "../services/liveStream";
+import { LIVE_STREAM_SPORTS } from "../services/liveStream";
 
 interface Args {
   projectId?: string;
@@ -115,7 +115,7 @@ function parseLiveScoring(value: string | undefined): Partial<Record<SportType, 
 }
 
 function parseLiveStreaming(value: string | undefined): Partial<Record<SportType, boolean>> {
-  return parseSwitch("--live-streaming", "live streaming", STREAMING_SPORTS, value);
+  return parseSwitch("--live-streaming", "live streaming", LIVE_STREAM_SPORTS, value);
 }
 
 function parseArgs(argv: string[]): Args {

@@ -4,7 +4,7 @@ import { MatchDoc, TournamentDoc } from "../types";
 import { resolveDocId } from "./identity";
 
 /**
- * Live video streaming (badminton first; contract: live-stream-contract.md).
+ * Live video streaming (sports in `LIVE_STREAM_SPORTS`; contract: live-stream-contract.md).
  *
  * The organizer's phone creates an unlisted YouTube broadcast and tells us
  * its `videoId`; the server never sees Google tokens. Server-written state:
@@ -18,7 +18,16 @@ import { resolveDocId } from "./identity";
 
 export const STREAM_PROVIDERS = ["youtube"] as const;
 export type StreamProvider = (typeof STREAM_PROVIDERS)[number];
-export const STREAMING_SPORTS: readonly string[] = ["badminton"];
+/**
+ * The sports whose matches can be streamed (the server's capability list).
+ * A sport belongs here once it has live scoring (racket live / cricket live),
+ * because the video's score overlay and the watch screen's score card read
+ * `matches/{id}.live`. Streaming a sport needs BOTH this list and the
+ * per-environment switch `config/sports.liveStreaming[sport] == true`.
+ * Enabling another sport = add it here + flip the config; no other code
+ * branches on the sport.
+ */
+export const LIVE_STREAM_SPORTS: string[] = ["badminton"];
 
 /** A stream with no heartbeat for this long is ended by the cleanup job (`endedReason: "stale"`). */
 export const STREAM_STALE_MS = 10 * 60 * 1000;
@@ -86,10 +95,10 @@ export function isStale(s: StreamDoc, nowMs: number): boolean {
   return nowMs - lastSeenMs(s) >= STREAM_STALE_MS;
 }
 
-/** The sports switched on in `config/sports.liveStreaming` (absent = off). */
+/** Whether a sport can stream: in `LIVE_STREAM_SPORTS` and switched on in `config/sports.liveStreaming` (absent = off). */
 export function streamingEnabled(config: Record<string, unknown> | undefined, sport: string): boolean {
   const map = config?.liveStreaming;
-  return STREAMING_SPORTS.includes(sport) && !!map && typeof map === "object" &&
+  return LIVE_STREAM_SPORTS.includes(sport) && !!map && typeof map === "object" &&
     (map as Record<string, unknown>)[sport] === true;
 }
 
