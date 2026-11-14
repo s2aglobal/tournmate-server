@@ -104,9 +104,12 @@ function durationSec(s: StreamDoc): number {
 // ─── startStream ────────────────────────────────────────
 
 /**
- * startStream({ matchId, provider: "youtube", videoId, label?, court? }) →
+ * startStream({ matchId, provider: "youtube", videoId, label?, court?, playersAgreed }) →
  * { status: "live", streamStatus: "started" | "resumed" | "restarted", videoId, label, court? }.
  * `court` (integer 1–20) is stored on a new stream only, like `label`.
+ * A new stream needs `playersAgreed: true` (the organizer ticked "Players
+ * agreed to be streamed"); the time is stored as `playersAgreedAt`. Resume and
+ * restart reuse the original agreement.
  * Organizer only; badminton; the match not finished; the sport switched on in
  * `config/sports.liveStreaming` (for a new stream). One live stream per match:
  * the same streamer calling again resumes (same videoId) or restarts with a
@@ -162,11 +165,14 @@ export const startStream = onCall(CALLABLE_OPTS, async (req) => {
     }
 
     if (!streamingEnabled(configSnap.data(), sport)) fail("failed-precondition", "LIVE_STREAMING_DISABLED", DISABLED);
+    if (d.playersAgreed !== true) {
+      fail("failed-precondition", "PLAYERS_NOT_AGREED", "Confirm the players agreed to be streamed.");
+    }
     const me = await playerForUid(db, uid, tx);
     const stream: StreamDoc = {
       provider: provider as StreamProvider, videoId, status: "live", label: streamLabel(d.label, l.match),
       ...(court !== undefined ? { court } : {}),
-      byUid: uid, byName: me?.data.name || "The organizer", startedAt: now, lastHeartbeatAt: now,
+      byUid: uid, byName: me?.data.name || "The organizer", playersAgreedAt: now, startedAt: now, lastHeartbeatAt: now,
       viewers: 0, peakViewers: 0, reconnects: 0,
     };
     tx.update(db.collection("matches").doc(matchId), { stream });

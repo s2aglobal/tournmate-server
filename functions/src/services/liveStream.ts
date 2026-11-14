@@ -37,6 +37,8 @@ export interface StreamDoc {
   court?: number;
   byUid: string;
   byName: string;
+  /** When the organizer confirmed the players agreed to be streamed (new streams; absent on older docs). */
+  playersAgreedAt?: Timestamp;
   startedAt: Timestamp;
   lastHeartbeatAt: Timestamp;
   endedAt?: Timestamp;

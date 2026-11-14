@@ -144,51 +144,56 @@ async function switchAndInput(db: Firestore): Promise<void> {
   console.log("\n── config/sports.liveStreaming switch, sports, rights, input ──");
   await newMatch(db, "M-OFF");
   await setSwitch(db, null);
-  await expectFail("switch absent: refused", ls.startStream, P.org.uid, { matchId: "M-OFF", provider: "youtube", videoId: VID[0] },
+  await expectFail("switch absent: refused", ls.startStream, P.org.uid, { matchId: "M-OFF", provider: "youtube", playersAgreed: true, videoId: VID[0] },
     "LIVE_STREAMING_DISABLED", "Live video isn't available for this sport yet.", "failed-precondition");
   await setSwitch(db, { badminton: false });
-  await expectFail("switch false: refused", ls.startStream, P.org.uid, { matchId: "M-OFF", provider: "youtube", videoId: VID[0] },
+  await expectFail("switch false: refused", ls.startStream, P.org.uid, { matchId: "M-OFF", provider: "youtube", playersAgreed: true, videoId: VID[0] },
     "LIVE_STREAMING_DISABLED");
   await setSwitch(db, { badminton: true });
   await newMatch(db, "M-CR", TC);
-  await expectFail("cricket: not available", ls.startStream, P.org.uid, { matchId: "M-CR", provider: "youtube", videoId: VID[0] },
+  await expectFail("cricket: not available", ls.startStream, P.org.uid, { matchId: "M-CR", provider: "youtube", playersAgreed: true, videoId: VID[0] },
     "LIVE_STREAMING_DISABLED");
   await db.collection("config").doc("sports").update({ liveStreaming: { badminton: true, tennis: true } });
   await newMatch(db, "M-TN", TT);
   await expectFail("tennis switched on in config: still badminton only", ls.startStream, P.org.uid,
-    { matchId: "M-TN", provider: "youtube", videoId: VID[0] }, "LIVE_STREAMING_DISABLED");
+    { matchId: "M-TN", provider: "youtube", playersAgreed: true, videoId: VID[0] }, "LIVE_STREAMING_DISABLED");
   await setSwitch(db, { badminton: true });
 
-  await expectFail("signed out", ls.startStream, null, { matchId: "M-OFF", provider: "youtube", videoId: VID[0] }, "UNAUTHENTICATED");
-  await expectFail("player in the match refused", ls.startStream, P.a1.uid, { matchId: "M-OFF", provider: "youtube", videoId: VID[0] },
+  await expectFail("signed out", ls.startStream, null, { matchId: "M-OFF", provider: "youtube", playersAgreed: true, videoId: VID[0] }, "UNAUTHENTICATED");
+  await expectFail("player in the match refused", ls.startStream, P.a1.uid, { matchId: "M-OFF", provider: "youtube", playersAgreed: true, videoId: VID[0] },
     "NOT_ORGANIZER", "Only the organizer can stream this match.", "permission-denied");
-  await expectFail("outsider refused", ls.startStream, P.x.uid, { matchId: "M-OFF", provider: "youtube", videoId: VID[0] }, "NOT_ORGANIZER");
-  await expectFail("bad videoId (too short)", ls.startStream, P.org.uid, { matchId: "M-OFF", provider: "youtube", videoId: "abc" },
+  await expectFail("outsider refused", ls.startStream, P.x.uid, { matchId: "M-OFF", provider: "youtube", playersAgreed: true, videoId: VID[0] }, "NOT_ORGANIZER");
+  await expectFail("bad videoId (too short)", ls.startStream, P.org.uid, { matchId: "M-OFF", provider: "youtube", playersAgreed: true, videoId: "abc" },
     "INVALID_ARGUMENT", "That YouTube stream isn't valid. Try going live again.", "invalid-argument");
   await expectFail("bad videoId (url)", ls.startStream, P.org.uid,
-    { matchId: "M-OFF", provider: "youtube", videoId: "https://youtu.be/dQw4w9WgXcQ" }, "INVALID_ARGUMENT");
+    { matchId: "M-OFF", provider: "youtube", playersAgreed: true, videoId: "https://youtu.be/dQw4w9WgXcQ" }, "INVALID_ARGUMENT");
   await expectFail("unknown provider", ls.startStream, P.org.uid, { matchId: "M-OFF", provider: "twitch", videoId: VID[0] },
     "INVALID_ARGUMENT", "This video service isn't supported. Update the app and try again.");
-  await expectFail("missing match", ls.startStream, P.org.uid, { provider: "youtube", videoId: VID[0] }, "INVALID_ARGUMENT", "Missing match.");
-  await expectFail("unknown match", ls.startStream, P.org.uid, { matchId: "M-NOPE", provider: "youtube", videoId: VID[0] }, "NOT_FOUND");
+  await expectFail("missing match", ls.startStream, P.org.uid, { provider: "youtube", playersAgreed: true, videoId: VID[0] }, "INVALID_ARGUMENT", "Missing match.");
+  await expectFail("unknown match", ls.startStream, P.org.uid, { matchId: "M-NOPE", provider: "youtube", playersAgreed: true, videoId: VID[0] }, "NOT_FOUND");
   await newMatch(db, "M-DONE", TB, { statusRaw: "finished" });
-  await expectFail("finished match", ls.startStream, P.org.uid, { matchId: "M-DONE", provider: "youtube", videoId: VID[0] },
+  await expectFail("finished match", ls.startStream, P.org.uid, { matchId: "M-DONE", provider: "youtube", playersAgreed: true, videoId: VID[0] },
     "MATCH_FINISHED", "This match is already finished.");
   await newMatch(db, "M-SUB", TB, { statusRaw: "scoreSubmitted" });
-  await expectFail("score submitted", ls.startStream, P.org.uid, { matchId: "M-SUB", provider: "youtube", videoId: VID[0] }, "MATCH_FINISHED");
+  await expectFail("score submitted", ls.startStream, P.org.uid, { matchId: "M-SUB", provider: "youtube", playersAgreed: true, videoId: VID[0] }, "MATCH_FINISHED");
   check("nothing written by refusals", (await m(db, "M-OFF"))?.stream === undefined && (await t(db))?.liveStreams === undefined);
 }
 
 async function lifecycle(db: Firestore): Promise<void> {
   console.log("\n── start, two concurrent streams, resume / restart, heartbeat, end ──");
+  await expectFail("new stream without players agreed refused", ls.startStream, P.org.uid,
+    { matchId: "M1", provider: "youtube", videoId: VID[0] }, "PLAYERS_NOT_AGREED", "Confirm the players agreed to be streamed.");
+  await expectFail("playersAgreed must be true", ls.startStream, P.org.uid,
+    { matchId: "M1", provider: "youtube", playersAgreed: "yes", videoId: VID[0] }, "PLAYERS_NOT_AGREED");
+  check("refused start writes nothing", (await m(db, "M1"))?.stream === undefined);
   const r1 = await ok<{ status: string; streamStatus: string; label: string }>("organizer starts M1 (label SF1, lower-case id)",
-    ls.startStream, P.org.uid, { matchId: "m1", provider: "youtube", videoId: VID[0], label: "  SF1 " });
+    ls.startStream, P.org.uid, { matchId: "m1", provider: "youtube", playersAgreed: true, videoId: VID[0], label: "  SF1 " });
   let md = await m(db, "M1");
   const s = md?.stream;
   check("start result", r1?.status === "live" && r1?.streamStatus === "started" && r1?.label === "SF1");
   check("stream shape", s?.provider === "youtube" && s?.videoId === VID[0] && s?.status === "live" && s?.label === "SF1" &&
     s?.byUid === P.org.uid && s?.byName === "Olga Organizer" && s?.startedAt instanceof Timestamp &&
-    s?.lastHeartbeatAt instanceof Timestamp && s?.viewers === 0 && s?.peakViewers === 0 && s?.reconnects === 0 &&
+    s?.playersAgreedAt instanceof Timestamp && s?.lastHeartbeatAt instanceof Timestamp && s?.viewers === 0 && s?.peakViewers === 0 && s?.reconnects === 0 &&
     s?.endedAt === undefined && s?.endedReason === undefined, JSON.stringify(s));
   let td = await t(db);
   const e = td?.liveStreams?.[0];
@@ -197,15 +202,15 @@ async function lifecycle(db: Firestore): Promise<void> {
     e?.viewers === 0 && e?.startedAt instanceof Timestamp && Object.keys(e).length === 7, JSON.stringify(e));
   check("live scoring untouched", md?.live === undefined);
 
-  await ok("organizer starts M2 (default label)", ls.startStream, P.org.uid, { matchId: "M2", provider: "youtube", videoId: VID[1] });
+  await ok("organizer starts M2 (default label)", ls.startStream, P.org.uid, { matchId: "M2", provider: "youtube", playersAgreed: true, videoId: VID[1] });
   td = await t(db);
   check("two concurrent streams, oldest first", td?.liveStreamCount === 2 && ids(td?.liveStreams) === "M1,M2" &&
     td?.liveStreams?.[1]?.label === "Round 1", ids(td?.liveStreams));
   await expectFail("second stream on M1 by someone else", ls.startStream, P.a1.uid,
-    { matchId: "M1", provider: "youtube", videoId: VID[2] }, "NOT_ORGANIZER");
+    { matchId: "M1", provider: "youtube", playersAgreed: true, videoId: VID[2] }, "NOT_ORGANIZER");
 
   const res = await ok<{ streamStatus: string }>("same organizer, same video = resume", ls.startStream, P.org.uid,
-    { matchId: "M1", provider: "youtube", videoId: VID[0] });
+    { matchId: "M1", provider: "youtube", playersAgreed: true, videoId: VID[0] });
   check("resumed, nothing reset", res?.streamStatus === "resumed" && (await m(db, "M1"))?.stream?.videoId === VID[0] &&
     (await t(db))?.liveStreamCount === 2);
 
@@ -237,7 +242,7 @@ async function lifecycle(db: Firestore): Promise<void> {
 
   console.log("  restart with a new broadcast");
   const rs = await ok<{ streamStatus: string }>("same organizer, new video = restart", ls.startStream, P.org.uid,
-    { matchId: "M1", provider: "youtube", videoId: VID[2] });
+    { matchId: "M1", provider: "youtube", playersAgreed: true, videoId: VID[2] });
   md = await m(db, "M1");
   td = await t(db);
   check("restart replaces the video and resets counters", rs?.streamStatus === "restarted" && md?.stream?.videoId === VID[2] &&
@@ -265,16 +270,16 @@ async function lifecycle(db: Firestore): Promise<void> {
   check("no stream = no-op", none?.alreadyEnded === true && (await m(db, "M-OFF"))?.stream === undefined);
   await expectFail("heartbeat after end", ls.heartbeatStream, P.org.uid, { matchId: "M1", viewers: 1 }, "STREAM_ENDED",
     "This stream has ended.", "failed-precondition");
-  await ok("a new stream on the same match after end", ls.startStream, P.org.uid, { matchId: "M1", provider: "youtube", videoId: VID[3] });
+  await ok("a new stream on the same match after end", ls.startStream, P.org.uid, { matchId: "M1", provider: "youtube", playersAgreed: true, videoId: VID[3] });
   check("new stream replaces the ended one", (await m(db, "M1"))?.stream?.status === "live" &&
     (await m(db, "M1"))?.stream?.videoId === VID[3] && (await t(db))?.liveStreamCount === 2);
 
   console.log("  switch off with streams running");
   await setSwitch(db, {});
   await ok("switch off: heartbeat still works", ls.heartbeatStream, P.org.uid, { matchId: "M1", viewers: 2 });
-  await ok("switch off: resume still works", ls.startStream, P.org.uid, { matchId: "M1", provider: "youtube", videoId: VID[3] });
+  await ok("switch off: resume still works", ls.startStream, P.org.uid, { matchId: "M1", provider: "youtube", playersAgreed: true, videoId: VID[3] });
   await newMatch(db, "M-NEW");
-  await expectFail("switch off: no new stream", ls.startStream, P.org.uid, { matchId: "M-NEW", provider: "youtube", videoId: VID[4] },
+  await expectFail("switch off: no new stream", ls.startStream, P.org.uid, { matchId: "M-NEW", provider: "youtube", playersAgreed: true, videoId: VID[4] },
     "LIVE_STREAMING_DISABLED");
   await setSwitch(db, { badminton: true });
   await ok("end M1", ls.endStream, P.org.uid, { matchId: "M1" }, true);
@@ -289,13 +294,13 @@ async function courts(db: Firestore): Promise<void> {
   await newMatch(db, "M-NOCT");
   for (const [name, court] of [["0", 0], ["21", 21], ["2.5", 2.5], ["string \"3\"", "3"], ["-1", -1], ["NaN", Number.NaN]] as const) {
     await expectFail(`court ${name} refused`, ls.startStream, P.org.uid,
-      { matchId: "M-CT", provider: "youtube", videoId: VID[0], label: "SF1", court }, "INVALID_ARGUMENT", "Pick a court from 1 to 20.",
+      { matchId: "M-CT", provider: "youtube", playersAgreed: true, videoId: VID[0], label: "SF1", court }, "INVALID_ARGUMENT", "Pick a court from 1 to 20.",
       "invalid-argument");
   }
   check("refused court: nothing written", (await m(db, "M-CT"))?.stream === undefined && ((await t(db))?.liveStreams ?? []).length === 0);
 
   const r = await ok<{ court?: number; label: string }>("start with court 3", ls.startStream, P.org.uid,
-    { matchId: "M-CT", provider: "youtube", videoId: VID[0], label: "SF1", court: 3 });
+    { matchId: "M-CT", provider: "youtube", playersAgreed: true, videoId: VID[0], label: "SF1", court: 3 });
   let md = await m(db, "M-CT");
   let td = await t(db);
   let e = td?.liveStreams?.find((x: { matchId: string }) => x.matchId === "M-CT");
@@ -303,7 +308,7 @@ async function courts(db: Firestore): Promise<void> {
   check("court on matches.stream", md?.stream?.court === 3 && md?.stream?.label === "SF1", JSON.stringify(md?.stream));
   check("court on liveStreams entry", e?.court === 3 && e?.label === "SF1" && Object.keys(e).length === 8, JSON.stringify(e));
   await ok("court 20 (upper bound) accepted", ls.startStream, P.org.uid,
-    { matchId: "M-NOCT", provider: "youtube", videoId: VID[1], court: 20 }, true);
+    { matchId: "M-NOCT", provider: "youtube", playersAgreed: true, videoId: VID[1], court: 20 }, true);
   check("court 20 stored", (await m(db, "M-NOCT"))?.stream?.court === 20);
   await ok("end M-NOCT", ls.endStream, P.org.uid, { matchId: "M-NOCT" }, true);
 
@@ -312,24 +317,24 @@ async function courts(db: Firestore): Promise<void> {
   e = (await t(db))?.liveStreams?.find((x: { matchId: string }) => x.matchId === "M-CT");
   check("court kept after heartbeat", md?.stream?.court === 3 && e?.court === 3 && e?.viewers === 4);
   await ok("restart with a new video keeps the court", ls.startStream, P.org.uid,
-    { matchId: "M-CT", provider: "youtube", videoId: VID[2], court: 5 });
+    { matchId: "M-CT", provider: "youtube", playersAgreed: true, videoId: VID[2], court: 5 });
   md = await m(db, "M-CT");
   e = (await t(db))?.liveStreams?.find((x: { matchId: string }) => x.matchId === "M-CT");
   check("restart keeps the first court (like label)", md?.stream?.court === 3 && e?.court === 3 && e?.videoId === VID[2]);
   await expectFail("invalid court refused even on resume", ls.startStream, P.org.uid,
-    { matchId: "M-CT", provider: "youtube", videoId: VID[2], court: 99 }, "INVALID_ARGUMENT");
+    { matchId: "M-CT", provider: "youtube", playersAgreed: true, videoId: VID[2], court: 99 }, "INVALID_ARGUMENT");
   await ok("end with court", ls.endStream, P.org.uid, { matchId: "M-CT" }, true);
   check("court kept on the ended stream (replay)", (await m(db, "M-CT"))?.stream?.court === 3);
 
   await ok("new stream after end without court", ls.startStream, P.org.uid,
-    { matchId: "M-CT", provider: "youtube", videoId: VID[3], court: null });
+    { matchId: "M-CT", provider: "youtube", playersAgreed: true, videoId: VID[3], court: null });
   md = await m(db, "M-CT");
   td = await t(db);
   e = td?.liveStreams?.find((x: { matchId: string }) => x.matchId === "M-CT");
   check("court absent (null sent): no field on stream", md?.stream?.status === "live" && !("court" in (md?.stream ?? {})),
     JSON.stringify(md?.stream));
   check("court absent: no field on entry", !!e && !("court" in e) && Object.keys(e).length === 7, JSON.stringify(e));
-  await ok("start M-NOCT again without court", ls.startStream, P.org.uid, { matchId: "M-NOCT", provider: "youtube", videoId: VID[4] });
+  await ok("start M-NOCT again without court", ls.startStream, P.org.uid, { matchId: "M-NOCT", provider: "youtube", playersAgreed: true, videoId: VID[4] });
   md = await m(db, "M-NOCT");
   e = (await t(db))?.liveStreams?.find((x: { matchId: string }) => x.matchId === "M-NOCT");
   check("court not sent: omitted on both docs", !("court" in (md?.stream ?? {})) && !!e && !("court" in e));
@@ -341,15 +346,15 @@ async function courts(db: Firestore): Promise<void> {
 async function activeAndStale(db: Firestore): Promise<void> {
   console.log("\n── STREAM_ACTIVE, stale takeover, cleanup job (injected clock), orphan entries ──");
   await newMatch(db, "M-ACT");
-  await ok("start", ls.startStream, P.org.uid, { matchId: "M-ACT", provider: "youtube", videoId: VID[0] });
+  await ok("start", ls.startStream, P.org.uid, { matchId: "M-ACT", provider: "youtube", playersAgreed: true, videoId: VID[0] });
   // Someone else's live stream (e.g. the tournament changed hands).
   await db.collection("matches").doc("M-ACT").update({ "stream.byUid": "someone-else", "stream.byName": "Sam" });
-  await expectFail("another streamer's live stream", ls.startStream, P.org.uid, { matchId: "M-ACT", provider: "youtube", videoId: VID[1] },
+  await expectFail("another streamer's live stream", ls.startStream, P.org.uid, { matchId: "M-ACT", provider: "youtube", playersAgreed: true, videoId: VID[1] },
     "STREAM_ACTIVE", "Sam is streaming this match.", "failed-precondition");
   await ok("organizer can still heartbeat / end it", ls.heartbeatStream, P.org.uid, { matchId: "M-ACT", viewers: 1 });
   await db.collection("matches").doc("M-ACT").update({ "stream.lastHeartbeatAt": Timestamp.fromMillis(Date.now() - 11 * 60_000) });
   const take = await ok<{ streamStatus: string }>("stale stream can be replaced", ls.startStream, P.org.uid,
-    { matchId: "M-ACT", provider: "youtube", videoId: VID[1] });
+    { matchId: "M-ACT", provider: "youtube", playersAgreed: true, videoId: VID[1] });
   const md = await m(db, "M-ACT");
   check("replaced as a new stream", take?.streamStatus === "started" && md?.stream?.byUid === P.org.uid && md?.stream?.videoId === VID[1] &&
     (await t(db))?.liveStreamCount === 1);
@@ -357,8 +362,8 @@ async function activeAndStale(db: Firestore): Promise<void> {
   console.log("  cleanup job");
   await newMatch(db, "M-STALE");
   await newMatch(db, "M-FRESH");
-  await ok("start stale-to-be", ls.startStream, P.org.uid, { matchId: "M-STALE", provider: "youtube", videoId: VID[2] }, true);
-  await ok("start fresh", ls.startStream, P.org.uid, { matchId: "M-FRESH", provider: "youtube", videoId: VID[3] }, true);
+  await ok("start stale-to-be", ls.startStream, P.org.uid, { matchId: "M-STALE", provider: "youtube", playersAgreed: true, videoId: VID[2] }, true);
+  await ok("start fresh", ls.startStream, P.org.uid, { matchId: "M-FRESH", provider: "youtube", playersAgreed: true, videoId: VID[3] }, true);
   await db.collection("matches").doc("M-STALE").update({ "stream.lastHeartbeatAt": Timestamp.fromMillis(Date.now() - 10 * 60_000 - 5000) });
   let r = await svc.runStreamCleanup(db, new Date());
   check("9:59 and fresh streams stay, 10:05 ends", r.stale === 1 && (await m(db, "M-STALE"))?.stream?.endedReason === "stale" &&
@@ -376,7 +381,7 @@ async function activeAndStale(db: Firestore): Promise<void> {
 
   console.log("  orphan entries");
   await newMatch(db, "M-ORPH");
-  await ok("start", ls.startStream, P.org.uid, { matchId: "M-ORPH", provider: "youtube", videoId: VID[4] }, true);
+  await ok("start", ls.startStream, P.org.uid, { matchId: "M-ORPH", provider: "youtube", playersAgreed: true, videoId: VID[4] }, true);
   const entries = (await t(db))?.liveStreams ?? [];
   await db.collection("tournaments").doc(TB).update({
     liveStreams: [...entries, { matchId: "M-GONE", videoId: VID[5], label: "QF", teamAName: "", teamBName: "", viewers: 0, startedAt: Timestamp.now() },
@@ -397,7 +402,7 @@ async function finishEnds(db: Firestore): Promise<void> {
   console.log("\n── a finished match ends its stream (match_finished) ──");
   const start = async (id: string, v: string) => {
     await newMatch(db, id);
-    await ok(`start ${id}`, ls.startStream, P.org.uid, { matchId: id, provider: "youtube", videoId: v }, true);
+    await ok(`start ${id}`, ls.startStream, P.org.uid, { matchId: id, provider: "youtube", playersAgreed: true, videoId: v }, true);
   };
   await start("F-ORG", VID[0]);
   await start("F-PLAYER", VID[1]);
@@ -444,7 +449,7 @@ async function finishEnds(db: Firestore): Promise<void> {
   const r = await svc.runStreamCleanup(db, new Date());
   check("cleanup catches finished matches", r.finished === 1 && (await m(db, "F-STATUS"))?.stream?.endedReason === "match_finished" &&
     (await t(db))?.liveStreamCount === 0, JSON.stringify(r));
-  await expectFail("no stream on a finished match", ls.startStream, P.org.uid, { matchId: "F-ORG", provider: "youtube", videoId: VID[5] },
+  await expectFail("no stream on a finished match", ls.startStream, P.org.uid, { matchId: "F-ORG", provider: "youtube", playersAgreed: true, videoId: VID[5] },
     "MATCH_FINISHED");
   const fin = await ok<{ alreadyEnded: boolean }>("end on a finished match = no-op", ls.endStream, P.org.uid, { matchId: "F-ORG" });
   check("already ended by finish", fin?.alreadyEnded === true);
