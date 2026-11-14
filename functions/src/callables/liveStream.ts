@@ -7,6 +7,8 @@ import { Loaded, isOrganizer, load } from "./scores";
 import { playerById, playerForUid, resolveDocId } from "../services/identity";
 import { MatchDoc, RegistrationDoc, TournamentDoc, parseSportType } from "../types";
 import { SPORTS_CONFIG_COLLECTION, SPORTS_CONFIG_DOC_ID } from "../config/sportsCatalog";
+import { crewOf, hasCrewRole, tournamentClosed } from "../services/crew";
+import { SERVER_BROADCASTS, ServerBroadcastDoc, YOUTUBE_SECRETS, closeServerBroadcast } from "../services/youtubeServer";
 import {
   StreamDoc, StreamProvider, countArg, courtArg, endedStream, entriesOf, entryFor, isLive, isStale, isYouTubeVideoId,
   removeEntry, streamLabel, streamOf, streamingEnabled, tournamentPatch, upsertEntry, STREAM_PROVIDERS,
@@ -19,15 +21,22 @@ import {
  * transaction each. Independent of live scoring (callables/racketLive.ts).
  * Stale streams are ended by `streamCleanup` (triggers/streamCleanup.ts);
  * a finishing match ends its stream in `commit` (callables/scores.ts).
+ *
+ * Who streams: the organizer, or a `joined` camera member of the tournament
+ * crew (services/crew.ts) while the tournament is open. A crew member's new
+ * stream must use a broadcast the server created on the organizer's channel
+ * (createCrewBroadcast); such streams carry `createdBy: "server"` and are
+ * completed on YouTube by the server when they end.
  */
 
 const DISABLED = "Live video isn't available for this sport yet.";
-const ORGANIZER_ONLY = "Only the organizer can stream this match.";
+const ORGANIZER_ONLY = "Only the organizer or the tournament's camera crew can stream this match.";
+const BAD_VIDEO = "That YouTube stream isn't valid. Try going live again.";
 const MAX_VIEWERS = 10_000_000;
 const MAX_RECONNECTS = 100_000;
 const MAX_BITRATE = 100_000;
 
-function requireMatchId(d: Data): string {
+export function requireMatchId(d: Data): string {
   const id = d.matchId;
   if (typeof id !== "string" || id.length === 0 || id.length > 128 || id.includes("/")) {
     fail("invalid-argument", "INVALID_ARGUMENT", "Missing match.");
@@ -47,7 +56,7 @@ function counters(d: Data): { viewers?: number; reconnects?: number; bitrateKbps
 }
 
 /** "Priya & Arjun": a team's name, else the players' first names. */
-async function sideName(db: Firestore, tx: Transaction, reg: RegistrationDoc | null): Promise<string> {
+export async function sideName(db: Firestore, tx: Transaction, reg: RegistrationDoc | null): Promise<string> {
   if (!reg) return "TBD";
   if (reg.teamName && reg.teamName.trim()) return reg.teamName.trim();
   const names: string[] = [];
@@ -84,6 +93,20 @@ function organizerOf(t: TournamentDoc | undefined, uid: string): boolean {
   return !!t?.createdBy && t.createdBy === uid;
 }
 
+/** Organizer, or a joined camera crew member of an open tournament. */
+export function canStream(t: TournamentDoc | undefined, uid: string): boolean {
+  return organizerOf(t, uid) || hasCrewRole(t, uid, "camera");
+}
+
+/** Refuses a caller who can't stream; a crew member of a closed tournament gets TOURNAMENT_CLOSED. */
+export function requireCanStream(t: TournamentDoc | undefined, uid: string): void {
+  if (canStream(t, uid)) return;
+  if (crewOf(t)[uid] && tournamentClosed(t)) {
+    fail("failed-precondition", "TOURNAMENT_CLOSED", "This tournament has ended, so the crew can't stream anymore.");
+  }
+  fail("permission-denied", "NOT_ORGANIZER", ORGANIZER_ONLY);
+}
+
 /** Streamer or organizer. */
 function requireStreamer(r: Ref, s: StreamDoc, uid: string): void {
   if (s.byUid !== uid && !organizerOf(r.tournament, uid)) fail("permission-denied", "NOT_ORGANIZER", ORGANIZER_ONLY);
@@ -110,7 +133,9 @@ function durationSec(s: StreamDoc): number {
  * A new stream needs `playersAgreed: true` (the organizer ticked "Players
  * agreed to be streamed"); the time is stored as `playersAgreedAt`. Resume and
  * restart reuse the original agreement.
- * Organizer only; badminton; the match not finished; the sport switched on in
+ * Organizer or joined camera crew (a crew member's new / restarted video must be
+ * a server broadcast for this match, from createCrewBroadcast); the match not
+ * finished; the sport in LIVE_STREAM_SPORTS and switched on in
  * `config/sports.liveStreaming` (for a new stream). One live stream per match:
  * the same streamer calling again resumes (same videoId) or restarts with a
  * new videoId; anyone else gets STREAM_ACTIVE (unless the stream is stale).
@@ -125,7 +150,7 @@ export const startStream = onCall(CALLABLE_OPTS, async (req) => {
     fail("invalid-argument", "INVALID_ARGUMENT", "This video service isn't supported. Update the app and try again.");
   }
   if (!isYouTubeVideoId(d.videoId)) {
-    fail("invalid-argument", "INVALID_ARGUMENT", "That YouTube stream isn't valid. Try going live again.");
+    fail("invalid-argument", "INVALID_ARGUMENT", BAD_VIDEO);
   }
   const videoId = d.videoId;
   const court = courtArg(d.court);
@@ -135,7 +160,24 @@ export const startStream = onCall(CALLABLE_OPTS, async (req) => {
     const l: Loaded = await load(db, tx, matchId);
     const sport = parseSportType(l.tournament.sportType);
     const configSnap = await tx.get(db.collection(SPORTS_CONFIG_COLLECTION).doc(SPORTS_CONFIG_DOC_ID));
-    if (!isOrganizer(l, uid)) fail("permission-denied", "NOT_ORGANIZER", ORGANIZER_ONLY);
+    const sbSnap = await tx.get(db.collection(SERVER_BROADCASTS).doc(videoId));
+    requireCanStream(l.tournament, uid);
+    const organizer = isOrganizer(l, uid);
+    // A broadcast the server created: only for its match, only by whoever asked for it.
+    const sb = sbSnap.exists ? (sbSnap.data() as ServerBroadcastDoc) : null;
+    if (sb && (sb.matchId !== matchId || sb.createdByUid !== uid)) fail("invalid-argument", "INVALID_ARGUMENT", BAD_VIDEO);
+    const serverFields = (s: StreamDoc): StreamDoc => {
+      const next = { ...s };
+      delete next.createdBy;
+      delete next.broadcastId;
+      return sb ? { ...next, createdBy: "server", broadcastId: videoId } : next;
+    };
+    // Crew streams go to the organizer's channel: a crew member's new video must be a server broadcast.
+    const requireServerBroadcast = () => {
+      if (!organizer && !sb) {
+        fail("invalid-argument", "INVALID_ARGUMENT", "Go live from TournMate so the video goes to the organizer's channel.");
+      }
+    };
     const liveStatus = (l.match.live as { status?: unknown } | undefined)?.status;
     if (l.match.statusRaw !== "scheduled" || liveStatus === "finished") {
       fail("failed-precondition", "MATCH_FINISHED", "This match is already finished.");
@@ -154,9 +196,10 @@ export const startStream = onCall(CALLABLE_OPTS, async (req) => {
       }
       // Same streamer: resume (same video) or restart with a new broadcast.
       const restarted = current.videoId !== videoId;
+      if (restarted) requireServerBroadcast();
       const next: StreamDoc = restarted ?
-        { ...current, provider: provider as StreamProvider, videoId, startedAt: now, lastHeartbeatAt: now,
-          viewers: 0, peakViewers: 0, reconnects: 0 } :
+        serverFields({ ...current, provider: provider as StreamProvider, videoId, startedAt: now, lastHeartbeatAt: now,
+          viewers: 0, peakViewers: 0, reconnects: 0 }) :
         { ...current, lastHeartbeatAt: now };
       delete next.bitrateKbps;
       tx.update(db.collection("matches").doc(matchId), { stream: next });
@@ -168,13 +211,15 @@ export const startStream = onCall(CALLABLE_OPTS, async (req) => {
     if (d.playersAgreed !== true) {
       fail("failed-precondition", "PLAYERS_NOT_AGREED", "Confirm the players agreed to be streamed.");
     }
+    requireServerBroadcast();
     const me = await playerForUid(db, uid, tx);
-    const stream: StreamDoc = {
+    const fallbackName = organizer ? "The organizer" : (crewOf(l.tournament)[uid]?.name || "Camera crew");
+    const stream: StreamDoc = serverFields({
       provider: provider as StreamProvider, videoId, status: "live", label: streamLabel(d.label, l.match),
       ...(court !== undefined ? { court } : {}),
-      byUid: uid, byName: me?.data.name || "The organizer", playersAgreedAt: now, startedAt: now, lastHeartbeatAt: now,
+      byUid: uid, byName: me?.data.name || fallbackName, playersAgreedAt: now, startedAt: now, lastHeartbeatAt: now,
       viewers: 0, peakViewers: 0, reconnects: 0,
-    };
+    });
     tx.update(db.collection("matches").doc(matchId), { stream });
     writeTournament(r, (list) => upsertEntry(list, entryFor(matchId, stream, names)));
     return { streamStatus: "started", stream };
@@ -236,8 +281,11 @@ export const heartbeatStream = onCall(CALLABLE_OPTS, async (req) => {
  * { status: "ended", alreadyEnded, endedReason, durationSec, peakViewers, reconnects }.
  * Streamer or organizer. Idempotent: no stream or already ended →
  * `alreadyEnded: true`, nothing written. Optional final counters as in a heartbeat.
+ * A server broadcast (`stream.createdBy == "server"`) is also completed on
+ * YouTube with the organizer's token; the result says so in `youtubeEnded`
+ * (present only for server broadcasts).
  */
-export const endStream = onCall(CALLABLE_OPTS, async (req) => {
+export const endStream = onCall({ ...CALLABLE_OPTS, secrets: YOUTUBE_SECRETS }, async (req) => {
   const uid = requireUid(req);
   const d = dataOf(req);
   const db = getFirestore();
@@ -247,7 +295,7 @@ export const endStream = onCall(CALLABLE_OPTS, async (req) => {
     const r = await openLight(db, tx, matchId);
     const s = streamOf(r.match);
     if (!s) {
-      if (!organizerOf(r.tournament, uid)) fail("permission-denied", "NOT_ORGANIZER", ORGANIZER_ONLY);
+      if (!canStream(r.tournament, uid)) fail("permission-denied", "NOT_ORGANIZER", ORGANIZER_ONLY);
       return { alreadyEnded: true, stream: null };
     }
     requireStreamer(r, s, uid);
@@ -258,14 +306,21 @@ export const endStream = onCall(CALLABLE_OPTS, async (req) => {
       peakViewers: Math.max(s.peakViewers ?? 0, viewers),
       reconnects: Math.max(s.reconnects ?? 0, c.reconnects ?? 0),
       ...(c.bitrateKbps !== undefined ? { bitrateKbps: c.bitrateKbps } : {}),
-    }, "organizer", Timestamp.now());
+    }, "organizer", Timestamp.now(), uid);
     tx.update(db.collection("matches").doc(matchId), { stream: ended });
     writeTournament(r, (list) => removeEntry(list, matchId));
     return { alreadyEnded: false, stream: ended };
   });
   const s = out.stream;
   if (!out.alreadyEnded) logger.info(`endStream ${matchId}: ${s ? durationSec(s) : 0}s`);
+  // Server broadcast: complete it on YouTube (null = already closed by an earlier end / the sweep).
+  let youtubeEnded: boolean | undefined;
+  if (s?.createdBy === "server") {
+    const res = await closeServerBroadcast(db, s.videoId);
+    youtubeEnded = res === null || res === "completed" || res === "deleted" || res === "already_ended";
+  }
   return {
+    ...(youtubeEnded !== undefined ? { youtubeEnded } : {}),
     status: "ended",
     alreadyEnded: out.alreadyEnded,
     endedReason: s?.endedReason ?? null,

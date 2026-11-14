@@ -107,10 +107,12 @@ service cloud.firestore {
     // triggers), autoDraw / deadlineReminderFor (scheduled draw job),
     // drawMade (draw callables + match trigger), awards / awardPlayerIds /
     // awardsNotified (cricket awards: match trigger + setTournamentAwards),
-    // finished / finishedAt (match trigger + resetDraw; the apps' COMPLETED).
+    // finished / finishedAt (match trigger + resetDraw; the apps' COMPLETED),
+    // liveStreams / liveStreamCount (live video callables), crew (Tournament
+    // crew callables).
     function tournamentServerFields() {
       return ['registrationCount', 'autoDraw', 'deadlineReminderFor', 'drawMade', 'awards', 'awardPlayerIds',
-              'awardsNotified', 'finished', 'finishedAt', 'liveStreams', 'liveStreamCount'];
+              'awardsNotified', 'finished', 'finishedAt', 'liveStreams', 'liveStreamCount', 'crew'];
     }
 
     // The draw of a registration's tournament hasn't been made yet (ids in
@@ -224,6 +226,8 @@ service cloud.firestore {
         // Live video streams (startStream / heartbeatStream / endStream) are server-only.
         && unchangedOptional('liveStreams')
         && unchangedOptional('liveStreamCount')
+        // Tournament crew (createCrewInvite / addCrewMember / joinCrew / leaveCrew / removeCrewMember) is server-only.
+        && unchangedOptional('crew')
         && cricketRulesUnchangedAfterDraw()
         && sportUnchangedOrLive()
         && teamFormatForTeamSport();
@@ -547,6 +551,25 @@ service cloud.firestore {
     // Written only by the submitFeedback callable; read by admins via the
     // Admin SDK (scripts/listFeedback.ts).
     match /feedback/{feedbackId} {
+      allow read, write: if false;
+    }
+
+    // ─── Tournament crew + server-held YouTube (server only) ──
+    // private_youtube/{uid}: the organizer's encrypted YouTube refresh token.
+    // serverBroadcasts/{broadcastId}: broadcasts the server created on an
+    // organizer's channel. serverBroadcastRate/{uid}: createCrewBroadcast
+    // rate limit. crewInvites/{code}: crew invite codes (the code is the
+    // secret). Admin SDK only; spelled out so nobody opens them by accident.
+    match /private_youtube/{uid} {
+      allow read, write: if false;
+    }
+    match /serverBroadcasts/{broadcastId} {
+      allow read, write: if false;
+    }
+    match /serverBroadcastRate/{uid} {
+      allow read, write: if false;
+    }
+    match /crewInvites/{code} {
       allow read, write: if false;
     }
 

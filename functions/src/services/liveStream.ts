@@ -34,7 +34,12 @@ export const STREAM_STALE_MS = 10 * 60 * 1000;
 /** The apps send a heartbeat about this often. */
 export const STREAM_HEARTBEAT_MS = 60 * 1000;
 
-export type EndedReason = "organizer" | "stale" | "match_finished";
+/**
+ * "organizer": ended from the app with endStream (by the streamer or the
+ * organizer; `endedByUid` says who). "crew_removed": the streamer left or was
+ * removed from the tournament crew.
+ */
+export type EndedReason = "organizer" | "stale" | "match_finished" | "crew_removed";
 
 /** `matches/{id}.stream`. */
 export interface StreamDoc {
@@ -46,6 +51,12 @@ export interface StreamDoc {
   court?: number;
   byUid: string;
   byName: string;
+  /** Set when the broadcast was created by the server on the organizer's channel (createCrewBroadcast). */
+  createdBy?: "server";
+  /** The YouTube broadcast id (= videoId) when `createdBy == "server"`. */
+  broadcastId?: string;
+  /** Who called endStream (absent for other end reasons). */
+  endedByUid?: string;
   /** When the organizer confirmed the players agreed to be streamed (new streams; absent on older docs). */
   playersAgreedAt?: Timestamp;
   startedAt: Timestamp;
@@ -133,8 +144,8 @@ export function countArg(v: unknown, max: number): number | undefined | null {
 }
 
 /** The stream map after it ends. */
-export function endedStream(s: StreamDoc, reason: EndedReason, now: Timestamp): StreamDoc {
-  return { ...s, status: "ended", endedAt: now, endedReason: reason };
+export function endedStream(s: StreamDoc, reason: EndedReason, now: Timestamp, byUid?: string): StreamDoc {
+  return { ...s, status: "ended", endedAt: now, endedReason: reason, ...(byUid ? { endedByUid: byUid } : {}) };
 }
 
 export function entriesOf(t: TournamentDoc | undefined): LiveStreamEntry[] {
