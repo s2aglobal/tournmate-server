@@ -230,6 +230,10 @@ export interface TournamentDoc {
   /** Cricket: rules JSON (players per side, overs, balls per over, …). See services/cricket.ts. */
   rulesData?: string;
   ageGroupRaw?: string;
+  /** Active live video streams, one per match (server-only; see services/liveStream.ts). */
+  liveStreams?: Array<Record<string, unknown>>;
+  /** `liveStreams.length` (server-only), for the Play tab "Streaming" query. */
+  liveStreamCount?: number;
   createdAt: Timestamp;
 }
 
@@ -320,6 +324,8 @@ export interface MatchDoc {
   live?: Record<string, unknown>;
   /** Cricket playing XI + batting order per registration id (server-only). */
   lineups?: Record<string, { xi: string[]; order: string[]; setBy: string; setAt: Timestamp }>;
+  /** Live video stream of this match (server-only; see services/liveStream.ts). Kept after it ends (replay). */
+  stream?: Record<string, unknown>;
   createdAt: Timestamp;
 }
 

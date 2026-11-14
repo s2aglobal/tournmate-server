@@ -4,7 +4,7 @@ import { HttpsError, FunctionsErrorCode } from "firebase-functions/v2/https";
  * Machine-readable reasons sent in `HttpsError.details.reason`. Apps branch
  * on these; `message` is user-facing and shown as-is. Shared specs:
  * server-authority-spec.md, profile-photos-spec.md, cricket-live-contract.md,
- * racket-live-contract.md.
+ * racket-live-contract.md, live-stream-contract.md.
  */
 export type FailReason =
   | "UNAUTHENTICATED"
@@ -43,6 +43,25 @@ export type FailReason =
   | "MATCH_FINISHED"
   | "INVALID_POINT"
   | "LIVE_SCORING_DISABLED"
+  | "LIVE_STREAMING_DISABLED"
+  | "PLAYERS_NOT_AGREED"
+  | "STREAM_ACTIVE"
+  | "STREAM_ENDED"
+  | "TOURNAMENT_CLOSED"
+  | "CREW_FULL"
+  | "INVITE_INVALID"
+  | "NOT_INVITED"
+  | "NOT_REGISTERED"
+  | "IS_ORGANIZER"
+  | "YOUTUBE_NOT_CONNECTED"
+  | "YOUTUBE_AUTH_EXPIRED"
+  | "YOUTUBE_LIVE_NOT_ENABLED"
+  | "YOUTUBE_QUOTA"
+  | "YOUTUBE_ERROR"
+  | "YOUTUBE_NOT_CONFIGURED"
+  | "YOUTUBE_CODE_INVALID"
+  | "YOUTUBE_SCOPE_MISSING"
+  | "YOUTUBE_NO_CHANNEL"
   | "INVALID_ARGUMENT";
 
 /** Throws `HttpsError(code, message, { reason })`. */

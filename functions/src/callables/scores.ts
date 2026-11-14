@@ -1,6 +1,6 @@
 import { CallableRequest, onCall } from "firebase-functions/v2/https";
 import { logger } from "firebase-functions/v2";
-import { FieldValue, Firestore, Transaction, getFirestore } from "firebase-admin/firestore";
+import { FieldValue, Firestore, Timestamp, Transaction, getFirestore } from "firebase-admin/firestore";
 import { MatchDoc, PlayerDoc, RegistrationDoc, TournamentDoc, parseSportType, registrationPlayerIds } from "../types";
 import { fail } from "./errors";
 import { SetScore, resolveScoring, validateMatchScores, validateSimpleScore } from "../services/scoring";
@@ -16,6 +16,7 @@ import {
 } from "../services/cricket";
 import { PlayerStats, decodePlayerStats, validatePlayerStats } from "../services/cricketPlayerStats";
 import { planElo } from "../services/elo";
+import { dropFromTournament, endedStream, isLive, streamOf } from "../services/liveStream";
 import { resolveDocId } from "../services/identity";
 import { isTeamEvent, matchWinnerId } from "../services/standings";
 import { notifyMatchFinished, notifyScoreDisputed, notifyScoreSubmitted, safely } from "../services/matchNotifications";
@@ -120,6 +121,8 @@ function parseScore(data: Record<string, unknown>, teamEvent: boolean): Score {
 export interface Loaded {
   match: MatchDoc;
   tournament: TournamentDoc;
+  /** Document id of `tournament` (match.tournamentId resolved case-insensitively). */
+  tournamentDocId: string;
   regA: RegistrationDoc | null;
   regB: RegistrationDoc | null;
 }
@@ -128,7 +131,8 @@ export async function load(db: Firestore, tx: Transaction, matchId: string): Pro
   const matchSnap = await tx.get(db.collection("matches").doc(matchId));
   if (!matchSnap.exists) fail("not-found", "NOT_FOUND", "This match no longer exists.");
   const match = matchSnap.data() as MatchDoc;
-  const tSnap = await tx.get(db.collection("tournaments").doc(await resolveDocId(db, "tournaments", match.tournamentId)));
+  const tournamentDocId = await resolveDocId(db, "tournaments", match.tournamentId);
+  const tSnap = await tx.get(db.collection("tournaments").doc(tournamentDocId));
   if (!tSnap.exists) fail("not-found", "NOT_FOUND", "This tournament no longer exists.");
   const [a, b] = await Promise.all([
     resolveDocId(db, "registrations", match.teamAId).then((id) => tx.get(db.collection("registrations").doc(id))),
@@ -137,6 +141,7 @@ export async function load(db: Firestore, tx: Transaction, matchId: string): Pro
   return {
     match,
     tournament: tSnap.data() as TournamentDoc,
+    tournamentDocId,
     regA: a.exists ? (a.data() as RegistrationDoc) : null,
     regB: b.exists ? (b.data() as RegistrationDoc) : null,
   };
@@ -433,17 +438,20 @@ export async function commit(db: Firestore, tx: Transaction, matchId: string, l:
   if (p.after.statusRaw !== "disputed" && l.match.disputeReason !== undefined) {
     p.delete("disputeReason");
   }
-  if (p.after.statusRaw === "finished" && l.match.eloApplied !== true) {
-    const plan = await planElo(db, tx, matchId, p.after);
-    if (plan.markApplied) {
-      p.set("eloApplied", true);
-      ratedNow = true;
-    }
-    tx.update(ref, p.fields);
-    plan.write(tx);
-  } else {
-    tx.update(ref, p.fields);
+  // Reads (planElo) come before every write.
+  const plan = p.after.statusRaw === "finished" && l.match.eloApplied !== true ? await planElo(db, tx, matchId, p.after) : null;
+  if (plan?.markApplied) {
+    p.set("eloApplied", true);
+    ratedNow = true;
   }
+  // A finished match ends its live video stream (`endedReason: "match_finished"`).
+  const stream = streamOf(l.match);
+  if (p.after.statusRaw === "finished" && isLive(stream)) {
+    p.set("stream", endedStream(stream, "match_finished", Timestamp.now()));
+    dropFromTournament(tx, db.collection("tournaments").doc(l.tournamentDocId), l.tournament, matchId);
+  }
+  tx.update(ref, p.fields);
+  plan?.write(tx);
   return { match: p.after, ratedNow };
 }
 
