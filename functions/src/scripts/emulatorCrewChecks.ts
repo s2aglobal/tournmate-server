@@ -75,6 +75,7 @@ const sent: Sent[] = [];
 const g = {
   refreshFails: false,
   insertBroadcastError: null as null | { status: number; reason: string },
+  embedRefused: false,
   bindFails: false,
   transition: "ok" as "ok" | "invalid",
   lifeCycle: "ready",
@@ -121,6 +122,9 @@ const fakeFetch: import("../services/youtubeServer").FetchFn = async (url, init)
   }
   if (path === "liveBroadcasts" && init.method === "POST") {
     if (g.insertBroadcastError) return res(g.insertBroadcastError.status, apiError(g.insertBroadcastError.status, g.insertBroadcastError.reason));
+    if (g.embedRefused && JSON.parse(String(init.body ?? "{}"))?.contentDetails?.enableEmbed) {
+      return res(400, apiError(400, "invalidEmbedSetting"));
+    }
     return res(200, { id: VIDEO_IDS[g.nextVideo++] });
   }
   if (path === "liveStreams" && init.method === "POST") {
@@ -555,6 +559,16 @@ async function youtubeErrors(db: Firestore): Promise<void> {
   g.insertBroadcastError = { status: 500, reason: "backendError" };
   await expectFail("other YouTube error", ytc.createCrewBroadcast, P.h2.uid, { matchId: "M6" }, "YOUTUBE_ERROR", undefined, "unavailable");
   g.insertBroadcastError = null;
+  await newMatch(db, "M6E");
+  g.embedRefused = true;
+  const emb = await ok<{ embeddable: boolean; videoId: string }>("channel refuses embedding: created without it",
+    ytc.createCrewBroadcast, P.h2.uid, { matchId: "M6E" });
+  check("embeddable false returned", emb?.embeddable === false && typeof emb?.videoId === "string");
+  await ok("start with embeddable false", ls.startStream, P.h2.uid,
+    { matchId: "M6E", provider: "youtube", playersAgreed: true, videoId: emb?.videoId, embeddable: false });
+  check("stream stores embeddable false", (await doc(db, "matches/M6E"))?.stream?.embeddable === false);
+  await ok("end M6", ls.endStream, P.h2.uid, { matchId: "M6E" });
+  g.embedRefused = false;
   g.bindFails = true;
   sent.length = 0;
   await expectFail("bind fails", ytc.createCrewBroadcast, P.h2.uid, { matchId: "M6" }, "YOUTUBE_ERROR");

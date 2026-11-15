@@ -169,5 +169,6 @@ export const createCrewBroadcast = onCall(OPTS, async (req) => {
   return {
     broadcastId: b.broadcastId, streamId: b.streamId, videoId: b.videoId, rtmpUrl: b.rtmpUrl, streamKey: b.streamKey,
     channelTitle: typeof channel === "string" ? channel : "",
+    embeddable: b.embeddable,
   };
 });

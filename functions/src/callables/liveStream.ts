@@ -217,7 +217,7 @@ export const startStream = onCall(CALLABLE_OPTS, async (req) => {
     const stream: StreamDoc = serverFields({
       provider: provider as StreamProvider, videoId, status: "live", label: streamLabel(d.label, l.match),
       ...(court !== undefined ? { court } : {}),
-      byUid: uid, byName: me?.data.name || fallbackName, playersAgreedAt: now, startedAt: now, lastHeartbeatAt: now,
+      byUid: uid, byName: me?.data.name || fallbackName, playersAgreedAt: now, ...(d.embeddable === false ? { embeddable: false } : {}), startedAt: now, lastHeartbeatAt: now,
       viewers: 0, peakViewers: 0, reconnects: 0,
     });
     tx.update(db.collection("matches").doc(matchId), { stream });

@@ -59,6 +59,8 @@ export interface StreamDoc {
   endedByUid?: string;
   /** When the organizer confirmed the players agreed to be streamed (new streams; absent on older docs). */
   playersAgreedAt?: Timestamp;
+  /** false when the YouTube channel can't embed live streams: viewers open the stream on YouTube. Absent = embeddable. */
+  embeddable?: boolean;
   startedAt: Timestamp;
   lastHeartbeatAt: Timestamp;
   endedAt?: Timestamp;

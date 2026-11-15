@@ -273,7 +273,9 @@ export function broadcastDescription(tournament: string): string {
 }
 
 export const yt = {
-  insertBroadcast(title: string, description: string, scheduledStart: Date): YouTubeRequest {
+  /** `embed: false` leaves `enableEmbed` out: YouTube refuses it (400 invalidEmbedSetting) on channels
+   * that aren't allowed to embed live streams yet, e.g. new channels. */
+  insertBroadcast(title: string, description: string, scheduledStart: Date, embed = true): YouTubeRequest {
     return {
       method: "POST", path: "liveBroadcasts", query: { part: "id,snippet,contentDetails,status" },
       body: {
@@ -281,7 +283,7 @@ export const yt = {
         status: { privacyStatus: "unlisted", selfDeclaredMadeForKids: false },
         contentDetails: {
           enableAutoStart: true, enableAutoStop: false, latencyPreference: "ultraLow",
-          enableDvr: true, recordFromStart: true, enableEmbed: true,
+          enableDvr: true, recordFromStart: true, ...(embed ? { enableEmbed: true } : {}),
         },
       },
     };
@@ -436,12 +438,26 @@ export interface CreatedBroadcast {
   videoId: string;
   rtmpUrl: string;
   streamKey: string;
+  /** false when the channel refused embedding: viewers must open the stream on YouTube. */
+  embeddable: boolean;
+}
+
+/** True for YouTube's 400 `invalidEmbedSetting` (the channel can't embed live streams). */
+export function isInvalidEmbedSetting(status: number, body: Record<string, unknown>): boolean {
+  const e = (body.error ?? {}) as { errors?: Array<{ reason?: string }> };
+  return status === 400 && (e.errors ?? []).some((x) => x?.reason === "invalidEmbedSetting");
 }
 
 /** liveBroadcasts.insert → liveStreams.insert → bind (as the iOS app does on the device). */
 export async function createBroadcast(accessToken: string, title: string, description: string, forOrganizer: boolean,
   now = new Date()): Promise<CreatedBroadcast> {
-  const b = await send(yt.insertBroadcast(title, description, now), accessToken);
+  let embeddable = true;
+  let b = await send(yt.insertBroadcast(title, description, now), accessToken);
+  if (!b.ok && isInvalidEmbedSetting(b.status, b.body)) {
+    // The channel can't embed live streams (yet): create it without embedding.
+    embeddable = false;
+    b = await send(yt.insertBroadcast(title, description, now, false), accessToken);
+  }
   if (!b.ok) failYouTube(errorKind(b.status, b.body), forOrganizer);
   const broadcastId = typeof b.body.id === "string" ? b.body.id : "";
   if (!broadcastId) fail("unavailable", "YOUTUBE_ERROR", "YouTube sent an answer TournMate didn't understand.");
@@ -452,7 +468,7 @@ export async function createBroadcast(accessToken: string, title: string, descri
     if (!ingestion) fail("unavailable", "YOUTUBE_ERROR", "YouTube sent an answer TournMate didn't understand.");
     const bound = await send(yt.bind(broadcastId, ingestion.streamId), accessToken);
     if (!bound.ok) failYouTube(errorKind(bound.status, bound.body), forOrganizer);
-    return { broadcastId, streamId: ingestion.streamId, videoId: broadcastId, rtmpUrl: ingestion.address, streamKey: ingestion.key };
+    return { broadcastId, streamId: ingestion.streamId, videoId: broadcastId, rtmpUrl: ingestion.address, streamKey: ingestion.key, embeddable };
   } catch (err) {
     // Don't leave an empty broadcast on the organizer's channel.
     await send(yt.deleteBroadcast(broadcastId), accessToken).catch(() => undefined);
