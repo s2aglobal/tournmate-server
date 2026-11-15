@@ -23,6 +23,8 @@ tools/rules-test/run.sh
 
 `racket_live.py` covers racket live scoring (badminton): `matches.live` is never client-written; `matches/{id}/points/*` and `matches/{id}/racketLive/*` are readable by anyone and never client-written; while `live.status` is `inProgress` or `ended` no client may update the match, after `finished` older apps confirm as usual. The callables are checked by `npm run test:emulator-racket-live` and the reducer by `npm run check:racket-live` in `functions/`.
 
+`live_stream.py` covers live video streaming: `matches.stream` and `tournaments.liveStreams` / `liveStreamCount` are never client-written (create or update, including clearing them); everyone reads them with the match / tournament; older apps' writes that leave them alone still pass (score entry, confirm and organizer finish on a streamed match, organizer tournament edits while streams run, full-doc writes resending unchanged values). The callables, cleanup job and finish hooks are checked by `npm run test:emulator-live-stream` in `functions/`.
+
 `phase0.py` (stdlib Python, one PASS/FAIL line per case) covers the Phase 0 server-authority rules, using the write shapes of the older apps (iOS 1.7, Android 1.0) so their legitimate flows are proven to pass:
 - `players.genderRaw` only goes from missing/`preferNotToSay` to `male`/`female`; full-profile writes with an unchanged gender (and the old apps writing back `preferNotToSay` for a missing value) still pass; web profile create/update unaffected;
 - matches: only the organizer creates (incl. 40-match batches) and deletes; participants still submit/confirm scores; `eloApplied` is never client-written;

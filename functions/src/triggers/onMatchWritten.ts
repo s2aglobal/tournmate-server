@@ -6,6 +6,7 @@ import { StandingsRegistration, computeStandings } from "../services/standings";
 import { refreshAutoAwards } from "../services/tournamentAwards";
 import { tournamentIdVariants } from "../services/draw/tournament";
 import { syncTournamentFinished } from "../services/tournamentFinished";
+import { dropDeletedMatch, endStreamForMatch, isLive, streamOf } from "../services/liveStream";
 
 /**
  * Rebuilds `standings/{tournamentId}` on any match write (create, score,
@@ -27,11 +28,13 @@ import { syncTournamentFinished } from "../services/tournamentFinished";
 export const onMatchWritten = onDocumentWritten("matches/{matchId}", async (event) => {
   const before = event.data?.before.data() as MatchDoc | undefined;
   const after = event.data?.after.data() as MatchDoc | undefined;
-  // Cricket live scoring writes `live` on every ball (and `lineups`); those
-  // don't change standings, the draw, `finished` or awards.
+  // Live scoring writes `live` on every ball / point (and `lineups`), live
+  // video writes `stream` on every heartbeat; those don't change standings,
+  // the draw, `finished` or awards.
   if (before && after && onlyLiveChanged(before, after)) return;
   const ids = new Set([before?.tournamentId, after?.tournamentId].filter((id): id is string => !!id));
   const db = getFirestore();
+  await syncStream(db, event.params.matchId, before, after);
   for (const tournamentId of ids) {
     try {
       await rebuildStandings(db, tournamentId);
@@ -57,14 +60,32 @@ export const onMatchWritten = onDocumentWritten("matches/{matchId}", async (even
   }
 });
 
-/** True when nothing but the live-scoring fields (`live`, `lineups`) differs. */
+/** True when nothing but the live fields (`live`, `lineups`, `stream`) differs. */
 export function onlyLiveChanged(before: MatchDoc, after: MatchDoc): boolean {
   const strip = (m: MatchDoc) => {
-    const { live: _l, lineups: _u, ...rest } = m;
-    void _l; void _u;
+    const { live: _l, lineups: _u, stream: _s, ...rest } = m;
+    void _l; void _u; void _s;
     return JSON.stringify(Object.keys(rest).sort().map((k) => [k, (rest as Record<string, unknown>)[k]]));
   };
   return strip(before) === strip(after);
+}
+
+/**
+ * Live video upkeep for writes the score callables don't make (older apps
+ * finishing by direct write; deleted matches): a match that is now finished
+ * ends its live stream (`match_finished`); a deleted live match leaves its
+ * tournament's `liveStreams`.
+ */
+export async function syncStream(db: Firestore, matchId: string, before: MatchDoc | undefined, after: MatchDoc | undefined): Promise<void> {
+  try {
+    if (after && after.statusRaw === "finished" && isLive(streamOf(after))) {
+      await endStreamForMatch(db, matchId, "match_finished", (m) => m.statusRaw === "finished");
+    } else if (!after && before?.tournamentId && isLive(streamOf(before))) {
+      await dropDeletedMatch(db, before.tournamentId, matchId);
+    }
+  } catch (err) {
+    logger.error(`Live stream sync failed for match ${matchId}:`, err);
+  }
 }
 
 /** Player names by id; ids are tried as stored, then upper and lower case. */
