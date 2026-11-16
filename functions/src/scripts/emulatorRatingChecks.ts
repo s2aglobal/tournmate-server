@@ -64,6 +64,20 @@ async function bad(name: string, fn: Fn, uid: string | null, data: unknown, reas
   }
 }
 
+async function badText(name: string, fn: Fn, uid: string | null, data: unknown, textReason: string | undefined): Promise<void> {
+  try {
+    const r = await call(fn, uid, data);
+    check(name, false, `expected RATING_TEXT_REJECTED, got ${JSON.stringify(r)}`);
+  } catch (e) {
+    const err = e as { message?: string; details?: { reason?: string; textReason?: string } };
+    const d = err.details ?? {};
+    const comment = (data as { comment?: string }).comment ?? "";
+    check(name, d.reason === "RATING_TEXT_REJECTED" && d.textReason === textReason
+      && !JSON.stringify(d).includes(comment) && !(err.message ?? "").includes(comment),
+    `${d.reason}/${d.textReason}: ${err.message}`);
+  }
+}
+
 const P = (n: number) => `AAAAAAAA-0000-0000-0000-00000000000${n}`;
 const A = { id: P(1), uid: "uA", name: "Alice Smith", avatarId: "avatar_3" };
 const B = { id: P(2), uid: "uB", name: "Bob Jones" };
@@ -91,15 +105,46 @@ async function main(): Promise<void> {
     "Great shuttlecock control and fair line calls.", "Won 21-17 18-21 21-15, close match!",
     "Class act, passed the shuttle back every time.", "Assessed every call calmly.", "Scunthorpe fan, good sport.",
     "Played at 7 pm, on time.", "bc of rain we started late", "Good game, see you next week :)",
+    // false-positive guards for the contact / link / phone patterns
+    "great at net", "good @ net", "Strong @ the net, weak at the back", "Met @7pm sharp, on time", "Played @home courts",
+    "Fair player @ the club", "21-17 18-21 21-15", "6-4 3-6 7-6 6-4 6-2", "21-9 21-8 in 25 minutes",
+    "Won 2 sets to 1, scores 21 19 and 21 15", "Lost one set, won two, then three more games",
+    "the shuttle landed on the dot in the corner", "great at net. in the end he won", "Plays on the dot, never late",
+    "Quick snap of the wrist on smashes", "Snappy footwork, great snap smash", "ig he played well tbh",
+    "Called me out fairly when I was wrong", "Text book backhand, called every line fairly", "He made me laugh",
+    "Good sport, would play again. Thanks!", "Smart doubles partner, great at reading the game",
+    "Fast reflexes, great drop shots", "Hit me with a clean smash, all good", "She gave 100% in all 3 games",
+    "Rally of 40+ shots, amazing", "Plays 4 times a week at 6am", "No.1 at the club", "Ranked #3 in the league",
+    "Talked through every call, contacts the umpire calmly", "Sent a message to the group to reschedule",
+    "Was on time at 7:30, 2 courts booked", "One of the best, five stars", "Seven out of ten serves landed in",
+    "Good mail-in entry for the tourney", "x-factor at the net", "Score was 11 x 3 in the tiebreak",
   ];
   for (const t of benign) check(`text passes: "${t}"`, text.ratingTextProblem(t) === null, String(text.ratingTextProblem(t)));
   const blocked: [string, string][] = [
     ["you are a total fuck", "profanity"], ["F u c k this guy", "profanity"], ["sh1t player", "profanity"],
     ["what a b!tch", "profanity"], ["motherfucker", "profanity"], ["chutiya hai", "profanity"],
     ["bhenchod", "profanity"], ["lanja", "profanity"], ["fuuuuck", "profanity"],
-    ["see www.spam.com", "link"], ["visit https://x.io now", "link"], ["dm me at insta.com", "link"],
-    ["mail me a@b.com", "email"], ["call 98765 43210", "phone"], ["+1 (555) 123-4567", "phone"],
-    ["9876543210", "phone"],
+    ["see www.spam.com", "link"], ["visit https://x.io now", "link"], ["dm me at insta.com", "contact"],
+    ["check site dot com", "link"], ["check mysite [dot] com", "link"], ["visit cheats (dot) in", "link"],
+    ["mysite{.}com", "link"], ["go to cheats . com", "link"], ["www dot cheats dot net", "link"],
+    ["club(dot)org for details", "link"], ["see mysite .com", "link"],
+    ["mail me a@b.com", "contact"], ["riley at gmail dot com", "contact"], ["riley23 at gmail", "contact"],
+    ["gmail dot com", "contact"], ["riley [at] yahoo", "contact"], ["riley(at)hotmail(dot)com", "contact"],
+    ["my gmail is riley23", "contact"], ["riley @ gmail . com", "contact"], ["write to riley at outlook", "contact"],
+    ["follow @riley_23", "contact"], ["(@riley) on court", "contact"], ["@riley23 great game", "contact"],
+    ["insta: riley23", "contact"], ["instagram riley", "contact"], ["ig riley", "contact"], ["ig: riley_23", "contact"],
+    ["add me on snap", "contact"], ["snap: riley23", "contact"], ["my snap is riley_23", "contact"],
+    ["snapchat riley", "contact"], ["telegram riley23", "contact"], ["on telegram", "contact"],
+    ["whatsapp me", "contact"], ["whats app me for games", "contact"], ["dm me", "contact"], ["DM me for doubles", "contact"],
+    ["text me anytime", "contact"], ["call me for a game", "contact"], ["message me later", "contact"],
+    ["find me on x", "contact"], ["fb riley.k", "contact"], ["tiktok riley", "contact"], ["hmu for doubles", "contact"],
+    ["my number is in my bio", "contact"],
+    ["call 98765 43210", "phone"], ["ring me on 98765 43210", "contact"], ["98765 43210", "phone"],
+    ["+1 (555) 123-4567", "phone"], ["9876543210", "phone"], ["9 8 7 6 5 4 3 2 1 0", "phone"],
+    ["nine eight seven six five four three", "phone"], ["nine eight seven six five four three two one zero", "phone"],
+    ["98 seven 6 five 43 two", "phone"], ["98765 four three two one", "phone"], ["nine 8 seven 6 five 4 three", "phone"],
+    ["Nine-Eight-Seven-Six-Five-Four-Three", "phone"], ["double nine eight seven six five four", "phone"],
+    ["number: nine eight seven, six five four, three two one", "phone"],
   ];
   for (const [t, why] of blocked) check(`text blocked (${why}): "${t}"`, text.ratingTextProblem(t) === why, String(text.ratingTextProblem(t)));
   check("display name: first + last initial", svc.reviewerDisplayName("Arjun  kumar reddy") === "Arjun R.");
@@ -159,13 +204,18 @@ async function main(): Promise<void> {
   await bad("comment over 200", callables.ratePlayer, A.uid, { playerId: B.id, stars: 4, comment: "x".repeat(201) }, "INVALID_ARGUMENT");
   await ok("comment of exactly 200", callables.ratePlayer, Dd.uid, { playerId: B.id, stars: 4, comment: "y".repeat(200) });
   await bad("anonymous not a bool", callables.ratePlayer, A.uid, { playerId: B.id, stars: 4, anonymous: "yes" }, "INVALID_ARGUMENT");
-  await bad("profanity rejected", callables.ratePlayer, E.uid, { playerId: B.id, stars: 1, comment: "You are a total fuckwit" }, "RATING_TEXT_REJECTED");
-  await bad("link rejected", callables.ratePlayer, E.uid, { playerId: B.id, stars: 1, comment: "see www.cheats.com" }, "RATING_TEXT_REJECTED");
-  await bad("phone rejected", callables.ratePlayer, E.uid, { playerId: B.id, stars: 1, comment: "call 98765 43210" }, "RATING_TEXT_REJECTED");
+  await badText("profanity rejected (textReason profanity)", callables.ratePlayer, E.uid, { playerId: B.id, stars: 1, comment: "You are a total fuckwit" }, "profanity");
+  await badText("link rejected (textReason link)", callables.ratePlayer, E.uid, { playerId: B.id, stars: 1, comment: "see www.cheats.com" }, "link");
+  await badText("obfuscated link rejected (link)", callables.ratePlayer, E.uid, { playerId: B.id, stars: 1, comment: "see cheats [dot] com" }, "link");
+  await badText("phone rejected (textReason phone)", callables.ratePlayer, E.uid, { playerId: B.id, stars: 1, comment: "98765 43210" }, "phone");
+  await badText("spelled phone rejected (phone)", callables.ratePlayer, E.uid, { playerId: B.id, stars: 1, comment: "nine eight seven six five four three" }, "phone");
+  await badText("email rejected (textReason contact)", callables.ratePlayer, E.uid, { playerId: B.id, stars: 1, comment: "riley at gmail dot com" }, "contact");
+  await badText("handle rejected (contact)", callables.ratePlayer, E.uid, { playerId: B.id, stars: 1, comment: "insta: riley23" }, "contact");
+  await badText("dm me rejected (contact)", callables.ratePlayer, E.uid, { playerId: B.id, stars: 1, comment: "dm me for doubles" }, "contact");
   text.setTextModerator(async () => { throw new Error("down"); });
   await bad("moderator error fails closed", callables.ratePlayer, E.uid, { playerId: B.id, stars: 2, comment: "ok" }, "RATING_CHECK_FAILED");
   text.setTextModerator(async () => "reject");
-  await bad("stub moderator reject", callables.ratePlayer, E.uid, { playerId: B.id, stars: 2, comment: "fine" }, "RATING_TEXT_REJECTED");
+  await badText("stub moderator reject (no textReason)", callables.ratePlayer, E.uid, { playerId: B.id, stars: 2, comment: "fine" }, undefined);
   text.setTextModerator(null);
   check("rejected calls wrote nothing for E",
     (await db.collection("ratingAuthors").where("raterId", "==", E.id).get()).empty);

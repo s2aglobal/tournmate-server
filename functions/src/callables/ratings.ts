@@ -17,8 +17,10 @@ const REJECTED_MESSAGE = "Please keep it respectful. Edit your comment and try a
  * ratePlayer({ playerId, stars: 1..5, comment?, anonymous?, tournamentId? })
  *   -> { status: "created" | "updated", ratingId }
  * One review per rater per player; a second call replaces it. Comments are
- * trimmed, max 200, and must pass the text check (no profanity, links, emails
- * or phone numbers). `anonymous` defaults to false (named).
+ * trimmed, max 200, and must pass the text check (no profanity, links, emails,
+ * social handles or phone numbers). `anonymous` defaults to false (named).
+ * A rejected comment fails with RATING_TEXT_REJECTED and
+ * `details.textReason` = "profanity" | "link" | "contact" | "phone".
  */
 export const ratePlayer = onCall(CALLABLE_OPTS, async (req) => {
   const uid = requireUid(req);
@@ -55,8 +57,11 @@ export const ratePlayer = onCall(CALLABLE_OPTS, async (req) => {
       fail("unavailable", "RATING_CHECK_FAILED", "We couldn't check your comment. Try again in a moment.");
     }
     if (verdict === "reject") {
-      logger.info("rating comment rejected", { raterId: me.id, reason: ratingTextProblem(comment) ?? "moderator" });
-      fail("invalid-argument", "RATING_TEXT_REJECTED", REJECTED_MESSAGE);
+      // details.textReason tells the app what to fix: profanity | link | contact | phone.
+      // Absent when another moderator rejected it (apps show the generic message).
+      const textReason = ratingTextProblem(comment);
+      logger.info("rating comment rejected", { raterId: me.id, reason: textReason ?? "moderator" });
+      fail("invalid-argument", "RATING_TEXT_REJECTED", REJECTED_MESSAGE, textReason ? { textReason } : undefined);
     }
   }
 
