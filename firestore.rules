@@ -172,10 +172,10 @@ service cloud.firestore {
         && request.resource.data.elo == 1200
         && request.resource.data.streak == 0
         // Profile photo fields are written by setProfilePhoto / removeProfilePhoto only.
-        && !request.resource.data.keys().hasAny(['photoURL', 'photoPath', 'photoUpdatedAt']);
+        && !request.resource.data.keys().hasAny(['photoURL', 'photoPath', 'photoUpdatedAt', 'sportsmanship']);
 
       // Users can only update safe profile fields — not elo, streak, firebaseUid, email.
-      // photoURL / photoPath / photoUpdatedAt are server-only (not in the list).
+      // photoURL / photoPath / photoUpdatedAt / sportsmanship are server-only (not in the list).
       allow update: if isAuthenticated()
         && resource.data.firebaseUid == request.auth.uid
         && unchanged('firebaseUid')
@@ -379,10 +379,18 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // ─── Ratings ────────────────────────────────────────
+    // ─── Ratings (sportsmanship reviews) ───────────────
+    // Written by the ratePlayer / deleteRating / reportRating callables.
+    // ratings/{id} holds VISIBLE reviews only and has no raterId (anonymous
+    // reviews must not reveal the author); hidden / removed reviews move to
+    // hiddenRatings. See functions/src/services/ratings.ts.
     match /ratings/{ratingId} {
       allow read: if isAuthenticated();
 
+      // PHASE A (one release): old app versions still create ratings
+      // directly in the old shape. onRatingCreated moves raterId to
+      // ratingAuthors and keeps one review per rater per player.
+      // PHASE B follow-up: replace with `allow create: if false;`.
       allow create: if isAuthenticated()
         && isNonEmptyString(request.resource.data.playerId)
         && isNonEmptyString(request.resource.data.raterId)
@@ -392,10 +400,35 @@ service cloud.firestore {
         && request.resource.data.playerId != request.resource.data.raterId
         && request.resource.data.stars is int
         && request.resource.data.stars >= 1
-        && request.resource.data.stars <= 5;
+        && request.resource.data.stars <= 5
+        && (request.resource.data.get('comment', null) == null
+            || (request.resource.data.comment is string && request.resource.data.comment.size() <= 200))
+        // Server-only fields of the new shape.
+        && !request.resource.data.keys().hasAny(['status', 'reportCount', 'anonymous',
+            'raterName', 'raterAvatarId', 'raterPhotoURL', 'updatedAt']);
 
       allow update: if false;
       allow delete: if false;
+    }
+
+    // Reviews hidden by reports or removed by an admin: only the author can
+    // read theirs (by id, found through their ratingAuthors doc).
+    match /hiddenRatings/{ratingId} {
+      allow get: if isAuthenticated()
+        && get(/databases/$(database)/documents/ratingAuthors/$(ratingId)).data.raterUid == request.auth.uid;
+      allow list, write: if false;
+    }
+
+    // Who wrote each review. The author can read their own (to find "my
+    // rating" of a player); nobody else, so anonymous stays anonymous.
+    match /ratingAuthors/{ratingId} {
+      allow read: if isAuthenticated() && resource.data.raterUid == request.auth.uid;
+      allow write: if false;
+    }
+
+    // Review reports: server only (reportRating, admin digest).
+    match /ratingReports/{reportId} {
+      allow read, write: if false;
     }
 
     // ─── Calorie Records ────────────────────────────────

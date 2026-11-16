@@ -43,6 +43,10 @@ export type FailReason =
   | "MATCH_FINISHED"
   | "INVALID_POINT"
   | "LIVE_SCORING_DISABLED"
+  | "SELF_RATING"
+  | "RATING_TEXT_REJECTED"
+  | "RATING_CHECK_FAILED"
+  | "OWN_REVIEW"
   | "INVALID_ARGUMENT";
 
 /** Throws `HttpsError(code, message, { reason })`. */
