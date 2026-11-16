@@ -43,7 +43,7 @@ export async function backfillRatings(db: Firestore, apply: boolean, log: (s: st
   const groups = new Map<string, typeof legacy>();
   for (const doc of legacy) {
     const d = doc.data();
-    const key = `${String(d.raterId).toUpperCase()}|${d.playerId}`;
+    const key = `${String(d.raterId).toUpperCase()}|${String(d.playerId).toUpperCase()}`;
     groups.set(key, [...(groups.get(key) ?? []), doc]);
   }
   let superseded = 0;
@@ -59,7 +59,8 @@ export async function backfillRatings(db: Firestore, apply: boolean, log: (s: st
       log(`  ${key}: keep ${keep.id}${docs.length > 1 ? `, delete ${docs.slice(0, -1).map((d) => d.id).join(", ")}` : ""}${dropped ? " (comment fails the text check, dropped)" : ""}`);
     }
   }
-  const players = new Set(snap.docs.map((d) => d.data().playerId).filter((p): p is string => typeof p === "string" && !!p));
+  const players = new Set(snap.docs.map((d) => d.data().playerId).filter((p): p is string => typeof p === "string" && !!p)
+    .map((p) => p.toUpperCase()));
 
   if (apply) {
     for (const docs of groups.values()) {

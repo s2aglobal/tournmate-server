@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import { logger } from "firebase-functions/v2";
 import { DocumentData, Firestore, Timestamp, Transaction } from "firebase-admin/firestore";
 import { canonicalPlayerId, playerById, playerForUid, PlayerRef } from "./identity";
@@ -84,17 +85,32 @@ export function sportsmanshipOf(docs: DocumentData[]): Sportsmanship {
   return { avg: count ? Math.round((sum / count) * 100) / 100 : 0, count, withComments, dist };
 }
 
-/** Recounts `players/{playerDocId}.sportsmanship` from the visible ratings. */
-export async function refreshSportsmanship(db: Firestore, playerDocId: string): Promise<Sportsmanship | null> {
-  const ref = db.collection("players").doc(playerDocId);
+/**
+ * Recounts `players/{id}.sportsmanship` from the visible ratings. `playerId`
+ * may be in any case: ratings store the UPPER case id the apps use, older
+ * web docs may be lower case, and web-created player docs have lower-case ids.
+ */
+export async function refreshSportsmanship(db: Firestore, playerId: string): Promise<Sportsmanship | null> {
+  const player = await playerById(db, playerId);
+  if (!player) return null;
+  const variants = [...new Set([player.docId, player.id, player.id.toLowerCase()])];
   return db.runTransaction(async (tx) => {
-    const p = await tx.get(ref);
+    const p = await tx.get(player.ref);
     if (!p.exists) return null;
-    const snap = await tx.get(db.collection(RATINGS).where("playerId", "==", playerDocId));
+    const snap = await tx.get(db.collection(RATINGS).where("playerId", "in", variants));
     const agg = sportsmanshipOf(snap.docs.map((d) => d.data()));
-    tx.update(ref, { sportsmanship: agg });
+    tx.update(player.ref, { sportsmanship: agg });
     return agg;
   });
+}
+
+/**
+ * New rating ids: UPPER case UUIDs, like the ids the apps always wrote (app
+ * versions before 1.9/1.2 skip ratings whose id isn't a UUID). Random, so an
+ * id says nothing about the author.
+ */
+export function newRatingId(): string {
+  return randomUUID().toUpperCase();
 }
 
 /** Author fields copied onto the public doc (null when anonymous). */
@@ -108,8 +124,8 @@ function authorFields(rater: PlayerRef | null, anonymous: boolean): Record<strin
 }
 
 /** The author doc for (rater, player), read inside `tx`. */
-async function findAuthorDoc(db: Firestore, tx: Transaction, raterId: string, playerDocId: string) {
-  const q = db.collection(RATING_AUTHORS).where("raterId", "==", raterId).where("playerId", "==", playerDocId).limit(5);
+async function findAuthorDoc(db: Firestore, tx: Transaction, raterId: string, playerId: string) {
+  const q = db.collection(RATING_AUTHORS).where("raterId", "==", raterId).where("playerId", "==", playerId).limit(5);
   const snap = await tx.get(q);
   return snap.docs;
 }
@@ -133,7 +149,7 @@ export type UpsertResult = { status: "created" | "updated"; ratingId: string } |
 export async function upsertRating(db: Firestore, input: UpsertInput): Promise<UpsertResult> {
   const { rater, target } = input;
   const result = await db.runTransaction(async (tx): Promise<UpsertResult> => {
-    const authors = await findAuthorDoc(db, tx, rater.id, target.docId);
+    const authors = await findAuthorDoc(db, tx, rater.id, target.id);
     const existingId = authors[0]?.id ?? null;
     let prev: DocumentData | null = null;
     let prevHidden = false;
@@ -153,10 +169,10 @@ export async function upsertRating(db: Firestore, input: UpsertInput): Promise<U
       ? (await tx.get(db.collection(RATING_REPORTS).where("ratingId", "==", existingId))).docs
       : [];
 
-    const id = existingId ?? db.collection(RATINGS).doc().id;
+    const id = existingId ?? newRatingId();
     const now = Timestamp.now();
     const doc: Record<string, unknown> = {
-      playerId: target.docId,
+      playerId: target.id,
       stars: input.stars,
       comment: input.comment,
       anonymous: input.anonymous,
@@ -174,7 +190,7 @@ export async function upsertRating(db: Firestore, input: UpsertInput): Promise<U
     tx.set(db.collection(RATING_AUTHORS).doc(id), {
       raterId: rater.id,
       raterUid: rater.data.firebaseUid ?? null,
-      playerId: target.docId,
+      playerId: target.id,
       createdAt: authors[0]?.data().createdAt ?? now,
       updatedAt: now,
     });
@@ -187,7 +203,7 @@ export async function upsertRating(db: Firestore, input: UpsertInput): Promise<U
 /** Deletes the rater's review of `target`. False if there is none. */
 export async function deleteOwnRating(db: Firestore, rater: PlayerRef, target: PlayerRef): Promise<boolean> {
   const found = await db.runTransaction(async (tx) => {
-    const authors = await findAuthorDoc(db, tx, rater.id, target.docId);
+    const authors = await findAuthorDoc(db, tx, rater.id, target.id);
     if (authors.length === 0) return false;
     const reports = (await tx.get(db.collection(RATING_REPORTS)
       .where("ratingId", "in", authors.map((a) => a.id)))).docs;
@@ -302,7 +318,7 @@ export async function normalizeLegacyRating(db: Firestore, ratingId: string,
     const rater = await resolveRater(db, d.raterId, tx);
     const raterId = rater ? rater.id : d.raterId;
     const raterUid = rater ? (rater.data.firebaseUid ?? null) : d.raterId;
-    const playerDocId: string = d.playerId;
+    const playerDocId: string = canonicalPlayerId(d.playerId);
     const authors = (await findAuthorDoc(db, tx, raterId, playerDocId)).filter((a) => a.id !== ratingId);
 
     // The other review by the same rater (visible or hidden), if any.

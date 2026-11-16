@@ -116,7 +116,7 @@ async function main(): Promise<void> {
     && doc.anonymous === false && doc.raterName === "Alice S." && doc.raterAvatarId === "avatar_3"
     && doc.status === "visible" && doc.reportCount === 0 && doc.createdAt instanceof Timestamp, JSON.stringify(doc));
   check("public doc has no raterId", !("raterId" in doc));
-  check("rating id doesn't contain the rater's id", !id1.includes(A.id));
+  check("rating id is a random UPPER case UUID (old apps need UUID ids)", /^[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}$/.test(id1) && !id1.includes(A.id), id1);
   const author = (await db.collection("ratingAuthors").doc(id1).get()).data() ?? {};
   check("author doc", author.raterId === A.id && author.raterUid === A.uid && author.playerId === B.id, JSON.stringify(author));
   let s = await agg(B.id);
@@ -144,7 +144,7 @@ async function main(): Promise<void> {
   // ── web player (lower-case doc id) ──
   const rw = await ok("rate a web player by upper-case id", callables.ratePlayer, A.uid, { playerId: W.id.toUpperCase(), stars: 4 });
   const wdoc = (await db.collection("ratings").doc(rw?.ratingId).get()).data() ?? {};
-  check("playerId stored as the player's doc id", wdoc.playerId === W.id, String(wdoc.playerId));
+  check("playerId stored as the UPPER case id the apps query", wdoc.playerId === W.id.toUpperCase(), String(wdoc.playerId));
   check("web player's aggregate on the lower-case doc", (await agg(W.id))?.count === 1);
 
   // ── validation ──
@@ -272,6 +272,12 @@ async function main(): Promise<void> {
   check("aggregate unaffected by superseded", (await agg(E.id))?.avg === 4);
   // Callable-written docs (no raterId) are skipped.
   check("new-shape doc skipped", (await svc.normalizeLegacyRating(db, (await visibleFor(E.id))[0].id)).outcome === "skipped");
+
+  // Old web doc with a lower-case player id still counts for that player.
+  await db.collection("ratings").doc("LEGACY-W").set({ playerId: W.id, raterId: B.id, stars: 2, createdAt: T });
+  await svc.normalizeLegacyRating(db, "LEGACY-W");
+  check("lower-case legacy playerId normalised to UPPER and counted", (await db.collection("ratings").doc("LEGACY-W").get()).data()?.playerId === W.id.toUpperCase()
+    && (await agg(W.id))?.count === 2, JSON.stringify(await agg(W.id)));
 
   // ── backfill ──
   const old = (ms: number) => Timestamp.fromMillis(Date.now() - ms);
