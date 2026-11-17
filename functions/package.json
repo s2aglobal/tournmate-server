@@ -44,6 +44,7 @@
     "test:emulator-ratings": "npm run build && firebase emulators:exec --only firestore --project demo-tournmate \"node lib/scripts/emulatorRatingChecks.js\"",
     "test:rules-ratings": "bash ../tools/rules-test/run-ratings.sh",
     "test:emulator-photos": "npm run build && firebase emulators:exec --only firestore,storage,auth --project demo-tournmate \"node lib/scripts/emulatorPhotoChecks.js\"",
+    "test:emulator-push-tokens": "npm run build && firebase emulators:exec --only firestore --project demo-tournmate \"node lib/scripts/emulatorPushTokenChecks.js\"",
     "backfill:player-private": "npm run build && node lib/scripts/backfillPlayerPrivate.js",
     "test:emulator-player-privacy": "npm run build && firebase emulators:exec --only firestore,auth,storage --project demo-tournmate \"node lib/scripts/emulatorPlayerPrivacyChecks.js\"",
     "test:rules-player-privacy": "bash ../tools/rules-test/run-player-privacy.sh"

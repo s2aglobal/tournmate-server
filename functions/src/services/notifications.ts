@@ -1,4 +1,6 @@
 import { getMessaging } from "firebase-admin/messaging";
+import { getFirestore } from "firebase-admin/firestore";
+import { clearInvalidToken, isInvalidTokenError } from "./tokenCleanup";
 import { logger } from "firebase-functions/v2";
 import { SportType, DEFAULT_SPORT } from "../types";
 
@@ -217,11 +219,13 @@ export async function sendToPlayer(
     });
   } catch (err: unknown) {
     const code = (err as { code?: string }).code;
-    if (
-      code === "messaging/invalid-registration-token" ||
-      code === "messaging/registration-token-not-registered"
-    ) {
-      logger.warn(`Stale FCM token, should clean up: ${fcmToken.slice(0, 10)}...`);
+    if (isInvalidTokenError(code)) {
+      try {
+        const cleared = await clearInvalidToken(getFirestore(), fcmToken);
+        logger.warn(`Dead FCM token cleared from ${cleared} doc(s): ${fcmToken.slice(0, 10)}...`);
+      } catch (cleanupErr) {
+        logger.error("Failed to clear dead FCM token", cleanupErr);
+      }
     } else {
       logger.error("Failed to send notification:", err);
     }
