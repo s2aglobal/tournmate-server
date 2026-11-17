@@ -12,7 +12,7 @@ import { PLAYER_PRIVATE, ScrubMode, authEmailFor, hasValue, planMirror } from ".
  * Change it here and redeploy functions; run the backfill with the matching
  * --scrub flags first.
  */
-export const SCRUB_PUBLIC: ScrubMode = "off";
+export const SCRUB_PUBLIC: ScrubMode = "tier1";
 
 /**
  * Mirrors one write of players/{id} into playerPrivate/{id}. Exported for
