@@ -52,6 +52,7 @@
  */
 
 import { initializeApp, getApps } from "firebase-admin/app";
+import { playerDocByEmail } from "../services/playerPrivate";
 import { getFirestore, Firestore, Timestamp, WriteBatch } from "firebase-admin/firestore";
 import { randomUUID } from "crypto";
 import { writeFileSync } from "fs";
@@ -192,7 +193,9 @@ async function main() {
   // Test players test1..test20 (read only). test[0] = test1.
   const test: PlayerRef[] = [];
   for (let i = 1; i <= 20; i++) {
-    const p = await playerByQuery("email", `test${i}@tournmate.dev`, `test${i}@tournmate.dev`);
+    const found = await playerDocByEmail(db, `test${i}@tournmate.dev`);
+    if (!found) throw new Error(`No player doc for test${i}@tournmate.dev`);
+    const p: PlayerRef = { id: found.id, name: found.get("name"), uid: found.get("firebaseUid") ?? "", email: `test${i}@tournmate.dev` };
     if (!p.uid) throw new Error(`test${i}@tournmate.dev has no firebaseUid (run seedTestUsers.ts)`);
     test.push(p);
   }

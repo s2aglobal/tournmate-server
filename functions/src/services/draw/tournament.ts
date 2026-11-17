@@ -220,7 +220,8 @@ export function tournamentIdVariants(id: string): string[] {
 
 function isPlayer(data: unknown): data is PlayerDoc {
   const d = data as Record<string, unknown> | undefined;
-  return !!d && typeof d.name === "string" && typeof d.phone === "string" && typeof d.email === "string";
+  // Name only: email / phone may be "" placeholders or missing (player privacy).
+  return !!d && typeof d.name === "string";
 }
 
 function playerRating(p: PlayerDoc, sport: string): number {

@@ -15,6 +15,7 @@
  */
 
 import { initializeApp, getApps } from "firebase-admin/app";
+import { PLAYER_PRIVATE } from "../services/playerPrivate";
 import { getFirestore, Timestamp } from "firebase-admin/firestore";
 
 if (getApps().length === 0) {
@@ -183,11 +184,19 @@ async function seedTestUsers() {
       console.log(`  🗑 Deleted old player doc: ${doc.id}`);
     }
 
-    // Also clean up docs matching the email (catches profile-setup duplicates)
+    // Also clean up docs matching the email (catches profile-setup duplicates;
+    // the email is in playerPrivate now, legacy docs still have it publicly)
     const emailSnap = await db
       .collection("players")
       .where("email", "==", email)
       .get();
+    const privSnap = await db.collection(PLAYER_PRIVATE).where("email", "==", email).get();
+    for (const doc of privSnap.docs) {
+      const pub = db.collection("players").doc(doc.id);
+      if ((await pub.get()).exists) await pub.delete();
+      await doc.ref.delete();
+      console.log(`  🗑 Deleted duplicate by private email: ${doc.id}`);
+    }
 
     for (const doc of emailSnap.docs) {
       await doc.ref.delete();
@@ -198,18 +207,27 @@ async function seedTestUsers() {
     const playerId = crypto.randomUUID().toUpperCase();
     await db.collection("players").doc(playerId).set({
       name: tp.name,
+      // Public doc: "" placeholders only (player privacy); private fields below.
       phone: "",
-      email: email,
+      email: "",
       genderRaw: tp.gender,
       elo: tp.elo,
       streak: 0,
       firebaseUid: uid,
       avatarId: tp.avatarId,
+      homeCountryCode: "US",
+      createdAt: Timestamp.now(),
+    });
+    await db.collection(PLAYER_PRIVATE).doc(playerId).set({
+      firebaseUid: uid,
+      email,
+      phone: "",
+      phoneDigits: "",
       weightKg: tp.weightKg,
       dateOfBirth: dobTimestamp(tp.dobYear),
-      homeCountryCode: "US",
       homePostalCode: "78641",
-      createdAt: Timestamp.now(),
+      updatedAt: Timestamp.now(),
+      source: "backfill",
     });
 
     playerIdMap.set(tp.index, playerId);

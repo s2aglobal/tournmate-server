@@ -3,6 +3,7 @@ import { logger } from "firebase-functions/v2";
 import { getFirestore } from "firebase-admin/firestore";
 import { TournamentDoc, RegistrationDoc, PlayerDoc, registrationPlayerIds } from "../types";
 import { sendToPlayer } from "../services/notifications";
+import { deviceTokenFor } from "../services/playerPrivate";
 
 /**
  * Fires when a tournament document is updated.
@@ -58,9 +59,10 @@ export const onTournamentCancelled = onDocumentUpdated(
       }
 
       // Send push notification
-      if (player.fcmToken) {
+      const token = await deviceTokenFor(db, player, playerDoc.id);
+      if (token) {
         await sendToPlayer(
-          player.fcmToken,
+          token,
           "Tournament Cancelled",
           `${after.title} has been cancelled by the organizer.`,
           {

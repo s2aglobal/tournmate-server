@@ -1,6 +1,6 @@
 # TournMate Server
 
-Backend API and automation for the TournMate sports tournament platform. Built with Firebase Cloud Functions (v2), Express, and TypeScript.
+Backend API and automation for the TournMate sports tournament platform. Built with Firebase Cloud Functions (v2) and TypeScript.
 
 Supports **badminton** today, designed for expansion to **pickleball, tennis, table tennis, and more**.
 
@@ -10,15 +10,8 @@ Supports **badminton** today, designed for expansion to **pickleball, tennis, ta
 tournmate-server/
 ├── functions/
 │   └── src/
-│       ├── index.ts              # Main entry — HTTP API + triggers + scheduled jobs
-│       ├── api/                   # REST API route handlers
-│       │   ├── players.ts         # Player profile CRUD
-│       │   ├── tournaments.ts     # Tournament CRUD + cancel
-│       │   ├── registrations.ts   # Register/unregister with validation
-│       │   ├── matches.ts         # Score submission, confirmation, disputes, ELO
-│       │   └── ratings.ts         # Player ratings with duplicate prevention
-│       ├── middleware/
-│       │   └── auth.ts            # Firebase token verification
+│       ├── index.ts              # Main entry — callables + triggers + scheduled jobs
+│       ├── callables/             # Callable functions (server authority)
 │       ├── validators/
 │       │   └── index.ts           # Input validation (sport-specific score rules)
 │       ├── services/
@@ -34,6 +27,7 @@ tournmate-server/
 │           └── index.ts           # TypeScript interfaces matching Firestore schema
 ├── firebase.json
 ├── firestore.rules
+├── firestore.rules.phase3        # player privacy phase 3 (NOT deployed yet)
 ├── firestore.indexes.json
 ├── .firebaserc
 └── README.md
@@ -95,54 +89,13 @@ firebase deploy --only firestore:rules
 | `dev` | `baddies-live-dev` | Testing and development |
 | `prod` | `baddies-live` | Production |
 
-## API Reference
+## API
 
-**Production**: `https://us-central1-baddies-live.cloudfunctions.net/api`
+The apps and the web call **callable functions** (`functions/src/callables/*`, exported from `index.ts`) and read Firestore directly under `firestore.rules`. The old Express REST `api` function was removed (player privacy, S8): nothing called it and its players route was an email-enumeration path.
 
-All endpoints (except `/health`) require: `Authorization: Bearer <Firebase ID Token>`
+### Player privacy
 
-### Health Check
-```
-GET /health
-```
-
-### Players
-```
-POST   /api/players        Create profile
-PUT    /api/players/:id    Update own profile
-GET    /api/players/me     Get current player
-```
-
-### Tournaments
-```
-GET    /api/tournaments          List upcoming
-GET    /api/tournaments/past     List past
-GET    /api/tournaments/:id      Get single
-POST   /api/tournaments          Create (requires auth)
-PUT    /api/tournaments/:id      Update (organizer only)
-POST   /api/tournaments/:id/cancel  Cancel (organizer only, 3hr cutoff)
-```
-
-### Registrations
-```
-POST   /api/registrations/:tournamentId/register       Register
-DELETE /api/registrations/:tournamentId/register       Unregister
-GET    /api/registrations/:tournamentId/registrations  List registrations
-```
-
-### Matches
-```
-GET    /api/matches/:tournamentId/matches         List matches
-POST   /api/matches/:matchId/submit-score         Submit scores
-POST   /api/matches/:matchId/confirm              Confirm scores
-POST   /api/matches/:matchId/dispute              Dispute scores
-```
-
-### Ratings
-```
-POST   /api/ratings            Rate a player
-GET    /api/ratings/:playerId  Get player ratings
-```
+`players/{id}` is public (guest mode reads names and photos); contact and personal data (`email`, `phone`, `phoneDigits`, `dateOfBirth`, `weightKg`, `homePostalCode`, `fcmToken`) live in owner-only `playerPrivate/{id}` (same doc id). Server-written only: the `onPlayerWritten` mirror, the `updatePrivateProfile` callable and `npm run backfill:player-private`. Teammate lookup by email/phone goes through `findPlayerByContact` (returns only a player id; 20 lookups / 10 min). `firestore.rules.phase3` holds the stricter rules for after the min-version bump (not deployed). See tournmate-docs `designs/player-privacy/player-privacy-design.md`.
 
 ## Validation Rules
 

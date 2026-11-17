@@ -2,7 +2,7 @@
  * One-off broadcast push to players (e.g. a holiday message). DRY RUN by default.
  *
  * How it sends: the same per-device FCM token push the app uses everywhere
- * (`players/{id}.fcmToken`, see services/notifications.ts `sendToPlayer`), just
+ * (`playerPrivate/{id}.fcmToken`, legacy `players/{id}.fcmToken`, see services/notifications.ts `sendToPlayer`), just
  * batched with `sendEach` (500 per call). Payload matches existing pushes
  * (notification + `data.type`, APNs badge/sound, Android high priority).
  *
@@ -24,6 +24,7 @@
  */
 
 import { initializeApp, getApps } from "firebase-admin/app";
+import { PLAYER_PRIVATE, privateFirst } from "../services/playerPrivate";
 import { Firestore, getFirestore } from "firebase-admin/firestore";
 import { getMessaging, Message } from "firebase-admin/messaging";
 import { isSportType, parseSportType } from "../types";
@@ -92,13 +93,17 @@ export async function collectAudience(
     audience: 0, bySport: {}, sample: [], sent: 0, failed: 0, invalidTokens: 0,
   };
   const snap = await db.collection("players").get();
+  // Tokens live in playerPrivate/{id} (player privacy); legacy public value as fallback.
+  const privSnap = await db.collection(PLAYER_PRIVATE).get();
+  const priv = new Map(privSnap.docs.map((d) => [d.id, d.data()]));
   const seen = new Set<string>();
   const recipients: Recipient[] = [];
   for (const doc of snap.docs) {
     const p = doc.data();
     if (opts.testUid && p.firebaseUid !== opts.testUid) continue;
     result.scanned++;
-    const token = typeof p.fcmToken === "string" ? p.fcmToken.trim() : "";
+    const raw = privateFirst<unknown>(priv.get(doc.id) ?? null, p, "fcmToken");
+    const token = typeof raw === "string" ? raw.trim() : "";
     if (!token) { result.skippedNoToken++; continue; }
     if (OPT_OUT_FIELDS.some(([f, v]) => p[f] === v)) { result.skippedOptOut++; continue; }
     const sport = parseSportType(p.preferredSport);
