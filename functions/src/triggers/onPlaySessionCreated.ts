@@ -2,6 +2,7 @@ import { onDocumentCreated } from "firebase-functions/v2/firestore";
 import { logger } from "firebase-functions/v2";
 import { getFirestore, FieldValue, Firestore, Timestamp, DocumentData } from "firebase-admin/firestore";
 import { sendToRegionTopicExcluding, sendToCountryTopicExcluding, sendToPlayer } from "../services/notifications";
+import { deviceTokenFor } from "../services/playerPrivate";
 import { PlayerDoc, parseSportType, sportName, sportEmoji } from "../types";
 import {
   ClashingSession,
@@ -219,8 +220,8 @@ async function notifyHost(db: Firestore, hostUid: string, sessionId: string, bod
     createdAt: FieldValue.serverTimestamp(),
   });
   const snap = await db.collection("players").where("firebaseUid", "==", hostUid).limit(1).get();
-  const player = snap.empty ? undefined : (snap.docs[0].data() as PlayerDoc);
-  if (player?.fcmToken) {
-    await sendToPlayer(player.fcmToken, title, body, { type: "session_cancelled", sessionId });
+  const token = snap.empty ? undefined : await deviceTokenFor(db, snap.docs[0].data(), snap.docs[0].id);
+  if (token) {
+    await sendToPlayer(token, title, body, { type: "session_cancelled", sessionId });
   }
 }

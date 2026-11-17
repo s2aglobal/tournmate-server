@@ -10,6 +10,7 @@ import {
 } from "./shared";
 import { PlayerRef, playerById, resolveDocId, sameId } from "../services/identity";
 import { notifyPlayer } from "../services/notifyPlayer";
+import { dobFor } from "../services/playerPrivate";
 import {
   TeamRoles, isPlayingRole, normalizeRoles, roleKey, rolesFromFirestore, rolesToFirestore, rosterKeys,
   PlayingRole,
@@ -142,10 +143,11 @@ function maxParticipants(t: TournamentDoc): number | null {
   }
 }
 
-function checkAge(t: TournamentDoc, me: PlayerRef): void {
+/** Age-group check. Reads the caller's DOB (private first, then legacy public) in `tx`. */
+async function checkAge(db: Firestore, tx: Transaction, t: TournamentDoc, me: PlayerRef): Promise<void> {
   const ageGroup = (t.ageGroupRaw || "open") as AgeGroup;
   if (ageGroup === "open" || !AGE_GROUP_RULES[ageGroup]) return;
-  const dob = me.data.dateOfBirth;
+  const dob = await dobFor(db, me, tx);
   if (!dob) {
     fail("failed-precondition", "INVALID_ARGUMENT",
       "This tournament has an age restriction. Set your date of birth in your profile to register.");
@@ -350,7 +352,7 @@ export const register = onCall(CALLABLE_OPTS, async (req) => {
     // Checks.
     if (t.data.statusRaw !== "cancelled" && hasDraw) fail("failed-precondition", "REG_CLOSED", DRAW_MADE_REG_CLOSED);
     requireOpen(t.data);
-    checkAge(t.data, me);
+    await checkAge(db, tx, t.data, me);
     if (isCricket(t.data) && !team) {
       fail("failed-precondition", "SPORT_NOT_ALLOWED", "Cricket tournaments take team entries. Register a team.");
     }
@@ -536,7 +538,7 @@ export const joinAsPartner = onCall(CALLABLE_OPTS, async (req) => {
     if (typeof reg.partnerId === "string" && reg.partnerId.length > 0) {
       fail("failed-precondition", "REG_FULL", "That player already has a partner.");
     }
-    checkAge(t.data, me);
+    await checkAge(db, tx, t.data, me);
     if (!registrant) fail("not-found", "NOT_FOUND", "That player no longer exists.");
     checkMixedPair(format, registrant, me);
 

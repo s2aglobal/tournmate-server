@@ -3,6 +3,7 @@ import { logger } from "firebase-functions/v2";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { RegistrationDoc, TournamentDoc } from "../types";
 import { sendToPlayer } from "../services/notifications";
+import { deviceTokenFor } from "../services/playerPrivate";
 import { refreshRegistrationCount } from "../services/registrationCount";
 
 /**
@@ -54,7 +55,7 @@ export const onRegistrationCreated = onDocumentCreated(
         .get();
 
       if (!orgSnap.empty) {
-        const fcmToken = orgSnap.docs[0].data()?.fcmToken as string | undefined;
+        const fcmToken = await deviceTokenFor(db, orgSnap.docs[0].data(), orgSnap.docs[0].id);
         if (fcmToken) {
           await sendToPlayer(
             fcmToken,

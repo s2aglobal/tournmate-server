@@ -1,6 +1,7 @@
 import { FieldValue, Firestore } from "firebase-admin/firestore";
 import { logger } from "firebase-functions/v2";
 import { sendToPlayer } from "../notifications";
+import { deviceTokenFor } from "../playerPrivate";
 
 export interface DrawNotice {
   type: string;
@@ -26,7 +27,7 @@ export async function notifyUids(db: Firestore, uids: Iterable<string>, notice: 
         createdAt: FieldValue.serverTimestamp(),
       });
       const snap = await db.collection("players").where("firebaseUid", "==", uid).limit(1).get();
-      const token = snap.empty ? undefined : (snap.docs[0].data().fcmToken as string | undefined);
+      const token = snap.empty ? undefined : await deviceTokenFor(db, snap.docs[0].data(), snap.docs[0].id);
       if (token) {
         await sendToPlayer(token, notice.title, notice.body, { type: notice.type, tournamentId: notice.tournamentId });
       }

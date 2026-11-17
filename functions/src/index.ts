@@ -1,44 +1,9 @@
 import { initializeApp } from "firebase-admin/app";
-import { onRequest } from "firebase-functions/v2/https";
-import express from "express";
-import cors from "cors";
-
-import { requireAuth } from "./middleware/auth";
-import playersRouter from "./api/players";
-import tournamentsRouter from "./api/tournaments";
-import registrationsRouter from "./api/registrations";
-import matchesRouter from "./api/matches";
-import ratingsRouter from "./api/ratings";
 
 // ─── Firebase Admin Init ────────────────────────────────
+// The legacy REST `api` function (Express) was removed (player privacy S8):
+// no app called it, and its players route was an email-enumeration path.
 initializeApp();
-
-// ─── Express App ────────────────────────────────────────
-const app = express();
-app.use(cors({ origin: true }));
-app.use(express.json());
-
-// Health check (no auth)
-app.get("/health", (_req, res) => {
-  res.json({ status: "ok", timestamp: new Date().toISOString() });
-});
-
-// All API routes require authentication
-app.use("/api/players", requireAuth, playersRouter);
-app.use("/api/tournaments", requireAuth, tournamentsRouter);
-app.use("/api/registrations", requireAuth, registrationsRouter);
-app.use("/api/matches", requireAuth, matchesRouter);
-app.use("/api/ratings", requireAuth, ratingsRouter);
-
-// ─── HTTP Cloud Function ────────────────────────────────
-export const api = onRequest(
-  {
-    region: "us-central1",
-    maxInstances: 50,
-    timeoutSeconds: 60,
-  },
-  app,
-);
 
 // ─── Firestore Triggers ─────────────────────────────────
 export { onTournamentCreated } from "./triggers/onTournamentCreated";
@@ -51,11 +16,13 @@ export { onSessionJoined } from "./triggers/onSessionJoined";
 export { onMatchWritten } from "./triggers/onMatchWritten";
 export { onRegistrationWrittenStandings } from "./triggers/onRegistrationWrittenStandings";
 export { onRegistrationWrittenMemberUids, onMatchWrittenMemberUids } from "./triggers/memberUids";
+export { onPlayerWritten } from "./triggers/onPlayerWritten";
 
 // ─── Callables (server authority) ───────────────────────
 export { createSession, updateSession, joinSession, leaveSession, cancelSession, finishSession, deleteSession } from "./callables/openPlay";
 export { setGender, setProfilePhoto, removeProfilePhoto } from "./callables/profile";
 export { deleteAccount } from "./callables/account";
+export { findPlayerByContact, updatePrivateProfile } from "./callables/playerPrivate";
 export { submitFeedback } from "./callables/feedback";
 export { ratePlayer, deleteRating, reportRating } from "./callables/ratings";
 export { onRatingCreated } from "./triggers/onRatingCreated";

@@ -4,6 +4,7 @@ import { playerForUid } from "./identity";
 import { sessionWindow } from "./openPlay";
 import { cancelSessionFor, leaveSessionFor } from "../callables/openPlay";
 import { deletePhotoFiles } from "./profilePhotos";
+import { PLAYER_PRIVATE } from "./playerPrivate";
 
 /*
  * Removes what a deleted account leaves behind (deleteAccount callable and
@@ -15,7 +16,8 @@ import { deletePhotoFiles } from "./profilePhotos";
  *    team-entry lock) are deleted; as someone's partner they are taken off
  *  - inbox notifications
  *  - profile photo files (`profilePhotos/{uid}/`)
- *  - the player doc (which holds the device token)
+ *  - the player doc and its owner-only playerPrivate doc (contact data, DOB,
+ *    device token)
  * Past sessions, drawn tournaments, matches and ratings stay as history.
  */
 
@@ -27,6 +29,7 @@ export interface CleanupSummary {
   partnerCleared: number;
   notificationsDeleted: number;
   photosDeleted: number;
+  privateDeleted: number;
 }
 
 function idVariants(id: string): string[] {
@@ -57,6 +60,7 @@ export async function cleanupAccount(db: Firestore, uid: string): Promise<Cleanu
   const summary: CleanupSummary = {
     playerDeleted: false, sessionsLeft: 0, sessionsCancelled: 0,
     registrationsDeleted: 0, partnerCleared: 0, notificationsDeleted: 0, photosDeleted: 0,
+    privateDeleted: 0,
   };
   const me = await playerForUid(db, uid);
 
@@ -133,6 +137,16 @@ export async function cleanupAccount(db: Firestore, uid: string): Promise<Cleanu
   if (me) {
     await me.ref.delete();
     summary.playerDeleted = true;
+  }
+  // Private data: the doc with the player's id, plus any other carrying this uid.
+  const privateRefs = new Map<string, FirebaseFirestore.DocumentReference>();
+  if (me) privateRefs.set(me.docId, db.collection(PLAYER_PRIVATE).doc(me.docId));
+  for (const d of (await db.collection(PLAYER_PRIVATE).where("firebaseUid", "==", uid).get()).docs) privateRefs.set(d.id, d.ref);
+  for (const ref of privateRefs.values()) {
+    if ((await ref.get()).exists) {
+      await ref.delete();
+      summary.privateDeleted++;
+    }
   }
   logger.info(`cleanupAccount ${uid}`, summary);
   return summary;
