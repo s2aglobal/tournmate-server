@@ -47,7 +47,8 @@
     "test:emulator-push-tokens": "npm run build && firebase emulators:exec --only firestore --project demo-tournmate \"node lib/scripts/emulatorPushTokenChecks.js\"",
     "backfill:player-private": "npm run build && node lib/scripts/backfillPlayerPrivate.js",
     "test:emulator-player-privacy": "npm run build && firebase emulators:exec --only firestore,auth,storage --project demo-tournmate \"node lib/scripts/emulatorPlayerPrivacyChecks.js\"",
-    "test:rules-player-privacy": "bash ../tools/rules-test/run-player-privacy.sh"
+    "test:rules-player-privacy": "bash ../tools/rules-test/run-player-privacy.sh",
+    "seed:showcase": "npm run build && node lib/scripts/seedShowcase.js"
   },
   "engines": {
     "node": "24"
