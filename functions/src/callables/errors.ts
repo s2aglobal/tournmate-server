@@ -43,9 +43,17 @@ export type FailReason =
   | "MATCH_FINISHED"
   | "INVALID_POINT"
   | "LIVE_SCORING_DISABLED"
+  | "SELF_RATING"
+  | "RATING_TEXT_REJECTED"
+  | "RATING_CHECK_FAILED"
+  | "OWN_REVIEW"
   | "INVALID_ARGUMENT";
 
-/** Throws `HttpsError(code, message, { reason })`. */
-export function fail(code: FunctionsErrorCode, reason: FailReason, message: string): never {
-  throw new HttpsError(code, message, { reason });
+/**
+ * Throws `HttpsError(code, message, { reason, ...extra })`. `extra` carries
+ * optional machine fields next to `reason` (e.g. `textReason` on
+ * RATING_TEXT_REJECTED); older apps ignore them.
+ */
+export function fail(code: FunctionsErrorCode, reason: FailReason, message: string, extra?: Record<string, string>): never {
+  throw new HttpsError(code, message, { ...(extra ?? {}), reason });
 }

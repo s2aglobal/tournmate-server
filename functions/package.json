@@ -39,6 +39,10 @@
     "check:profile-photos": "npm run build && node lib/scripts/checkProfilePhotos.js",
     "send:broadcast": "npm run build && node lib/scripts/sendBroadcast.js",
     "test:emulator-broadcast": "npm run build && firebase emulators:exec --only firestore --project demo-tournmate \"node lib/scripts/emulatorBroadcastChecks.js\"",
+    "backfill:ratings": "npm run build && node lib/scripts/backfillRatings.js",
+    "moderate:rating": "npm run build && node lib/scripts/moderateRating.js",
+    "test:emulator-ratings": "npm run build && firebase emulators:exec --only firestore --project demo-tournmate \"node lib/scripts/emulatorRatingChecks.js\"",
+    "test:rules-ratings": "bash ../tools/rules-test/run-ratings.sh",
     "test:emulator-photos": "npm run build && firebase emulators:exec --only firestore,storage,auth --project demo-tournmate \"node lib/scripts/emulatorPhotoChecks.js\""
   },
   "engines": {

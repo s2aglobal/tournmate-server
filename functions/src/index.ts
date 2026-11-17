@@ -57,6 +57,9 @@ export { createSession, updateSession, joinSession, leaveSession, cancelSession,
 export { setGender, setProfilePhoto, removeProfilePhoto } from "./callables/profile";
 export { deleteAccount } from "./callables/account";
 export { submitFeedback } from "./callables/feedback";
+export { ratePlayer, deleteRating, reportRating } from "./callables/ratings";
+export { onRatingCreated } from "./triggers/onRatingCreated";
+export { ratingReportDigest } from "./triggers/ratingReportEmails";
 export { onFeedbackCreated, feedbackDailyDigest } from "./triggers/feedbackEmails";
 export { orphanAccountSweep } from "./triggers/orphanAccountSweep";
 export { register, withdraw, joinAsPartner, changePartner, updateRoster, setRoles } from "./callables/registrations";
