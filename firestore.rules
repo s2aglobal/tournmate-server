@@ -168,29 +168,46 @@ service cloud.firestore {
       allow create: if isAuthenticated()
         && request.resource.data.firebaseUid == request.auth.uid
         && isNonEmptyString(request.resource.data.name)
-        && isNonEmptyString(request.resource.data.email)
+        // New apps / web write "" (the real email is kept in playerPrivate,
+        // from Firebase Auth); older apps still write it. Phase 3 requires "".
+        && request.resource.data.email is string
         && request.resource.data.elo == 1200
         && request.resource.data.streak == 0
         // Profile photo fields are written by setProfilePhoto / removeProfilePhoto only.
         && !request.resource.data.keys().hasAny(['photoURL', 'photoPath', 'photoUpdatedAt', 'sportsmanship']);
 
-      // Users can only update safe profile fields — not elo, streak, firebaseUid, email.
+      // Users can only update safe profile fields — not elo, streak, firebaseUid.
+      // email may only stay as it is or be blanked to "" (player privacy).
       // photoURL / photoPath / photoUpdatedAt / sportsmanship are server-only (not in the list).
       allow update: if isAuthenticated()
         && resource.data.firebaseUid == request.auth.uid
         && unchanged('firebaseUid')
         && genderChangeAllowed()
-        && unchanged('email')
+        && (unchangedOptional('email') || request.resource.data.get('email', null) == '')
         // Optional on older player docs: unchanged() errors (deny) on a missing field.
         && unchangedOptional('elo')
         && unchangedOptional('streak')
         && unchangedOptional('createdAt')
-        && onlyUpdates(['name', 'phone', 'genderRaw', 'avatarId',
+        // email is listed so it can be blanked; the check above allows only "".
+        && onlyUpdates(['name', 'email', 'phone', 'genderRaw', 'avatarId',
             'homeCountryCode', 'homePostalCode', 'weightKg',
             'dateOfBirth', 'fcmToken', 'preferredSport',
             'playingHand', 'skillLevel']);
 
       allow delete: if false;
+    }
+
+    // ─── Player private data (owner only) ───────────────
+    // playerPrivate/{playerId}: same doc id as players/{playerId}. Holds
+    // contact + personal fields that must never be public (email, phone,
+    // phoneDigits, dateOfBirth, weightKg, homePostalCode, fcmToken). Written
+    // only by the server (onPlayerWritten mirror, updatePrivateProfile,
+    // backfill). A missing doc reads as "nothing yet" (resource == null:
+    // not-found, not permission-denied) and reveals nothing.
+    match /playerPrivate/{playerId} {
+      allow read: if isAuthenticated()
+        && (resource == null || resource.data.firebaseUid == request.auth.uid);
+      allow write: if false;
     }
 
     // ─── Tournaments ────────────────────────────────────
@@ -432,8 +449,25 @@ service cloud.firestore {
     }
 
     // ─── Calorie Records ────────────────────────────────
+    // Owner only: `playerId` is the owner's player id. The apps write it
+    // UPPER case; Android also queries the lower-case form, and web profiles
+    // have lower-case doc ids, so the player doc is looked up in any case.
+    function isOwnPlayerAnyCase(playerId) {
+      let exact = /databases/$(database)/documents/players/$(playerId);
+      let upper = /databases/$(database)/documents/players/$(playerId.upper());
+      let lower = /databases/$(database)/documents/players/$(playerId.lower());
+      return playerId is string
+        && (exists(exact) ? get(exact) : (exists(upper) ? get(upper) : get(lower)))
+             .data.firebaseUid == request.auth.uid;
+    }
+
     match /calorieRecords/{recordId} {
-      allow read, write: if isAuthenticated();
+      allow read, delete: if isAuthenticated() && isOwnPlayerAnyCase(resource.data.playerId);
+      allow create: if isAuthenticated() && isOwnPlayerAnyCase(request.resource.data.playerId);
+      // iOS saves with setData on the record id: an overwrite of its own record.
+      allow update: if isAuthenticated()
+        && isOwnPlayerAnyCase(resource.data.playerId)
+        && request.resource.data.playerId == resource.data.playerId;
     }
 
     // ─── Play Sessions ──────────────────────────────────

@@ -44,6 +44,7 @@
  */
 
 import { initializeApp, getApps } from "firebase-admin/app";
+import { playerDocByEmail } from "../services/playerPrivate";
 import { getFirestore, Firestore, Timestamp, WriteBatch } from "firebase-admin/firestore";
 import { randomUUID } from "crypto";
 import {
@@ -222,8 +223,9 @@ async function main() {
 
   const test: PlayerRef[] = [];
   for (let i = 1; i <= 20; i++) {
-    const snap = await db.collection("players").where("email", "==", `test${i}@tournmate.dev`).limit(1).get();
-    if (snap.empty) throw new Error(`No player doc for test${i}@tournmate.dev (run seedTestUsers first)`);
+    const found = await playerDocByEmail(db, `test${i}@tournmate.dev`);
+    if (!found) throw new Error(`No player doc for test${i}@tournmate.dev (run seedTestUsers first)`);
+    const snap = { docs: [found] };
     test.push({ id: snap.docs[0].id, name: snap.docs[0].get("name"), uid: snap.docs[0].get("firebaseUid") });
   }
   // A seeded player must never be the organizer (one team per person).

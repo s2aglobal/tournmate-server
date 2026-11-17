@@ -3,6 +3,7 @@ import { logger } from "firebase-functions/v2";
 import { getFirestore, FieldValue, Firestore, Timestamp, DocumentData, DocumentSnapshot } from "firebase-admin/firestore";
 import { PlayerDoc, parseSportType, sportEmoji } from "../types";
 import { sendToPlayer } from "../services/notifications";
+import { deviceTokenFor } from "../services/playerPrivate";
 import { playerById } from "../services/identity";
 import {
   ClashingSession,
@@ -54,8 +55,9 @@ export const onSessionJoined = onDocumentUpdated(
       logger.info(`Session ${sessionId} finished${autoClosed ? " (auto)" : " by host"}, notifying ${attendeeIds.length} attendees`);
 
       for (const attendeeId of attendeeIds) {
-        const playerData = (await playerById(db, attendeeId))?.data;
-        if (!playerData) continue;
+        const attendee = await playerById(db, attendeeId);
+        const playerData = attendee?.data;
+        if (!attendee || !playerData) continue;
         const playerUid = playerData.firebaseUid;
         // Don't notify the host who finished it
         if (!autoClosed && playerUid === hostId) continue;
@@ -74,9 +76,10 @@ export const onSessionJoined = onDocumentUpdated(
         }
 
         // Send push
-        if (playerData.fcmToken) {
+        const playerToken = await deviceTokenFor(db, playerData, attendee.docId);
+        if (playerToken) {
           await sendToPlayer(
-            playerData.fcmToken,
+            playerToken,
             "Session Complete! 🏁",
             `"${sessionTitle}" has ended. Don't forget to log your calories!`,
             { type: "session_finished", sessionId },
@@ -151,10 +154,10 @@ export const onSessionJoined = onDocumentUpdated(
         .get();
 
       if (!hostSnap.empty) {
-        const hostPlayer = hostSnap.docs[0].data() as PlayerDoc;
-        if (hostPlayer.fcmToken) {
+        const hostToken = await deviceTokenFor(db, hostSnap.docs[0].data(), hostSnap.docs[0].id);
+        if (hostToken) {
           await sendToPlayer(
-            hostPlayer.fcmToken,
+            hostToken,
             joinedTitle,
             `${joinText} "${sessionTitle}"`,
             { type: "session_joined", sessionId },
@@ -208,10 +211,10 @@ export const onSessionJoined = onDocumentUpdated(
         .get();
 
       if (!hostSnap.empty) {
-        const hostPlayer = hostSnap.docs[0].data() as PlayerDoc;
-        if (hostPlayer.fcmToken) {
+        const hostToken = await deviceTokenFor(db, hostSnap.docs[0].data(), hostSnap.docs[0].id);
+        if (hostToken) {
           await sendToPlayer(
-            hostPlayer.fcmToken,
+            hostToken,
             "Player Left 👋",
             `${leaveText} "${sessionTitle}"`,
             { type: "session_left", sessionId },
@@ -230,7 +233,7 @@ async function notifyHost(
     recipientId: hostId, type, title, body, sessionId, read: false, createdAt: FieldValue.serverTimestamp(),
   });
   const hostSnap = await db.collection("players").where("firebaseUid", "==", hostId).limit(1).get();
-  const token = hostSnap.empty ? undefined : (hostSnap.docs[0].data() as PlayerDoc).fcmToken;
+  const token = hostSnap.empty ? undefined : await deviceTokenFor(db, hostSnap.docs[0].data(), hostSnap.docs[0].id);
   if (token) await sendToPlayer(token, title, body, { type, sessionId });
 }
 
@@ -411,7 +414,8 @@ async function notifyPlayer(db: Firestore, playerId: string, title: string, body
       createdAt: FieldValue.serverTimestamp(),
     });
   }
-  if (player.fcmToken) {
-    await sendToPlayer(player.fcmToken, title, body, { type: "session_removed", sessionId });
+  const token = await deviceTokenFor(db, player, snap.id);
+  if (token) {
+    await sendToPlayer(token, title, body, { type: "session_removed", sessionId });
   }
 }

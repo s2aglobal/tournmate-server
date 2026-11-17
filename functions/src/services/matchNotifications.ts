@@ -3,6 +3,7 @@ import { logger } from "firebase-functions/v2";
 import { MatchDoc, PlayerDoc, RegistrationDoc, TournamentDoc, registrationPlayerIds } from "../types";
 import { sendToPlayer } from "./notifications";
 import { playerForUid } from "./identity";
+import { deviceTokenFor } from "./playerPrivate";
 
 /**
  * Score notifications: inbox doc (`notifications`, by auth uid) plus a push
@@ -43,8 +44,9 @@ async function notifyPlayers(
         createdAt: new Date(),
       });
     }
-    if (player.fcmToken) {
-      await sendToPlayer(player.fcmToken, message.title, message.body, {
+    const token = await deviceTokenFor(db, player);
+    if (token) {
+      await sendToPlayer(token, message.title, message.body, {
         type: message.type,
         matchId: message.matchId,
         tournamentId: message.tournamentId,
@@ -117,7 +119,8 @@ export async function notifyScoreDisputed(
     read: false,
     createdAt: new Date(),
   });
-  const token = (await playerForUid(db, uid))?.data.fcmToken;
+  const me = await playerForUid(db, uid);
+  const token = me ? await deviceTokenFor(db, me.data, me.docId) : undefined;
   if (token) {
     await sendToPlayer(token, title, body, { type: "score_disputed", matchId, tournamentId: match.tournamentId });
   }

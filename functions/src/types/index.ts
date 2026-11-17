@@ -166,8 +166,10 @@ export function isAgeEligible(age: number, ageGroup: AgeGroup): boolean {
 
 export interface PlayerDoc {
   name: string;
-  phone: string;
-  email: string;
+  /** "" placeholder (the real value lives in playerPrivate/{id}); missing on some docs. */
+  phone?: string;
+  /** "" placeholder (the real value lives in playerPrivate/{id}); missing on some docs. */
+  email?: string;
   genderRaw: string;
   /** Legacy single rating — the badminton rating (read by app versions before multi-sport). */
   elo: number;

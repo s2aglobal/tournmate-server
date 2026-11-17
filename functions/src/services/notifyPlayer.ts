@@ -2,6 +2,7 @@ import { Firestore, FieldValue } from "firebase-admin/firestore";
 import { logger } from "firebase-functions/v2";
 import { PlayerDoc } from "../types";
 import { sendToPlayer } from "./notifications";
+import { deviceTokenFor } from "./playerPrivate";
 
 /**
  * Inbox doc (`notifications`, keyed by the player's auth uid) plus a push
@@ -26,8 +27,9 @@ export async function notifyPlayer(
         createdAt: FieldValue.serverTimestamp(),
       });
     }
-    if (player.fcmToken) {
-      await sendToPlayer(player.fcmToken, n.title, n.body, { type: n.type, ...(n.data ?? {}) });
+    const token = await deviceTokenFor(db, player);
+    if (token) {
+      await sendToPlayer(token, n.title, n.body, { type: n.type, ...(n.data ?? {}) });
     }
   } catch (err) {
     logger.error(`notifyPlayer(${n.type}) failed`, err);
