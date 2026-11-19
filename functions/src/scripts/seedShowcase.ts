@@ -36,10 +36,16 @@
  *                and a demo-* project id required)
  *
  * Writes nothing outside tournmate-dev (or a demo-* emulator).
+ *
+ * The default organizer ("Coach Daniel Reyes", uid showcase-organizer-1) gets
+ * a disabled sign-in account (no email, no password, can't sign in). Without
+ * it the nightly orphanAccountSweep treats the profile as a deleted account
+ * and removes it, and "Organized by" loses its name. --cleanup deletes it.
  */
 
 import { initializeApp, getApps } from "firebase-admin/app";
 import { Firestore, Timestamp, WriteBatch, getFirestore } from "firebase-admin/firestore";
+import { getAuth } from "firebase-admin/auth";
 import { randomUUID } from "crypto";
 
 const DEV_PROJECT_ID = "tournmate-dev";
@@ -158,7 +164,7 @@ async function main() {
     process.exit(1);
   }
 
-  if (cleanup) return runCleanup(db, dryRun);
+  if (cleanup) return runCleanup(db, dryRun, emulator);
 
   const existing = await db.collection("tournaments").where(MARK, "==", true).limit(1).get();
   if (!existing.empty && !dryRun) {
@@ -184,6 +190,7 @@ async function main() {
   // Showcase organizer (shows in "Organized by" when --organizer isn't given).
   let organizerUid = organizerArg ?? SHOWCASE_ORGANIZER_UID;
   if (!organizerArg) {
+    await ensureShowcaseOrganizerAuth(emulator, dryRun);
     const id = newId();
     await w.set("players", id, {
       name: "Coach Daniel Reyes", email: "", phone: "", genderRaw: "male", elo: 1500, streak: 0,
@@ -400,7 +407,46 @@ async function main() {
 
 // ─── Cleanup ─────────────────────────────────────────────
 
-async function runCleanup(db: Firestore, dryRun: boolean) {
+/** Auth calls are skipped on the emulator unless the Auth emulator is running. */
+function authAvailable(emulator: boolean): boolean {
+  return !emulator || !!process.env.FIREBASE_AUTH_EMULATOR_HOST;
+}
+
+/**
+ * Disabled sign-in account for the showcase organizer, so orphanAccountSweep
+ * keeps their profile. No email or password: nobody can sign in with it.
+ */
+async function ensureShowcaseOrganizerAuth(emulator: boolean, dryRun: boolean) {
+  if (!authAvailable(emulator)) {
+    console.log("Auth emulator not running: showcase organizer has no sign-in account.");
+    return;
+  }
+  const auth = getAuth();
+  try {
+    await auth.getUser(SHOWCASE_ORGANIZER_UID);
+    console.log(`Auth account ${SHOWCASE_ORGANIZER_UID} already exists.`);
+  } catch (err) {
+    if ((err as { code?: string }).code !== "auth/user-not-found") throw err;
+    console.log(`${dryRun ? "[DRY RUN] would create" : "Creating"} disabled auth account ${SHOWCASE_ORGANIZER_UID}.`);
+    if (!dryRun) {
+      await auth.createUser({ uid: SHOWCASE_ORGANIZER_UID, displayName: "Coach Daniel Reyes", disabled: true });
+    }
+  }
+}
+
+async function deleteShowcaseOrganizerAuth(emulator: boolean, dryRun: boolean) {
+  if (!authAvailable(emulator)) return;
+  try {
+    await getAuth().getUser(SHOWCASE_ORGANIZER_UID);
+  } catch (err) {
+    if ((err as { code?: string }).code === "auth/user-not-found") return;
+    throw err;
+  }
+  console.log(`${dryRun ? "[DRY RUN] would delete" : "Deleting"} auth account ${SHOWCASE_ORGANIZER_UID}.`);
+  if (!dryRun) await getAuth().deleteUser(SHOWCASE_ORGANIZER_UID);
+}
+
+async function runCleanup(db: Firestore, dryRun: boolean, emulator: boolean) {
   const del: FirebaseFirestore.DocumentReference[] = [];
   const add = (refs: FirebaseFirestore.DocumentReference[]) => { for (const r of refs) if (!del.some((d) => d.path === r.path)) del.push(r); };
 
@@ -422,7 +468,7 @@ async function runCleanup(db: Firestore, dryRun: boolean) {
   for (const s of sessions) add((await db.collection("notifications").where("sessionId", "==", s.id).get()).docs.map((d) => d.ref));
 
   console.log(`${dryRun ? "[DRY RUN] would delete" : "Deleting"} ${del.length} docs: ${tournaments.length} tournaments, ${sessions.length} sessions, ${players.length} players (+ their registrations, matches, standings, notifications, playerPrivate).`);
-  if (dryRun) return;
+  if (dryRun) return deleteShowcaseOrganizerAuth(emulator, true);
   // Matches first, recursively: live-scoring subcollections if anyone scored a showcase match in the app.
   for (const r of del.filter((d) => d.parent.id === "matches")) await db.recursiveDelete(r);
   const rest = del.filter((d) => d.parent.id !== "matches");
@@ -431,6 +477,7 @@ async function runCleanup(db: Firestore, dryRun: boolean) {
     for (const r of rest.slice(i, i + 400)) batch.delete(r);
     await batch.commit();
   }
+  await deleteShowcaseOrganizerAuth(emulator, dryRun);
   console.log("Done.");
 }
 
